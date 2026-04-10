@@ -1,0 +1,684 @@
+
+=======================================================================
+REPLIT AGENT PROMPT — PICKLEBALL CLUB LADDER SYSTEM
+=======================================================================
+Paste everything below this line into Replit Agent.
+=======================================================================
+
+Build a full-stack web application for a pickleball club ladder system.
+Use Next.js (App Router), Supabase (PostgreSQL + Auth + Realtime), and
+Tailwind CSS. Use Resend for transactional emails. The app should be
+production-ready, mobile-friendly, and support 200+ members.
+
+=======================================================================
+OVERVIEW
+=======================================================================
+
+This is a club ladder system for doubles pickleball. Teams of 2 players
+challenge other teams to climb a ranked leaderboard over a defined season.
+Partners are self-selected and fixed for the entire season. A new partner
+can be selected each new season.
+
+=======================================================================
+TECH STACK
+=======================================================================
+
+- Framework: Next.js 14 (App Router, TypeScript)
+- Database + Auth + Realtime: Supabase
+- Styling: Tailwind CSS + shadcn/ui components
+- Email: Resend
+- Hosting: Replit (ensure it runs on Replit with proper env vars)
+- Cron jobs: Vercel Cron or a Supabase scheduled function for inactivity drops
+
+=======================================================================
+DATABASE SCHEMA (Supabase / PostgreSQL)
+=======================================================================
+
+-- PLAYERS
+create table players (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  full_name text not null,
+  email text not null unique,
+  phone text,
+  created_at timestamptz default now()
+);
+
+-- SEASONS
+create table seasons (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  start_date date not null,
+  end_date date not null,
+  is_active boolean default false,
+  created_at timestamptz default now()
+);
+
+-- TEAMS (one per season per pair)
+create table teams (
+  id uuid primary key default gen_random_uuid(),
+  season_id uuid references seasons(id) on delete cascade,
+  player1_id uuid references players(id) on delete cascade,
+  player2_id uuid references players(id) on delete cascade,
+  team_name text not null,
+  status text default 'pending', -- pending | active | inactive
+  created_at timestamptz default now(),
+  unique(season_id, player1_id),
+  unique(season_id, player2_id)
+);
+
+-- TEAM INVITATIONS (player1 invites player2 to form a team)
+create table team_invitations (
+  id uuid primary key default gen_random_uuid(),
+  season_id uuid references seasons(id),
+  inviter_id uuid references players(id),
+  invitee_id uuid references players(id),
+  team_name text not null,
+  status text default 'pending', -- pending | accepted | declined
+  created_at timestamptz default now()
+);
+
+-- LADDER STANDINGS
+create table ladder_standings (
+  id uuid primary key default gen_random_uuid(),
+  season_id uuid references seasons(id) on delete cascade,
+  team_id uuid references teams(id) on delete cascade,
+  position integer not null,
+  wins integer default 0,
+  losses integer default 0,
+  last_match_date timestamptz,
+  created_at timestamptz default now(),
+  unique(season_id, position),
+  unique(season_id, team_id)
+);
+
+-- CHALLENGES
+create table challenges (
+  id uuid primary key default gen_random_uuid(),
+  season_id uuid references seasons(id),
+  challenger_team_id uuid references teams(id),
+  challenged_team_id uuid references teams(id),
+  status text default 'pending',
+  -- status flow: pending > accepted > scheduling > scheduled > completed | cancelled | disputed
+  created_at timestamptz default now()
+);
+
+-- AVAILABILITY (per team, per challenge)
+create table availability (
+  id uuid primary key default gen_random_uuid(),
+  challenge_id uuid references challenges(id) on delete cascade,
+  team_id uuid references teams(id),
+  slots jsonb not null,
+  -- format: [{"date": "2026-04-15", "times": ["18:00", "19:00"]}, ...]
+  submitted_at timestamptz default now()
+);
+
+-- MATCHES
+create table matches (
+  id uuid primary key default gen_random_uuid(),
+  challenge_id uuid references challenges(id) on delete cascade,
+  scheduled_date date not null,
+  scheduled_time time not null,
+  court_location text not null,
+  booked_by_team_id uuid references teams(id),
+  status text default 'scheduled', -- scheduled | completed | disputed
+  created_at timestamptz default now()
+);
+
+-- MATCH SCORES (best of 3 games)
+create table match_scores (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid references matches(id) on delete cascade,
+  game_number integer not null, -- 1, 2, or 3
+  team1_score integer not null,
+  team2_score integer not null
+  -- team1 = challenger, team2 = challenged
+);
+
+-- MATCH RESULTS
+create table match_results (
+  id uuid primary key default gen_random_uuid(),
+  match_id uuid references matches(id) on delete cascade,
+  winner_team_id uuid references teams(id),
+  loser_team_id uuid references teams(id),
+  submitted_by_team_id uuid references teams(id),
+  confirmed_by_team_id uuid references teams(id),
+  submitted_at timestamptz default now(),
+  confirmed_at timestamptz,
+  auto_confirmed boolean default false,
+  dispute_reason text,
+  dispute_resolved boolean default false
+);
+
+-- INACTIVITY LOG
+create table inactivity_drops (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid references teams(id),
+  season_id uuid references seasons(id),
+  old_position integer,
+  new_position integer,
+  dropped_at timestamptz default now()
+);
+
+-- NOTIFICATIONS
+create table notifications (
+  id uuid primary key default gen_random_uuid(),
+  player_id uuid references players(id),
+  type text not null,
+  message text not null,
+  link text,
+  is_read boolean default false,
+  created_at timestamptz default now()
+);
+
+=======================================================================
+BUSINESS LOGIC & RULES
+=======================================================================
+
+--- SEASONS ---
+- Only one season can be active at a time (is_active = true)
+- Admin creates seasons with a name, start date, and end date
+- At season start, all registered teams are placed at the bottom of the
+  ladder in random order
+- Teams can register until the season start date
+
+--- TEAM FORMATION ---
+- A player searches for their desired partner by name or email
+- Player 1 sends a team invitation to Player 2 with a proposed team name
+- Player 2 receives an email notification and in-app notification
+- Player 2 can accept or decline
+- On acceptance, the team is created with status 'active' and placed at
+  the bottom of the current season's ladder
+- A player can only be on one team per season
+- If Player 2 declines, Player 1 is notified and can invite someone else
+
+--- CHALLENGES ---
+- A team can only challenge teams that are 2 or 3 spots ABOVE them
+  in the current ladder standings
+- A team can only have ONE active challenge at a time (either sent or received)
+- If a team already has an active challenge, the challenge button is disabled
+- Challenge request is sent to the challenged team
+- Challenged team receives an email + in-app notification
+- Challenged team must accept or decline within 48 hours
+  - If no response in 48 hours: challenge auto-expires, challenger is notified
+- On acceptance, both teams enter their availability
+
+--- SCHEDULING ---
+- After a challenge is accepted, both teams submit their available time slots
+- Each team selects multiple date + time combinations from a calendar UI
+- The system automatically detects overlapping slots and displays them
+- If overlapping slots exist: system shows the common slots and prompts
+  one team to confirm a specific slot and enter the court location
+- If NO overlapping slots exist: system shows a message:
+  "No common availability found. Please contact each other directly to
+  arrange a time." and displays both teams' contact info (email + phone)
+- Once a court is booked, both teams receive a confirmation email with:
+  date, time, location, and both teams' player names and contact info
+
+--- MATCH SCORING ---
+- Match format: best of 3 games (first to 2 game wins)
+- Standard pickleball scoring (games to 11, win by 2)
+- After the match, either team's player can submit the score
+- Score entry form: enter score for each game played (2 or 3 games)
+- The submitting team also selects the winner
+- The opposing team receives an email + in-app notification to confirm
+- The opposing team has 48 hours to confirm the score
+  - If they confirm: rankings update immediately
+  - If they dispute: admin is notified by email, match is flagged, rankings
+    do NOT update until admin resolves
+  - If no response in 48 hours: score auto-confirms, rankings update,
+    both teams are notified
+
+--- RANKING / LADDER LOGIC ---
+- Win/loss based. No points system — positions on the ladder are what matter.
+- When challenger WINS:
+  - Challenger team moves up to the challenged team's old position
+  - Challenged team moves down to the challenger's old position
+  - (Positions swap)
+- When challenger LOSES: no position changes
+- After each confirmed result, update ladder_standings accordingly
+- Rankings update in real time on the leaderboard
+
+--- INACTIVITY DROPS ---
+- A cron job runs every 24 hours
+- For each active team in the current season:
+  - If last_match_date is NULL, use the season start date as reference
+  - If it has been 14 or more days since their last completed match:
+    - Drop the team 1 position down (swap with the team below them)
+    - Log this in inactivity_drops table
+    - Send the team an email warning: "Your team has dropped 1 position
+      due to inactivity. Play a match to stay competitive!"
+    - Update last_match_date check — only drop once per 14-day window
+  - Do not drop a team below the last position on the ladder
+- Additionally, teams naturally drop when teams below them win matches
+  and swap positions past them
+
+--- DISPUTES ---
+- Either team can click "Dispute" when asked to confirm a score
+- They must enter a reason for the dispute
+- Admin receives an email notification with both teams' contact info,
+  the submitted score, and the dispute reason
+- Admin can resolve the dispute in the admin panel by:
+  - Confirming the submitted score
+  - Entering a corrected score
+  - Cancelling the match entirely
+- Both teams are notified of the resolution by email
+
+=======================================================================
+PAGES & FEATURES
+=======================================================================
+
+--- PUBLIC PAGES (no login required) ---
+
+/ — Home page
+  - Club name: "Pickleball Club Ladder"
+  - Brief description of the ladder system
+  - Live leaderboard preview (top 10 teams)
+  - CTA buttons: "View Full Leaderboard" and "Sign Up / Log In"
+
+/leaderboard — Full live leaderboard
+  - Shows all teams ranked by position for the active season
+  - Columns: Position, Team Name, Player 1, Player 2, Wins, Losses,
+    Last Match Date
+  - Updates in real time using Supabase Realtime
+  - Season name and dates displayed at top
+  - Search/filter by team name or player name
+
+/register — Player registration
+  - Full name, email, phone number, password
+  - Email verification required before login
+
+/login — Login page
+
+--- AUTHENTICATED PAGES ---
+
+/dashboard — My Dashboard
+  - Welcome message with player name
+  - My Team card: team name, partner name, current ladder position,
+    wins, losses
+  - Active challenge status (if any): shows status, opponent team,
+    next action required
+  - Pending team invitation notification (if any)
+  - Recent match history (last 5 matches)
+  - Quick links: Challenge a Team, Enter Availability, Submit Score,
+    View Leaderboard
+
+/team — My Team
+  - If no team for current season:
+    - Show "You are not on a team this season"
+    - Button: "Find a Partner" — search for players without a team
+    - Show any pending invitations sent or received
+  - If on a team: show team details, partner info, season stats
+  - Option to view past seasons' teams
+
+/challenge — Challenge a Team
+  - Shows the 2-3 teams above the user's team on the ladder
+  - Each shows: position, team name, player names, wins/losses
+  - "Send Challenge" button for each eligible team
+  - If team already has an active challenge: show status instead
+  - If team is not eligible to challenge (already in a challenge):
+    show disabled state with explanation
+
+/challenges/[id] — Challenge Detail Page
+  - Shows full challenge status and history
+  - Conditional actions based on current status:
+    - pending: challenged team sees Accept / Decline buttons
+    - accepted: both teams see availability submission form
+    - scheduling: shows overlapping slots or contact info if none
+    - scheduled: shows match details (date, time, location)
+    - completed: shows final score
+  - Timeline showing each step of the challenge
+
+/availability/[challengeId] — Availability Submission
+  - Calendar date picker (next 30 days)
+  - For each selected date, choose available time slots (6am–10pm,
+    in 1-hour increments)
+  - Submit button
+  - Shows partner's submission status
+
+/matches/[id] — Match Details + Score Entry
+  - Match info: date, time, location, both teams
+  - Score entry form (if match is completed and no score entered yet):
+    - Game 1: Team A score vs Team B score
+    - Game 2: Team A score vs Team B score
+    - Game 3 (if needed): Team A score vs Team B score
+    - Winner confirmation (auto-calculated but manually confirmable)
+    - Submit button
+  - If score submitted by other team: show score and Confirm / Dispute buttons
+  - If score confirmed: show final result and ranking change
+
+/profile — My Profile
+  - Edit name, phone number
+  - Change password
+  - Email cannot be changed
+  - Notification preferences (email on/off for each notification type)
+
+/notifications — All Notifications
+  - List of all notifications, newest first
+  - Mark as read individually or all at once
+  - Click notification to go to relevant page
+
+--- ADMIN PAGES (only accessible to admin role) ---
+
+/admin — Admin Dashboard
+  - Stats: total players, total teams, active season name,
+    matches played this season, open disputes
+  - Quick links to all admin sections
+
+/admin/seasons — Season Management
+  - List all seasons with status
+  - Create new season: name, start date, end date
+  - Activate/deactivate a season
+  - Cannot delete a season with existing match data
+
+/admin/teams — Team Management
+  - List all teams for the active season
+  - Search by team name or player
+  - Manually activate/deactivate a team
+  - View team details and match history
+
+/admin/ladder — Ladder Management
+  - View full ladder with positions
+  - Manually adjust a team's position (drag-and-drop or input field)
+  - View inactivity drop log
+
+/admin/matches — Match Oversight
+  - List all matches: scheduled, completed, disputed
+  - Filter by status
+  - Click to view full match details
+
+/admin/disputes — Dispute Resolution
+  - List all open disputes
+  - For each: show both teams, submitted score, dispute reason,
+    contact info for both teams
+  - Admin actions: Confirm Score, Enter Correct Score, Cancel Match
+  - Resolved disputes shown in a separate tab
+
+/admin/players — Player Management
+  - List all registered players
+  - Search by name or email
+  - View player profile and team history
+  - Deactivate a player account
+
+=======================================================================
+EMAIL NOTIFICATIONS (via Resend)
+=======================================================================
+
+Send HTML emails for the following events. All emails should include
+the club name, a relevant message, a CTA button linking to the relevant
+page, and contact info for the other team where relevant.
+
+1. TEAM INVITATION RECEIVED
+   To: invited player
+   Subject: "You've been invited to join a team on the Pickleball Ladder"
+   Body: "[Inviter name] has invited you to form a team called [Team Name]
+   for the [Season Name] season. Accept or decline below."
+   CTA: Link to /team
+
+2. TEAM INVITATION ACCEPTED
+   To: inviter
+   Subject: "[Partner name] accepted your team invitation!"
+   Body: "Your team [Team Name] is now active and placed on the ladder."
+
+3. TEAM INVITATION DECLINED
+   To: inviter
+   Subject: "[Partner name] declined your team invitation"
+   Body: "You can invite another player to form a team."
+
+4. CHALLENGE RECEIVED
+   To: challenged team (both players)
+   Subject: "[Challenger Team] has challenged your team!"
+   Body: "[Challenger Team Name] (Position #X) has challenged your team
+   (Position #Y). Accept or decline within 48 hours."
+   CTA: Link to /challenges/[id]
+
+5. CHALLENGE ACCEPTED
+   To: challenger team (both players)
+   Subject: "[Challenged Team] accepted your challenge!"
+   Body: "Please submit your availability to schedule the match."
+   CTA: Link to /availability/[challengeId]
+
+6. CHALLENGE DECLINED
+   To: challenger team (both players)
+   Subject: "[Challenged Team] declined your challenge"
+
+7. AVAILABILITY SUBMITTED (to partner and opponent)
+   To: the other team in the challenge (both players)
+   Subject: "[Team Name] submitted their availability"
+   Body: "Please submit your availability so we can find a common time."
+   CTA: Link to /availability/[challengeId]
+
+8. COMMON AVAILABILITY FOUND
+   To: both teams (all 4 players)
+   Subject: "Common availability found — book your court!"
+   Body: "You have overlapping availability on these dates/times: [list].
+   Please confirm a time and book a court."
+   CTA: Link to /challenges/[id]
+
+9. NO COMMON AVAILABILITY
+   To: both teams (all 4 players)
+   Subject: "No common availability found — please coordinate directly"
+   Body: "No overlapping time slots were found. Contact each other to
+   arrange a match."
+   Include both teams' player names, emails, and phone numbers in the email.
+
+10. MATCH SCHEDULED
+    To: both teams (all 4 players)
+    Subject: "Match confirmed — [Date] at [Time], [Location]"
+    Body: Full match details + both teams' contact info.
+
+11. SCORE SUBMITTED — CONFIRMATION NEEDED
+    To: the team that did NOT submit (both players)
+    Subject: "Please confirm the match score"
+    Body: "[Submitting team] entered the following score: [score summary].
+    You have 48 hours to confirm or dispute. After 48 hours it will
+    auto-confirm."
+    CTA: Link to /matches/[id]
+
+12. SCORE CONFIRMED
+    To: both teams (all 4 players)
+    Subject: "Match result confirmed — rankings updated"
+    Body: Final score, winner, new ladder positions for both teams.
+
+13. SCORE AUTO-CONFIRMED
+    To: both teams (all 4 players)
+    Subject: "Match result auto-confirmed after 48 hours"
+    Body: Same as above.
+
+14. DISPUTE FILED
+    To: admin
+    Subject: "Score dispute filed — action required"
+    Body: Both team names, submitted score, dispute reason,
+    contact info for all 4 players.
+    CTA: Link to /admin/disputes/[id]
+
+15. DISPUTE RESOLVED
+    To: both teams (all 4 players)
+    Subject: "Your match dispute has been resolved"
+    Body: Admin decision + final score + updated positions.
+
+16. INACTIVITY DROP WARNING
+    To: team (both players)
+    Subject: "Your team dropped 1 spot due to inactivity"
+    Body: "Your team has not played a match in 14 days and has dropped
+    from position #X to position #Y. Challenge a team to stay competitive!"
+    CTA: Link to /challenge
+
+17. CHALLENGE AUTO-EXPIRED
+    To: challenger team (both players)
+    Subject: "Your challenge expired — no response received"
+    Body: "[Challenged Team] did not respond within 48 hours.
+    You are free to send a new challenge."
+
+=======================================================================
+REAL-TIME LEADERBOARD
+=======================================================================
+
+- Use Supabase Realtime to subscribe to changes on the
+  ladder_standings table
+- When any position updates, the /leaderboard page re-renders the
+  affected rows without a full page reload
+- Show a subtle animation or highlight when a position changes
+
+=======================================================================
+INACTIVITY CRON JOB
+=======================================================================
+
+Create an API route: POST /api/cron/inactivity-drop
+Protected by a secret header (CRON_SECRET env var)
+
+Logic:
+1. Get the active season
+2. For each team in the ladder, check last_match_date
+   (or season start_date if null)
+3. If days since last match >= 14:
+   a. Get their current position
+   b. Get the team currently at position + 1 (one below them)
+   c. If a team exists below them: swap positions
+   d. Log the drop in inactivity_drops
+   e. Send inactivity email to both players on the team
+   f. Update last_match_date check to now to reset the 14-day window
+      (use a separate field: last_inactivity_check)
+4. Return a summary of all drops made
+
+Set this to run daily via Replit's cron scheduler or an external
+cron service hitting the endpoint with the secret header.
+
+=======================================================================
+AUTO-CONFIRM CRON JOB
+=======================================================================
+
+Create an API route: POST /api/cron/auto-confirm
+Protected by a secret header (CRON_SECRET env var)
+
+Logic:
+1. Find all match_results where:
+   - confirmed_at IS NULL
+   - dispute_reason IS NULL
+   - submitted_at < now() - interval '48 hours'
+2. For each:
+   a. Set auto_confirmed = true, confirmed_at = now()
+   b. Trigger the ranking update logic (same as manual confirm)
+   c. Send auto-confirmed email to both teams
+
+Set this to run every hour.
+
+=======================================================================
+CHALLENGE EXPIRY CRON JOB
+=======================================================================
+
+Create an API route: POST /api/cron/expire-challenges
+Protected by a secret header (CRON_SECRET env var)
+
+Logic:
+1. Find all challenges where:
+   - status = 'pending'
+   - created_at < now() - interval '48 hours'
+2. For each:
+   a. Set status = 'cancelled'
+   b. Send challenge-expired email to challenger team
+
+Set this to run every hour.
+
+=======================================================================
+AUTHENTICATION & ROLES
+=======================================================================
+
+- Use Supabase Auth (email + password)
+- After registration, user must verify email before accessing the app
+- Player profile is created automatically after email verification
+  using a Supabase trigger
+- Roles: 'player' (default) and 'admin'
+- Admin role is set manually in the database by the Supabase admin
+  (add a role column to the players table)
+- Admin pages check for admin role server-side and redirect
+  unauthorized users to /dashboard
+- Row Level Security (RLS) should be enabled on all tables:
+  - Players can only read/write their own data
+  - Ladder standings are publicly readable
+  - Match results require team membership to write
+  - Admin can read/write everything
+
+=======================================================================
+UI / UX REQUIREMENTS
+=======================================================================
+
+- Clean, modern, mobile-first design using Tailwind CSS + shadcn/ui
+- Color scheme: green and white (pickleball theme)
+- Fully responsive — works well on phone (most users will use mobile)
+- Loading states and skeleton screens for all data fetches
+- Toast notifications for all user actions (success, error, warning)
+- Confirm dialogs before any destructive or irreversible actions
+  (e.g. cancelling a challenge, disputing a score)
+- Empty states with helpful CTAs when no data is present
+  (e.g. "No active challenge — challenge a team to get started!")
+- Accessible: proper ARIA labels, keyboard navigable,
+  sufficient color contrast
+
+=======================================================================
+ENVIRONMENT VARIABLES NEEDED
+=======================================================================
+
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+RESEND_API_KEY=
+CRON_SECRET=
+NEXT_PUBLIC_APP_URL=  (e.g. https://yourapp.replit.app)
+ADMIN_EMAIL=  (email address to receive dispute notifications)
+
+=======================================================================
+IMPORTANT IMPLEMENTATION NOTES
+=======================================================================
+
+1. All database mutations that affect ladder positions should be wrapped
+   in transactions to prevent race conditions.
+
+2. When positions swap (after a match), lock both rows before updating
+   to prevent concurrent swaps from corrupting the ladder.
+
+3. The leaderboard page should be server-rendered for SEO and initial
+   load speed, then hydrated with Supabase Realtime for live updates.
+
+4. Use Next.js Server Actions or API routes for all mutations — do not
+   expose Supabase service role key to the client.
+
+5. Validate all challenge eligibility server-side (do not trust
+   client-side checks alone) — check positions in the DB at the moment
+   of challenge submission.
+
+6. For the availability overlap detection: normalize all time slots to
+   UTC before storing and comparing.
+
+7. Ensure the admin panel is completely inaccessible to non-admin users
+   at the middleware level (not just UI-level hiding).
+
+8. All emails should be sent asynchronously (do not block the API
+   response waiting for the email to send).
+
+9. Add a /api/health endpoint that returns {status: "ok"} for
+   uptime monitoring.
+
+10. Include a seed script that creates: one test season, 10 test teams
+    with fake players, and populates the ladder — so the app is
+    immediately demonstrable after setup.
+
+=======================================================================
+DELIVERABLES
+=======================================================================
+
+1. Full Next.js app with all pages and API routes listed above
+2. Supabase migration SQL file with all table definitions, indexes,
+   RLS policies, and triggers
+3. Seed script for test data
+4. .env.example file with all required environment variables
+5. A setup.md file with step-by-step instructions for:
+   - Creating the Supabase project
+   - Running migrations
+   - Setting up Resend
+   - Configuring the cron jobs
+   - Setting the first admin user
+
+=======================================================================
+END OF PROMPT
+=======================================================================

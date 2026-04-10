@@ -3,20 +3,43 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Pickleball Club Ladder API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Auth operations
+  - name: players
+    description: Player operations
+  - name: seasons
+    description: Season operations
+  - name: teams
+    description: Team operations
+  - name: invitations
+    description: Team invitation operations
+  - name: ladder
+    description: Ladder standings operations
+  - name: challenges
+    description: Challenge operations
+  - name: availability
+    description: Availability operations
+  - name: matches
+    description: Match operations
+  - name: notifications
+    description: Notification operations
+  - name: admin
+    description: Admin operations
+  - name: cron
+    description: Cron job operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +47,1085 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: registerPlayer
+      tags: [auth]
+      summary: Register a new player
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: Player registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginPlayer
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutPlayer
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentPlayer
+      tags: [auth]
+      summary: Get current authenticated player
+      responses:
+        "200":
+          description: Current player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me/update:
+    patch:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update player profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # PLAYERS
+  /players:
+    get:
+      operationId: listPlayers
+      tags: [players]
+      summary: List all players (search)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: exclude_team_season_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+
+  /players/{id}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Player
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+
+  # SEASONS
+  /seasons:
+    get:
+      operationId: listSeasons
+      tags: [seasons]
+      summary: List all seasons
+      responses:
+        "200":
+          description: List of seasons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Season"
+    post:
+      operationId: createSeason
+      tags: [seasons]
+      summary: Create a new season (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSeasonBody"
+      responses:
+        "201":
+          description: Season created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+
+  /seasons/active:
+    get:
+      operationId: getActiveSeason
+      tags: [seasons]
+      summary: Get active season
+      responses:
+        "200":
+          description: Active season
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+        "404":
+          description: No active season
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /seasons/{id}:
+    get:
+      operationId: getSeason
+      tags: [seasons]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Season
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+
+  /seasons/{id}/activate:
+    post:
+      operationId: activateSeason
+      tags: [seasons]
+      summary: Activate a season (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Season activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+
+  /seasons/{id}/deactivate:
+    post:
+      operationId: deactivateSeason
+      tags: [seasons]
+      summary: Deactivate a season (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Season deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Season"
+
+  # TEAMS
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [teams]
+      summary: List teams
+      parameters:
+        - name: season_id
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamWithPlayers"
+
+  /teams/my-team:
+    get:
+      operationId: getMyTeam
+      tags: [teams]
+      summary: Get the current user's team for the active season
+      responses:
+        "200":
+          description: My team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamWithPlayers"
+        "404":
+          description: No team found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /teams/{id}:
+    get:
+      operationId: getTeam
+      tags: [teams]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamWithPlayers"
+
+  /teams/{id}/matches:
+    get:
+      operationId: getTeamMatches
+      tags: [teams]
+      summary: Get match history for a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Team matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MatchWithDetails"
+
+  /teams/{id}/status:
+    patch:
+      operationId: updateTeamStatus
+      tags: [teams]
+      summary: Update team status (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamStatusBody"
+      responses:
+        "200":
+          description: Team updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamWithPlayers"
+
+  # INVITATIONS
+  /invitations:
+    get:
+      operationId: listInvitations
+      tags: [invitations]
+      summary: List invitations for current player
+      responses:
+        "200":
+          description: Invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationsResponse"
+    post:
+      operationId: createInvitation
+      tags: [invitations]
+      summary: Create a team invitation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationBody"
+      responses:
+        "201":
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamInvitation"
+
+  /invitations/{id}/accept:
+    post:
+      operationId: acceptInvitation
+      tags: [invitations]
+      summary: Accept a team invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation accepted, team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamWithPlayers"
+
+  /invitations/{id}/decline:
+    post:
+      operationId: declineInvitation
+      tags: [invitations]
+      summary: Decline a team invitation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # LADDER
+  /ladder:
+    get:
+      operationId: getLadder
+      tags: [ladder]
+      summary: Get full ladder standings for active season
+      parameters:
+        - name: season_id
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ladder standings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LadderResponse"
+
+  /ladder/top:
+    get:
+      operationId: getTopLadder
+      tags: [ladder]
+      summary: Get top 10 ladder standings (public)
+      responses:
+        "200":
+          description: Top standings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LadderStandingWithTeam"
+
+  /ladder/my-position:
+    get:
+      operationId: getMyLadderPosition
+      tags: [ladder]
+      summary: Get current user's ladder position and nearby teams
+      responses:
+        "200":
+          description: My ladder position with challengeable teams
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyLadderPosition"
+
+  /ladder/{id}/position:
+    patch:
+      operationId: updateLadderPosition
+      tags: [ladder]
+      summary: Manually update a team's ladder position (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePositionBody"
+      responses:
+        "200":
+          description: Position updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LadderStandingWithTeam"
+
+  /ladder/inactivity-log:
+    get:
+      operationId: getInactivityLog
+      tags: [ladder]
+      summary: Get inactivity drop log (admin)
+      responses:
+        "200":
+          description: Inactivity drops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InactivityDrop"
+
+  # CHALLENGES
+  /challenges:
+    get:
+      operationId: listChallenges
+      tags: [challenges]
+      summary: List challenges
+      parameters:
+        - name: season_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: team_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChallengeWithTeams"
+    post:
+      operationId: createChallenge
+      tags: [challenges]
+      summary: Create a challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChallengeBody"
+      responses:
+        "201":
+          description: Challenge created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+
+  /challenges/my-active:
+    get:
+      operationId: getMyActiveChallenge
+      tags: [challenges]
+      summary: Get current user's active challenge
+      responses:
+        "200":
+          description: Active challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+        "404":
+          description: No active challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /challenges/{id}:
+    get:
+      operationId: getChallenge
+      tags: [challenges]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+
+  /challenges/{id}/accept:
+    post:
+      operationId: acceptChallenge
+      tags: [challenges]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+
+  /challenges/{id}/decline:
+    post:
+      operationId: declineChallenge
+      tags: [challenges]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge declined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+
+  /challenges/{id}/cancel:
+    post:
+      operationId: cancelChallenge
+      tags: [challenges]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Challenge cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChallengeWithTeams"
+
+  /challenges/{id}/book:
+    post:
+      operationId: bookMatch
+      tags: [challenges]
+      summary: Book a match from overlapping slots
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookMatchBody"
+      responses:
+        "200":
+          description: Match booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  # AVAILABILITY
+  /availability/{challengeId}:
+    get:
+      operationId: getAvailability
+      tags: [availability]
+      summary: Get availability for a challenge
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+    post:
+      operationId: submitAvailability
+      tags: [availability]
+      summary: Submit availability for a challenge
+      parameters:
+        - name: challengeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAvailabilityBody"
+      responses:
+        "200":
+          description: Availability submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilityResponse"
+
+  # MATCHES
+  /matches:
+    get:
+      operationId: listMatches
+      tags: [matches]
+      summary: List matches
+      parameters:
+        - name: season_id
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: team_id
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MatchWithDetails"
+
+  /matches/{id}:
+    get:
+      operationId: getMatch
+      tags: [matches]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  /matches/{id}/score:
+    post:
+      operationId: submitScore
+      tags: [matches]
+      summary: Submit match score
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitScoreBody"
+      responses:
+        "200":
+          description: Score submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  /matches/{id}/confirm:
+    post:
+      operationId: confirmScore
+      tags: [matches]
+      summary: Confirm match score
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Score confirmed, ladder updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  /matches/{id}/dispute:
+    post:
+      operationId: disputeScore
+      tags: [matches]
+      summary: Dispute match score
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DisputeScoreBody"
+      responses:
+        "200":
+          description: Dispute filed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  # NOTIFICATIONS
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for current player
+      parameters:
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsResponse"
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      responses:
+        "200":
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ADMIN
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get admin dashboard stats
+      responses:
+        "200":
+          description: Admin stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/players:
+    get:
+      operationId: listAdminPlayers
+      tags: [admin]
+      summary: List all players (admin)
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlayerWithTeam"
+
+  /admin/players/{id}/deactivate:
+    post:
+      operationId: deactivatePlayer
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Player deactivated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/disputes:
+    get:
+      operationId: listDisputes
+      tags: [admin]
+      summary: List disputes
+      parameters:
+        - name: resolved
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Disputes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DisputeWithDetails"
+
+  /admin/disputes/{id}/resolve:
+    post:
+      operationId: resolveDispute
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveDisputeBody"
+      responses:
+        "200":
+          description: Dispute resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
+  # CRON
+  /cron/inactivity-drop:
+    post:
+      operationId: runInactivityDrop
+      tags: [cron]
+      summary: Run inactivity drop job (protected)
+      responses:
+        "200":
+          description: Drops processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronJobResult"
+
+  /cron/auto-confirm:
+    post:
+      operationId: runAutoConfirm
+      tags: [cron]
+      summary: Auto-confirm pending scores after 48 hours (protected)
+      responses:
+        "200":
+          description: Scores auto-confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronJobResult"
+
+  /cron/expire-challenges:
+    post:
+      operationId: runExpireChallenges
+      tags: [cron]
+      summary: Expire pending challenges older than 48 hours (protected)
+      responses:
+        "200":
+          description: Challenges expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CronJobResult"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1136,735 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    # Auth
+    RegisterBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        password:
+          type: string
+      required:
+        - fullName
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        player:
+          $ref: "#/components/schemas/Player"
+        token:
+          type: string
+      required:
+        - player
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+
+    ChangePasswordBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - currentPassword
+        - newPassword
+
+    # Player
+    Player:
+      type: object
+      properties:
+        id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [player, admin]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - fullName
+        - email
+        - role
+        - isActive
+        - createdAt
+
+    PlayerWithTeam:
+      allOf:
+        - $ref: "#/components/schemas/Player"
+        - type: object
+          properties:
+            currentTeam:
+              $ref: "#/components/schemas/TeamWithPlayers"
+
+    # Season
+    Season:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - startDate
+        - endDate
+        - isActive
+        - createdAt
+
+    CreateSeasonBody:
+      type: object
+      properties:
+        name:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+      required:
+        - name
+        - startDate
+        - endDate
+
+    # Team
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        seasonId:
+          type: string
+        player1Id:
+          type: string
+        player2Id:
+          type: string
+        teamName:
+          type: string
+        status:
+          type: string
+          enum: [pending, active, inactive]
+        createdAt:
+          type: string
+      required:
+        - id
+        - seasonId
+        - player1Id
+        - player2Id
+        - teamName
+        - status
+        - createdAt
+
+    TeamWithPlayers:
+      allOf:
+        - $ref: "#/components/schemas/Team"
+        - type: object
+          properties:
+            player1:
+              $ref: "#/components/schemas/Player"
+            player2:
+              $ref: "#/components/schemas/Player"
+            standing:
+              $ref: "#/components/schemas/LadderStanding"
+            season:
+              $ref: "#/components/schemas/Season"
+
+    UpdateTeamStatusBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, active, inactive]
+      required:
+        - status
+
+    # Invitation
+    TeamInvitation:
+      type: object
+      properties:
+        id:
+          type: string
+        seasonId:
+          type: string
+        inviterId:
+          type: string
+        inviteeId:
+          type: string
+        teamName:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, declined]
+        createdAt:
+          type: string
+        inviter:
+          $ref: "#/components/schemas/Player"
+        invitee:
+          $ref: "#/components/schemas/Player"
+        season:
+          $ref: "#/components/schemas/Season"
+      required:
+        - id
+        - seasonId
+        - inviterId
+        - inviteeId
+        - teamName
+        - status
+        - createdAt
+
+    CreateInvitationBody:
+      type: object
+      properties:
+        inviteeId:
+          type: string
+        teamName:
+          type: string
+      required:
+        - inviteeId
+        - teamName
+
+    InvitationsResponse:
+      type: object
+      properties:
+        sent:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamInvitation"
+        received:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamInvitation"
+      required:
+        - sent
+        - received
+
+    # Ladder
+    LadderStanding:
+      type: object
+      properties:
+        id:
+          type: string
+        seasonId:
+          type: string
+        teamId:
+          type: string
+        position:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        lastMatchDate:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - seasonId
+        - teamId
+        - position
+        - wins
+        - losses
+        - createdAt
+
+    LadderStandingWithTeam:
+      allOf:
+        - $ref: "#/components/schemas/LadderStanding"
+        - type: object
+          properties:
+            team:
+              $ref: "#/components/schemas/TeamWithPlayers"
+
+    LadderResponse:
+      type: object
+      properties:
+        season:
+          $ref: "#/components/schemas/Season"
+        standings:
+          type: array
+          items:
+            $ref: "#/components/schemas/LadderStandingWithTeam"
+        total:
+          type: integer
+      required:
+        - standings
+        - total
+
+    MyLadderPosition:
+      type: object
+      properties:
+        myStanding:
+          $ref: "#/components/schemas/LadderStandingWithTeam"
+        challengeableTeams:
+          type: array
+          items:
+            $ref: "#/components/schemas/LadderStandingWithTeam"
+        hasActiveChallenge:
+          type: boolean
+      required:
+        - hasActiveChallenge
+
+    UpdatePositionBody:
+      type: object
+      properties:
+        position:
+          type: integer
+      required:
+        - position
+
+    InactivityDrop:
+      type: object
+      properties:
+        id:
+          type: string
+        teamId:
+          type: string
+        seasonId:
+          type: string
+        oldPosition:
+          type: integer
+        newPosition:
+          type: integer
+        droppedAt:
+          type: string
+        team:
+          $ref: "#/components/schemas/TeamWithPlayers"
+      required:
+        - id
+        - teamId
+        - seasonId
+        - oldPosition
+        - newPosition
+        - droppedAt
+
+    # Challenge
+    Challenge:
+      type: object
+      properties:
+        id:
+          type: string
+        seasonId:
+          type: string
+        challengerTeamId:
+          type: string
+        challengedTeamId:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, scheduling, scheduled, completed, cancelled, disputed]
+        createdAt:
+          type: string
+      required:
+        - id
+        - seasonId
+        - challengerTeamId
+        - challengedTeamId
+        - status
+        - createdAt
+
+    ChallengeWithTeams:
+      allOf:
+        - $ref: "#/components/schemas/Challenge"
+        - type: object
+          properties:
+            challengerTeam:
+              $ref: "#/components/schemas/TeamWithPlayers"
+            challengedTeam:
+              $ref: "#/components/schemas/TeamWithPlayers"
+            match:
+              $ref: "#/components/schemas/MatchWithDetails"
+            myTeamId:
+              type: string
+            overlappingSlots:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeSlot"
+            challengerAvailabilitySubmitted:
+              type: boolean
+            challengedAvailabilitySubmitted:
+              type: boolean
+
+    CreateChallengeBody:
+      type: object
+      properties:
+        challengedTeamId:
+          type: string
+      required:
+        - challengedTeamId
+
+    BookMatchBody:
+      type: object
+      properties:
+        date:
+          type: string
+        time:
+          type: string
+        courtLocation:
+          type: string
+      required:
+        - date
+        - time
+        - courtLocation
+
+    TimeSlot:
+      type: object
+      properties:
+        date:
+          type: string
+        times:
+          type: array
+          items:
+            type: string
+      required:
+        - date
+        - times
+
+    # Availability
+    AvailabilitySubmission:
+      type: object
+      properties:
+        id:
+          type: string
+        challengeId:
+          type: string
+        teamId:
+          type: string
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+        submittedAt:
+          type: string
+      required:
+        - id
+        - challengeId
+        - teamId
+        - slots
+        - submittedAt
+
+    SubmitAvailabilityBody:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+      required:
+        - slots
+
+    AvailabilityResponse:
+      type: object
+      properties:
+        challengerAvailability:
+          $ref: "#/components/schemas/AvailabilitySubmission"
+        challengedAvailability:
+          $ref: "#/components/schemas/AvailabilitySubmission"
+        overlappingSlots:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimeSlot"
+        hasOverlap:
+          type: boolean
+      required:
+        - hasOverlap
+
+    # Match
+    Match:
+      type: object
+      properties:
+        id:
+          type: string
+        challengeId:
+          type: string
+        scheduledDate:
+          type: string
+        scheduledTime:
+          type: string
+        courtLocation:
+          type: string
+        bookedByTeamId:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, completed, disputed]
+        createdAt:
+          type: string
+      required:
+        - id
+        - challengeId
+        - scheduledDate
+        - scheduledTime
+        - courtLocation
+        - status
+        - createdAt
+
+    MatchScore:
+      type: object
+      properties:
+        id:
+          type: string
+        matchId:
+          type: string
+        gameNumber:
+          type: integer
+        team1Score:
+          type: integer
+        team2Score:
+          type: integer
+      required:
+        - id
+        - matchId
+        - gameNumber
+        - team1Score
+        - team2Score
+
+    MatchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        matchId:
+          type: string
+        winnerTeamId:
+          type: string
+        loserTeamId:
+          type: string
+        submittedByTeamId:
+          type: string
+        confirmedByTeamId:
+          type: string
+        submittedAt:
+          type: string
+        confirmedAt:
+          type: string
+        autoConfirmed:
+          type: boolean
+        disputeReason:
+          type: string
+        disputeResolved:
+          type: boolean
+      required:
+        - id
+        - matchId
+        - winnerTeamId
+        - loserTeamId
+        - submittedByTeamId
+        - submittedAt
+        - autoConfirmed
+        - disputeResolved
+
+    MatchWithDetails:
+      allOf:
+        - $ref: "#/components/schemas/Match"
+        - type: object
+          properties:
+            challenge:
+              $ref: "#/components/schemas/ChallengeWithTeams"
+            scores:
+              type: array
+              items:
+                $ref: "#/components/schemas/MatchScore"
+            result:
+              $ref: "#/components/schemas/MatchResult"
+
+    SubmitScoreBody:
+      type: object
+      properties:
+        games:
+          type: array
+          items:
+            type: object
+            properties:
+              gameNumber:
+                type: integer
+              team1Score:
+                type: integer
+              team2Score:
+                type: integer
+            required:
+              - gameNumber
+              - team1Score
+              - team2Score
+        winnerTeamId:
+          type: string
+      required:
+        - games
+        - winnerTeamId
+
+    DisputeScoreBody:
+      type: object
+      properties:
+        reason:
+          type: string
+      required:
+        - reason
+
+    # Notification
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        playerId:
+          type: string
+        type:
+          type: string
+        message:
+          type: string
+        link:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - playerId
+        - type
+        - message
+        - isRead
+        - createdAt
+
+    NotificationsResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unreadCount:
+          type: integer
+      required:
+        - notifications
+        - unreadCount
+
+    # Admin
+    AdminStats:
+      type: object
+      properties:
+        totalPlayers:
+          type: integer
+        totalTeams:
+          type: integer
+        activeSeasonName:
+          type: string
+        matchesThisSeason:
+          type: integer
+        openDisputes:
+          type: integer
+        pendingChallenges:
+          type: integer
+      required:
+        - totalPlayers
+        - totalTeams
+        - matchesThisSeason
+        - openDisputes
+        - pendingChallenges
+
+    DisputeWithDetails:
+      type: object
+      properties:
+        matchResult:
+          $ref: "#/components/schemas/MatchResult"
+        match:
+          $ref: "#/components/schemas/MatchWithDetails"
+      required:
+        - matchResult
+        - match
+
+    ResolveDisputeBody:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [confirm, correct, cancel]
+        correctedGames:
+          type: array
+          items:
+            type: object
+            properties:
+              gameNumber:
+                type: integer
+              team1Score:
+                type: integer
+              team2Score:
+                type: integer
+            required:
+              - gameNumber
+              - team1Score
+              - team2Score
+        winnerTeamId:
+          type: string
+      required:
+        - action
+
+    # Cron
+    CronJobResult:
+      type: object
+      properties:
+        processed:
+          type: integer
+        details:
+          type: array
+          items:
+            type: string
+      required:
+        - processed
+        - details
