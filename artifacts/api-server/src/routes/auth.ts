@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, playersTable } from "@workspace/db";
+import { db, playersTable, teamInvitationsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { hashPassword, verifyPassword, createToken, requireAuth } from "../lib/auth";
 import { logger } from "../lib/logger";
@@ -28,6 +28,12 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     role: "player",
     isActive: true,
   }).returning();
+
+  // Link any pending email invitations sent to this address before they registered
+  await db.update(teamInvitationsTable)
+    .set({ inviteeId: player.id, inviteeEmail: null })
+    .where(eq(teamInvitationsTable.inviteeEmail, player.email))
+    .catch(() => {}); // non-fatal
 
   const token = createToken(player.id);
 

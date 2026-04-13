@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Search, Send, CheckCircle, XCircle, Trophy, ArrowRight, Loader2 } from "lucide-react";
+import { Users, Send, CheckCircle, XCircle, Trophy, Mail, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+
+function isValidEmail(val: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+}
 
 export default function Team() {
   return (
@@ -32,70 +35,85 @@ function TeamContent() {
   const qc = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [inviteeId, setInviteeId] = useState("");
+  const [inviteeId, setInviteeId] = useState<string | null>(null);
+  const [inviteeEmail, setInviteeEmail] = useState<string | null>(null);
   const [teamName, setTeamName] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
 
   const { data: players } = useListPlayers(
-    { search: searchQuery, limit: 10 },
-    { query: { enabled: searchQuery.length > 1 } }
+    { search: searchQuery, limit: 8 },
+    { query: { enabled: searchQuery.length > 1 && !inviteeId && !inviteeEmail } }
   );
 
   const sendInvite = useCreateInvitation();
   const acceptInv = useAcceptInvitation();
   const declineInv = useDeclineInvitation();
 
+  const filteredPlayers = (players as any[] | undefined)?.filter((p: any) => p.id !== player?.id) ?? [];
+  const showDropdown = filteredPlayers.length > 0 && !inviteeId && !inviteeEmail;
+
+  // Can send if we have a team name AND either a selected player or a valid typed email
+  const emailFromInput = !inviteeId && !inviteeEmail && isValidEmail(searchQuery) ? searchQuery.trim() : null;
+  const canSend = !!teamName && (!!inviteeId || !!inviteeEmail || !!emailFromInput);
+
   const handleSendInvite = () => {
-    if (!inviteeId || !teamName) {
-      toast({ title: "Fill in team name and select a player", variant: "destructive" });
-      return;
+    if (!canSend) return;
+    const payload: any = { data: { teamName } };
+    if (inviteeId) {
+      payload.data.inviteeId = inviteeId;
+    } else {
+      payload.data.inviteeEmail = inviteeEmail ?? emailFromInput;
     }
-    sendInvite.mutate(
-      { data: { inviteeId, teamName } },
-      {
-        onSuccess: () => {
-          toast({ title: "Invitation sent!" });
-          setShowInviteForm(false);
-          setInviteeId("");
-          setTeamName("");
-          setSearchQuery("");
-          qc.invalidateQueries();
-        },
-        onError: (err: any) => {
-          toast({ title: "Failed to send invitation", description: err?.data?.error, variant: "destructive" });
-        },
-      }
-    );
+    sendInvite.mutate(payload, {
+      onSuccess: () => {
+        toast({ title: "Invitation sent!" });
+        setShowInviteForm(false);
+        setInviteeId(null);
+        setInviteeEmail(null);
+        setTeamName("");
+        setSearchQuery("");
+        qc.invalidateQueries();
+      },
+      onError: (err: any) => {
+        toast({ title: "Failed to send invitation", description: err?.data?.error, variant: "destructive" });
+      },
+    });
+  };
+
+  const handleSelectPlayer = (p: any) => {
+    setInviteeId(p.id);
+    setInviteeEmail(null);
+    setSearchQuery(p.fullName);
+  };
+
+  const handleClearSelection = () => {
+    setInviteeId(null);
+    setInviteeEmail(null);
+    setSearchQuery("");
   };
 
   const handleAccept = (id: string) => {
-    acceptInv.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          toast({ title: "Invitation accepted! Welcome to the ladder!" });
-          qc.invalidateQueries();
-        },
-        onError: (err: any) => {
-          toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" });
-        },
-      }
-    );
+    acceptInv.mutate({ id }, {
+      onSuccess: () => {
+        toast({ title: "Invitation accepted! Welcome to the ladder!" });
+        qc.invalidateQueries();
+      },
+      onError: (err: any) => {
+        toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" });
+      },
+    });
   };
 
   const handleDecline = (id: string) => {
-    declineInv.mutate(
-      { id },
-      {
-        onSuccess: () => {
-          toast({ title: "Invitation declined" });
-          qc.invalidateQueries();
-        },
-        onError: (err: any) => {
-          toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" });
-        },
-      }
-    );
+    declineInv.mutate({ id }, {
+      onSuccess: () => {
+        toast({ title: "Invitation declined" });
+        qc.invalidateQueries();
+      },
+      onError: (err: any) => {
+        toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" });
+      },
+    });
   };
 
   const pendingReceived = invitations?.received?.filter((i: any) => i.status === "pending") ?? [];
@@ -188,53 +206,83 @@ function TeamContent() {
                   data-testid="input-team-name"
                 />
               </div>
+
               <div>
-                <Label>Search for Partner</Label>
-                <div className="relative mt-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    className="pl-9"
-                    placeholder="Search by name or email..."
-                    value={searchQuery}
-                    onChange={e => { setSearchQuery(e.target.value); setInviteeId(""); }}
-                    data-testid="input-search-partner"
-                  />
-                </div>
-                {players && players.length > 0 && !inviteeId && (
-                  <div className="mt-2 border rounded-lg divide-y">
-                    {(players as any[]).filter((p: any) => p.id !== player?.id).map((p: any) => (
-                      <button
-                        key={p.id}
-                        className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 text-left"
-                        onClick={() => { setInviteeId(p.id); setSearchQuery(p.fullName); }}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                          {p.fullName[0]}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{p.fullName}</p>
-                          <p className="text-xs text-muted-foreground">{p.email}</p>
-                        </div>
-                      </button>
-                    ))}
+                <Label>Partner's Name or Email</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Search for someone already on the app, or type their email to invite them to join.
+                </p>
+
+                {/* Show selected player or email badge */}
+                {(inviteeId || inviteeEmail) ? (
+                  <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 border-green-200">
+                    <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-green-800 truncate">{searchQuery}</p>
+                      {inviteeEmail && <p className="text-xs text-green-600">Will receive an email invite to join</p>}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={handleClearSelection} className="text-green-700 h-7 px-2">
+                      Change
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <Input
+                      placeholder="Search by name, or type an email address..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="mt-1"
+                      data-testid="input-search-partner"
+                    />
+
+                    {/* Dropdown: matching registered players */}
+                    {showDropdown && (
+                      <div className="absolute z-10 w-full mt-1 border rounded-lg bg-white shadow-lg divide-y">
+                        {filteredPlayers.map((p: any) => (
+                          <button
+                            key={p.id}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 text-left"
+                            onClick={() => handleSelectPlayer(p)}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                              {p.fullName[0]}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm">{p.fullName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{p.email}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Hint: if valid email typed but no player found */}
+                    {searchQuery.length > 1 && isValidEmail(searchQuery) && filteredPlayers.length === 0 && (
+                      <div className="mt-2 p-3 border rounded-lg bg-blue-50 border-blue-200 flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-blue-600 shrink-0" />
+                        <p className="text-sm text-blue-800">
+                          <span className="font-medium">{searchQuery.trim()}</span> isn't on the app yet — they'll get an email invite to sign up.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-              {inviteeId && (
-                <p className="text-sm text-green-600 flex items-center gap-1">
-                  <CheckCircle className="w-4 h-4" /> Partner selected: {searchQuery}
-                </p>
-              )}
+
               <div className="flex gap-2">
                 <Button
                   onClick={handleSendInvite}
-                  disabled={sendInvite.isPending || !inviteeId || !teamName}
+                  disabled={sendInvite.isPending || !canSend}
                   data-testid="btn-send-invite"
                 >
-                  {sendInvite.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                  {sendInvite.isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    : <Send className="w-4 h-4 mr-2" />}
                   Send Invitation
                 </Button>
-                <Button variant="outline" onClick={() => setShowInviteForm(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowInviteForm(false); handleClearSelection(); }}>
+                  Cancel
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -285,7 +333,14 @@ function TeamContent() {
                 <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-semibold">{inv.teamName}</p>
-                    <p className="text-sm text-muted-foreground">To: {inv.invitee?.fullName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      To: {inv.invitee?.fullName ?? inv.inviteeEmail ?? "—"}
+                    </p>
+                    {inv.inviteeEmail && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Mail className="w-3 h-3" /> Awaiting registration
+                      </p>
+                    )}
                   </div>
                   <Badge variant={inv.status === "pending" ? "outline" : inv.status === "accepted" ? "default" : "secondary"}>
                     {inv.status}

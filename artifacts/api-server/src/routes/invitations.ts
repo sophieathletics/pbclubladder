@@ -10,7 +10,9 @@ const router: IRouter = Router();
 
 async function enrichInvitation(inv: any) {
   const [inviter] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviterId)).limit(1);
-  const [invitee] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviteeId)).limit(1);
+  const invitee = inv.inviteeId
+    ? await db.select().from(playersTable).where(eq(playersTable.id, inv.inviteeId)).limit(1).then(r => r[0] ?? null)
+    : null;
   const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
   return {
     ...inv,
@@ -32,25 +34,20 @@ router.get("/invitations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  const { inviteeId, teamName } = req.body;
+  const { inviteeId, inviteeEmail, teamName } = req.body;
 
-  if (!inviteeId || !teamName) {
-    res.status(400).json({ error: "inviteeId and teamName are required" });
+  if (!teamName) {
+    res.status(400).json({ error: "teamName is required" });
+    return;
+  }
+  if (!inviteeId && !inviteeEmail) {
+    res.status(400).json({ error: "inviteeId or inviteeEmail is required" });
     return;
   }
 
   const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
   if (!activeSeason) {
     res.status(400).json({ error: "No active season" });
-    return;
-  }
-
-  // Check invitee is not already on a team
-  const existingTeam = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, inviteeId), eq(teamsTable.player2Id, inviteeId)))
-  ).limit(1);
-  if (existingTeam.length > 0) {
-    res.status(400).json({ error: "That player is already on a team this season" });
     return;
   }
 
@@ -63,19 +60,57 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Resolve invitee — look up by ID or email
+  let resolvedInviteeId: string | null = inviteeId ?? null;
+  let resolvedEmail: string | null = inviteeEmail ?? null;
+
+  if (!resolvedInviteeId && resolvedEmail) {
+    // Try to find existing player by email
+    const [found] = await db.select().from(playersTable).where(eq(playersTable.email, resolvedEmail.toLowerCase().trim())).limit(1);
+    if (found) {
+      resolvedInviteeId = found.id;
+      resolvedEmail = null;
+    }
+  }
+
+  // Can't invite yourself
+  if (resolvedInviteeId === player.id) {
+    res.status(400).json({ error: "You cannot invite yourself" });
+    return;
+  }
+
+  // If resolved to a known player, make sure they're not already on a team
+  if (resolvedInviteeId) {
+    const existingTeam = await db.select().from(teamsTable).where(
+      and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, resolvedInviteeId), eq(teamsTable.player2Id, resolvedInviteeId)))
+    ).limit(1);
+    if (existingTeam.length > 0) {
+      res.status(400).json({ error: "That player is already on a team this season" });
+      return;
+    }
+  }
+
   const [inv] = await db.insert(teamInvitationsTable).values({
     seasonId: activeSeason.id,
     inviterId: player.id,
-    inviteeId,
+    inviteeId: resolvedInviteeId ?? undefined,
+    inviteeEmail: resolvedEmail ?? undefined,
     teamName,
     status: "pending",
-  }).returning();
+  } as any).returning();
 
-  const [invitee] = await db.select().from(playersTable).where(eq(playersTable.id, inviteeId)).limit(1);
-  if (invitee?.email) {
-    sendTeamInvitationEmail(invitee.email, player.fullName, teamName, activeSeason.name);
+  // Send email — either to the registered player or the external address
+  const emailTarget = resolvedEmail ?? (resolvedInviteeId
+    ? await db.select().from(playersTable).where(eq(playersTable.id, resolvedInviteeId)).limit(1).then(r => r[0]?.email ?? null)
+    : null);
+
+  if (emailTarget) {
+    sendTeamInvitationEmail(emailTarget, player.fullName, teamName, activeSeason.name);
   }
-  notifyPlayers([inviteeId], "invitation_received", `${player.fullName} invited you to join team "${teamName}"`, "/team");
+
+  if (resolvedInviteeId) {
+    notifyPlayers([resolvedInviteeId], "invitation_received", `${player.fullName} invited you to join team "${teamName}"`, "/team");
+  }
 
   const enriched = await enrichInvitation(inv);
   res.status(201).json(enriched);
@@ -105,7 +140,7 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
   const [team] = await db.insert(teamsTable).values({
     seasonId: inv.seasonId,
     player1Id: inv.inviterId,
-    player2Id: inv.inviteeId,
+    player2Id: inv.inviteeId!,
     teamName: inv.teamName,
     status: "active",
   }).returning();
