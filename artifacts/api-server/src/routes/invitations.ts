@@ -34,7 +34,7 @@ router.get("/invitations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  const { inviteeId, inviteeEmail, teamName } = req.body;
+  const { inviteeId, inviteeEmail, teamName, ladderId, seasonId: bodySeasonId } = req.body;
 
   if (!teamName) {
     res.status(400).json({ error: "teamName is required" });
@@ -45,7 +45,27 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  // Resolve active season for the chosen ladder
+  let activeSeason: any = null;
+  if (bodySeasonId) {
+    [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, bodySeasonId)).limit(1);
+  } else if (ladderId) {
+    [activeSeason] = await db.select().from(seasonsTable)
+      .where(and(eq(seasonsTable.ladderId, ladderId), eq(seasonsTable.isActive, true)))
+      .limit(1);
+    if (!activeSeason) {
+      res.status(400).json({ error: "No active season for this ladder" });
+      return;
+    }
+  } else {
+    // Fallback: only allowed if exactly one active season globally
+    const allActive = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+    if (allActive.length === 1) activeSeason = allActive[0];
+    else if (allActive.length > 1) {
+      res.status(400).json({ error: "ladderId is required (multiple active ladders)" });
+      return;
+    }
+  }
   if (!activeSeason) {
     res.status(400).json({ error: "No active season" });
     return;
@@ -130,9 +150,10 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  if (!activeSeason) {
-    res.status(400).json({ error: "No active season" });
+  // Use the invitation's season (per-ladder), and ensure it is still active
+  const [invitationSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
+  if (!invitationSeason || !invitationSeason.isActive) {
+    res.status(400).json({ error: "Invitation's season is no longer active" });
     return;
   }
 
@@ -170,7 +191,7 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     player1: sanitizePlayer(inviter),
     player2: sanitizePlayer(player),
     standing: await db.select().from(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, team.id)).limit(1).then(r => r[0] ?? null),
-    season: activeSeason,
+    season: invitationSeason,
   };
   res.json(enriched);
 });

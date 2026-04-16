@@ -134,10 +134,107 @@ export const GetPlayerResponse = zod.object({
 });
 
 /**
+ * @summary List all ladders
+ */
+export const ListLaddersQueryParams = zod.object({
+  active_only: zod.coerce.boolean().optional(),
+});
+
+export const ListLaddersResponseItem = zod
+  .object({
+    id: zod.string(),
+    name: zod.string(),
+    description: zod.string().nullish(),
+    isActive: zod.boolean(),
+    sortOrder: zod.string().optional(),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      activeSeason: zod
+        .object({
+          id: zod.string(),
+          ladderId: zod.string().nullish(),
+          name: zod.string(),
+          startDate: zod.string(),
+          endDate: zod.string(),
+          isActive: zod.boolean(),
+          createdAt: zod.string(),
+        })
+        .nullish(),
+      teamCount: zod.number().optional(),
+    }),
+  );
+export const ListLaddersResponse = zod.array(ListLaddersResponseItem);
+
+/**
+ * @summary Create a new ladder (admin only)
+ */
+export const CreateLadderBody = zod.object({
+  name: zod.string(),
+  description: zod.string().optional(),
+  sortOrder: zod.string().optional(),
+});
+
+export const GetLadderInfoParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetLadderInfoResponse = zod
+  .object({
+    id: zod.string(),
+    name: zod.string(),
+    description: zod.string().nullish(),
+    isActive: zod.boolean(),
+    sortOrder: zod.string().optional(),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      activeSeason: zod
+        .object({
+          id: zod.string(),
+          ladderId: zod.string().nullish(),
+          name: zod.string(),
+          startDate: zod.string(),
+          endDate: zod.string(),
+          isActive: zod.boolean(),
+          createdAt: zod.string(),
+        })
+        .nullish(),
+      teamCount: zod.number().optional(),
+    }),
+  );
+
+/**
+ * @summary Update a ladder (admin only)
+ */
+export const UpdateLadderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateLadderBody = zod.object({
+  name: zod.string().optional(),
+  description: zod.string().optional(),
+  isActive: zod.boolean().optional(),
+  sortOrder: zod.string().optional(),
+});
+
+export const UpdateLadderResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  description: zod.string().nullish(),
+  isActive: zod.boolean(),
+  sortOrder: zod.string().optional(),
+  createdAt: zod.string(),
+});
+
+/**
  * @summary List all seasons
  */
 export const ListSeasonsResponseItem = zod.object({
   id: zod.string(),
+  ladderId: zod.string().nullish(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
@@ -150,16 +247,22 @@ export const ListSeasonsResponse = zod.array(ListSeasonsResponseItem);
  * @summary Create a new season (admin only)
  */
 export const CreateSeasonBody = zod.object({
+  ladderId: zod.string(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
 });
 
 /**
- * @summary Get active season
+ * @summary Get active season for a ladder
  */
+export const GetActiveSeasonQueryParams = zod.object({
+  ladder_id: zod.coerce.string().optional(),
+});
+
 export const GetActiveSeasonResponse = zod.object({
   id: zod.string(),
+  ladderId: zod.string().nullish(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
@@ -173,6 +276,7 @@ export const GetSeasonParams = zod.object({
 
 export const GetSeasonResponse = zod.object({
   id: zod.string(),
+  ladderId: zod.string().nullish(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
@@ -189,6 +293,7 @@ export const ActivateSeasonParams = zod.object({
 
 export const ActivateSeasonResponse = zod.object({
   id: zod.string(),
+  ladderId: zod.string().nullish(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
@@ -205,6 +310,7 @@ export const DeactivateSeasonParams = zod.object({
 
 export const DeactivateSeasonResponse = zod.object({
   id: zod.string(),
+  ladderId: zod.string().nullish(),
   name: zod.string(),
   startDate: zod.string(),
   endDate: zod.string(),
@@ -270,6 +376,7 @@ export const ListTeamsResponseItem = zod
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -284,6 +391,10 @@ export const ListTeamsResponse = zod.array(ListTeamsResponseItem);
 /**
  * @summary Get the current user's team for the active season
  */
+export const GetMyTeamQueryParams = zod.object({
+  ladder_id: zod.coerce.string().optional(),
+});
+
 export const GetMyTeamResponse = zod
   .object({
     id: zod.string(),
@@ -333,6 +444,7 @@ export const GetMyTeamResponse = zod
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -342,6 +454,70 @@ export const GetMyTeamResponse = zod
         .optional(),
     }),
   );
+
+/**
+ * @summary Get the current user's teams across all active ladders
+ */
+export const GetMyTeamsResponseItem = zod
+  .object({
+    id: zod.string(),
+    seasonId: zod.string(),
+    player1Id: zod.string(),
+    player2Id: zod.string(),
+    teamName: zod.string(),
+    status: zod.enum(["pending", "active", "inactive"]),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      player1: zod
+        .object({
+          id: zod.string(),
+          fullName: zod.string(),
+          email: zod.string(),
+          phone: zod.string().optional(),
+          role: zod.enum(["player", "admin"]),
+          isActive: zod.boolean(),
+          createdAt: zod.string(),
+        })
+        .optional(),
+      player2: zod
+        .object({
+          id: zod.string(),
+          fullName: zod.string(),
+          email: zod.string(),
+          phone: zod.string().optional(),
+          role: zod.enum(["player", "admin"]),
+          isActive: zod.boolean(),
+          createdAt: zod.string(),
+        })
+        .optional(),
+      standing: zod
+        .object({
+          id: zod.string(),
+          seasonId: zod.string(),
+          teamId: zod.string(),
+          position: zod.number(),
+          wins: zod.number(),
+          losses: zod.number(),
+          lastMatchDate: zod.string().optional(),
+          createdAt: zod.string(),
+        })
+        .optional(),
+      season: zod
+        .object({
+          id: zod.string(),
+          ladderId: zod.string().nullish(),
+          name: zod.string(),
+          startDate: zod.string(),
+          endDate: zod.string(),
+          isActive: zod.boolean(),
+          createdAt: zod.string(),
+        })
+        .optional(),
+    }),
+  );
+export const GetMyTeamsResponse = zod.array(GetMyTeamsResponseItem);
 
 export const GetTeamParams = zod.object({
   id: zod.coerce.string(),
@@ -396,6 +572,7 @@ export const GetTeamResponse = zod
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -500,6 +677,7 @@ export const GetTeamMatchesResponseItem = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -559,6 +737,7 @@ export const GetTeamMatchesResponseItem = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -674,6 +853,7 @@ export const UpdateTeamStatusResponse = zod
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -722,6 +902,7 @@ export const ListInvitationsResponse = zod.object({
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -765,6 +946,7 @@ export const ListInvitationsResponse = zod.object({
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -840,6 +1022,7 @@ export const AcceptInvitationResponse = zod
       season: zod
         .object({
           id: zod.string(),
+          ladderId: zod.string().nullish(),
           name: zod.string(),
           startDate: zod.string(),
           endDate: zod.string(),
@@ -888,6 +1071,7 @@ export const GetLadderResponse = zod.object({
   season: zod
     .object({
       id: zod.string(),
+      ladderId: zod.string().nullish(),
       name: zod.string(),
       startDate: zod.string(),
       endDate: zod.string(),
@@ -958,6 +1142,7 @@ export const GetLadderResponse = zod.object({
                 season: zod
                   .object({
                     id: zod.string(),
+                    ladderId: zod.string().nullish(),
                     name: zod.string(),
                     startDate: zod.string(),
                     endDate: zod.string(),
@@ -1039,6 +1224,7 @@ export const GetTopLadderResponseItem = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1056,6 +1242,10 @@ export const GetTopLadderResponse = zod.array(GetTopLadderResponseItem);
 /**
  * @summary Get current user's ladder position and nearby teams
  */
+export const GetMyLadderPositionQueryParams = zod.object({
+  ladder_id: zod.coerce.string().optional(),
+});
+
 export const GetMyLadderPositionResponse = zod.object({
   myStanding: zod
     .object({
@@ -1119,6 +1309,7 @@ export const GetMyLadderPositionResponse = zod.object({
               season: zod
                 .object({
                   id: zod.string(),
+                  ladderId: zod.string().nullish(),
                   name: zod.string(),
                   startDate: zod.string(),
                   endDate: zod.string(),
@@ -1196,6 +1387,7 @@ export const GetMyLadderPositionResponse = zod.object({
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -1286,6 +1478,7 @@ export const UpdateLadderPositionResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1358,6 +1551,7 @@ export const GetInactivityLogResponseItem = zod.object({
         season: zod
           .object({
             id: zod.string(),
+            ladderId: zod.string().nullish(),
             name: zod.string(),
             startDate: zod.string(),
             endDate: zod.string(),
@@ -1448,6 +1642,7 @@ export const ListChallengesResponseItem = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1507,6 +1702,7 @@ export const ListChallengesResponseItem = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1653,6 +1849,7 @@ export const GetMyActiveChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1712,6 +1909,7 @@ export const GetMyActiveChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1851,6 +2049,7 @@ export const GetChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -1910,6 +2109,7 @@ export const GetChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2049,6 +2249,7 @@ export const AcceptChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2108,6 +2309,7 @@ export const AcceptChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2247,6 +2449,7 @@ export const DeclineChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2306,6 +2509,7 @@ export const DeclineChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2445,6 +2649,7 @@ export const CancelChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2504,6 +2709,7 @@ export const CancelChallengeResponse = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -2665,6 +2871,7 @@ export const BookMatchResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -2724,6 +2931,7 @@ export const BookMatchResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -2971,6 +3179,7 @@ export const ListMatchesResponseItem = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3030,6 +3239,7 @@ export const ListMatchesResponseItem = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3170,6 +3380,7 @@ export const GetMatchResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3229,6 +3440,7 @@ export const GetMatchResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3382,6 +3594,7 @@ export const SubmitScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3441,6 +3654,7 @@ export const SubmitScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3583,6 +3797,7 @@ export const ConfirmScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3642,6 +3857,7 @@ export const ConfirmScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3788,6 +4004,7 @@ export const DisputeScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -3847,6 +4064,7 @@ export const DisputeScoreResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -4022,6 +4240,7 @@ export const ListAdminPlayersResponseItem = zod
             season: zod
               .object({
                 id: zod.string(),
+                ladderId: zod.string().nullish(),
                 name: zod.string(),
                 startDate: zod.string(),
                 endDate: zod.string(),
@@ -4147,6 +4366,7 @@ export const ListDisputesResponseItem = zod.object({
                     season: zod
                       .object({
                         id: zod.string(),
+                        ladderId: zod.string().nullish(),
                         name: zod.string(),
                         startDate: zod.string(),
                         endDate: zod.string(),
@@ -4206,6 +4426,7 @@ export const ListDisputesResponseItem = zod.object({
                     season: zod
                       .object({
                         id: zod.string(),
+                        ladderId: zod.string().nullish(),
                         name: zod.string(),
                         startDate: zod.string(),
                         endDate: zod.string(),
@@ -4361,6 +4582,7 @@ export const ResolveDisputeResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),
@@ -4420,6 +4642,7 @@ export const ResolveDisputeResponse = zod
                   season: zod
                     .object({
                       id: zod.string(),
+                      ladderId: zod.string().nullish(),
                       name: zod.string(),
                       startDate: zod.string(),
                       endDate: zod.string(),

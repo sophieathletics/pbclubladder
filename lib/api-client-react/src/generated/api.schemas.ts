@@ -93,6 +93,7 @@ export interface LadderStanding {
 
 export interface Season {
   id: string;
+  ladderId?: string | null;
   name: string;
   startDate: string;
   endDate: string;
@@ -111,7 +112,35 @@ export type PlayerWithTeam = Player & {
   currentTeam?: TeamWithPlayers;
 };
 
+export interface Ladder {
+  id: string;
+  name: string;
+  description?: string | null;
+  isActive: boolean;
+  sortOrder?: string;
+  createdAt: string;
+}
+
+export type LadderWithSeason = Ladder & {
+  activeSeason?: Season | null;
+  teamCount?: number;
+};
+
+export interface CreateLadderBody {
+  name: string;
+  description?: string;
+  sortOrder?: string;
+}
+
+export interface UpdateLadderBody {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: string;
+}
+
 export interface CreateSeasonBody {
+  ladderId: string;
   name: string;
   startDate: string;
   endDate: string;
@@ -381,10 +410,22 @@ export type ListPlayersParams = {
   limit?: number;
 };
 
+export type ListLaddersParams = {
+  active_only?: boolean;
+};
+
+export type GetActiveSeasonParams = {
+  ladder_id?: string;
+};
+
 export type ListTeamsParams = {
   season_id?: string;
   search?: string;
   status?: string;
+};
+
+export type GetMyTeamParams = {
+  ladder_id?: string;
 };
 
 export type GetTeamMatchesParams = {
@@ -396,6 +437,10 @@ export type GetLadderParams = {
   search?: string;
   limit?: number;
   offset?: number;
+};
+
+export type GetMyLadderPositionParams = {
+  ladder_id?: string;
 };
 
 export type ListChallengesParams = {

@@ -8,6 +8,7 @@
 
 export interface Season {
   id: string;
+  ladderId?: string | null;
   name: string;
   startDate: string;
   endDate: string;

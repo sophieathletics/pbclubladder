@@ -47,27 +47,39 @@ router.get("/teams", requireAuth, async (req, res): Promise<void> => {
 
 router.get("/teams/my-team", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  // Get active season
-  const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  if (!activeSeason) {
+  const ladderId = req.query.ladder_id as string | undefined;
+
+  // Find active season(s)
+  let activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  if (ladderId) activeSeasons = activeSeasons.filter(s => s.ladderId === ladderId);
+  if (activeSeasons.length === 0) {
     res.status(404).json({ error: "No active season" });
     return;
   }
 
-  const [team] = await db.select().from(teamsTable).where(
-    and(
-      eq(teamsTable.seasonId, activeSeason.id),
-      or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id))
-    )
-  ).limit(1);
-
-  if (!team) {
-    res.status(404).json({ error: "No team found for this season" });
-    return;
+  for (const s of activeSeasons) {
+    const [team] = await db.select().from(teamsTable).where(
+      and(eq(teamsTable.seasonId, s.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    ).limit(1);
+    if (team) {
+      res.json(await enrichTeam(team));
+      return;
+    }
   }
+  res.status(404).json({ error: "No team found" });
+});
 
-  const enriched = await enrichTeam(team);
-  res.json(enriched);
+router.get("/teams/my-teams", requireAuth, async (req, res): Promise<void> => {
+  const player = (req as any).player;
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  const results: any[] = [];
+  for (const s of activeSeasons) {
+    const [team] = await db.select().from(teamsTable).where(
+      and(eq(teamsTable.seasonId, s.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    ).limit(1);
+    if (team) results.push(await enrichTeam(team));
+  }
+  res.json(results);
 });
 
 router.get("/teams/:id", requireAuth, async (req, res): Promise<void> => {

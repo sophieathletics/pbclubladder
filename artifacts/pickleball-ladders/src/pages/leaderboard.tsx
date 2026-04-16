@@ -1,18 +1,34 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { useGetLadder } from "@workspace/api-client-react";
+import { useState, useMemo, useEffect } from "react";
+import { useGetLadder, useListLadders } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Users, Medal, Search } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useGetLadder({ search: search || undefined });
+  const { data: ladders } = useListLadders();
+  const ladderList = (ladders as any[]) ?? [];
+
+  const [ladderId, setLadderId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!ladderId && ladderList.length > 0) {
+      const withSeason = ladderList.find(l => l.activeSeason) ?? ladderList[0];
+      setLadderId(withSeason.id);
+    }
+  }, [ladderList, ladderId]);
+
+  const { data, isLoading } = useGetLadder(
+    { search: search || undefined, ladder_id: ladderId },
+    { query: { enabled: !!ladderId } }
+  );
 
   const standings = data?.standings ?? [];
   const season = data?.season;
+  const currentLadder = useMemo(() => ladderList.find(l => l.id === ladderId), [ladderList, ladderId]);
 
   function positionColor(pos: number) {
     if (pos === 1) return "bg-yellow-400/20 text-yellow-600 border border-yellow-400/40";
@@ -30,19 +46,36 @@ export default function Leaderboard() {
               <Trophy className="w-8 h-8 text-primary" />
               Leaderboard
             </h1>
-            {season && (
-              <p className="text-muted-foreground mt-1">Season: <span className="font-semibold text-foreground">{season.name}</span></p>
+            {currentLadder && (
+              <p className="text-muted-foreground mt-1">
+                Ladder: <span className="font-semibold text-foreground">{currentLadder.name}</span>
+                {season && <> · Season: <span className="font-semibold text-foreground">{season.name}</span></>}
+              </p>
             )}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              className="pl-9 w-64"
-              placeholder="Search teams or players..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              data-testid="input-search"
-            />
+          <div className="flex flex-col sm:flex-row gap-2">
+            {ladderList.length > 0 && (
+              <Select value={ladderId} onValueChange={setLadderId}>
+                <SelectTrigger className="w-full sm:w-48" data-testid="select-ladder">
+                  <SelectValue placeholder="Select ladder" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ladderList.map((l: any) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                className="pl-9 w-full sm:w-64"
+                placeholder="Search teams or players..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                data-testid="input-search"
+              />
+            </div>
           </div>
         </div>
 

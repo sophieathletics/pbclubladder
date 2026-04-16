@@ -217,6 +217,85 @@ paths:
               schema:
                 $ref: "#/components/schemas/Player"
 
+  # LADDERS
+  /ladders:
+    get:
+      operationId: listLadders
+      tags: [ladders]
+      summary: List all ladders
+      parameters:
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of ladders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LadderWithSeason"
+    post:
+      operationId: createLadder
+      tags: [ladders]
+      summary: Create a new ladder (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLadderBody"
+      responses:
+        "201":
+          description: Ladder created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ladder"
+
+  /ladders/{id}:
+    get:
+      operationId: getLadderInfo
+      tags: [ladders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ladder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LadderWithSeason"
+    patch:
+      operationId: updateLadder
+      tags: [ladders]
+      summary: Update a ladder (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLadderBody"
+      responses:
+        "200":
+          description: Ladder updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ladder"
+
   # SEASONS
   /seasons:
     get:
@@ -254,7 +333,12 @@ paths:
     get:
       operationId: getActiveSeason
       tags: [seasons]
-      summary: Get active season
+      summary: Get active season for a ladder
+      parameters:
+        - name: ladder_id
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: Active season
@@ -359,6 +443,12 @@ paths:
       operationId: getMyTeam
       tags: [teams]
       summary: Get the current user's team for the active season
+      parameters:
+        - name: ladder_id
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: My team
@@ -372,6 +462,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /teams/my-teams:
+    get:
+      operationId: getMyTeams
+      tags: [teams]
+      summary: Get the current user's teams across all active ladders
+      responses:
+        "200":
+          description: List of my teams (one per ladder)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamWithPlayers"
 
   /teams/{id}:
     get:
@@ -581,6 +686,12 @@ paths:
       operationId: getMyLadderPosition
       tags: [ladder]
       summary: Get current user's ladder position and nearby teams
+      parameters:
+        - name: ladder_id
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: My ladder position with challengeable teams
@@ -1265,12 +1376,73 @@ components:
             currentTeam:
               $ref: "#/components/schemas/TeamWithPlayers"
 
+    # Ladder
+    Ladder:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+        sortOrder:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - isActive
+        - createdAt
+
+    LadderWithSeason:
+      allOf:
+        - $ref: "#/components/schemas/Ladder"
+        - type: object
+          properties:
+            activeSeason:
+              $ref: "#/components/schemas/Season"
+              nullable: true
+            teamCount:
+              type: integer
+
+    CreateLadderBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: string
+      required:
+        - name
+
+    UpdateLadderBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        sortOrder:
+          type: string
+
     # Season
     Season:
       type: object
       properties:
         id:
           type: string
+        ladderId:
+          type: string
+          nullable: true
         name:
           type: string
         startDate:
@@ -1292,6 +1464,8 @@ components:
     CreateSeasonBody:
       type: object
       properties:
+        ladderId:
+          type: string
         name:
           type: string
         startDate:
@@ -1299,6 +1473,7 @@ components:
         endDate:
           type: string
       required:
+        - ladderId
         - name
         - startDate
         - endDate

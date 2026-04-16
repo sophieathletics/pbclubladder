@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateSeasonBody {
-  ladderId: string;
-  name: string;
-  startDate: string;
-  endDate: string;
+export interface UpdateLadderBody {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+  sortOrder?: string;
 }

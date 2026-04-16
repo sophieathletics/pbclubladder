@@ -29,12 +29,18 @@ async function enrichStanding(standing: any) {
 }
 
 router.get("/ladder", async (req, res): Promise<void> => {
-  const { season_id, search, limit: limitQ, offset: offsetQ } = req.query;
+  const { season_id, ladder_id, search, limit: limitQ, offset: offsetQ } = req.query;
   const limit = limitQ ? Math.min(parseInt(limitQ as string), 200) : 200;
   const offset = offsetQ ? parseInt(offsetQ as string) : 0;
 
-  // Resolve season
+  // Resolve season: explicit season_id > ladder_id's active season > any active season
   let seasonId = season_id as string | undefined;
+  if (!seasonId && ladder_id) {
+    const [active] = await db.select().from(seasonsTable)
+      .where(and(eq(seasonsTable.ladderId, ladder_id as string), eq(seasonsTable.isActive, true)))
+      .limit(1);
+    seasonId = active?.id;
+  }
   if (!seasonId) {
     const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
     seasonId = active?.id;
@@ -84,7 +90,24 @@ router.get("/ladder/top", async (_req, res): Promise<void> => {
 
 router.get("/ladder/my-position", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  const ladderId = req.query.ladder_id as string | undefined;
+
+  let active: any = null;
+  if (ladderId) {
+    [active] = await db.select().from(seasonsTable)
+      .where(and(eq(seasonsTable.ladderId, ladderId), eq(seasonsTable.isActive, true)))
+      .limit(1);
+  } else {
+    // Pick the first active season where the player has a team
+    const allActive = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+    for (const s of allActive) {
+      const [t] = await db.select().from(teamsTable).where(
+        and(eq(teamsTable.seasonId, s.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+      ).limit(1);
+      if (t) { active = s; break; }
+    }
+    if (!active) active = allActive[0];
+  }
 
   if (!active) {
     res.json({ myStanding: null, challengeableTeams: [], hasActiveChallenge: false });

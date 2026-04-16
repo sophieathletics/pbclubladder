@@ -10,22 +10,24 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promise<void> => {
-  const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  if (!activeSeason) {
-    res.json({ processed: 0, details: ["No active season"] });
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  if (activeSeasons.length === 0) {
+    res.json({ processed: 0, details: ["No active seasons"] });
     return;
   }
 
-  const standings = await db.select().from(ladderStandingsTable)
-    .where(eq(ladderStandingsTable.seasonId, activeSeason.id))
-    .orderBy(asc(ladderStandingsTable.position));
-
   const details: string[] = [];
   const now = new Date();
-  const seasonStart = new Date(activeSeason.startDate);
   const INACTIVITY_DAYS = 14;
 
-  for (const standing of standings) {
+  for (const activeSeason of activeSeasons) {
+    const standings = await db.select().from(ladderStandingsTable)
+      .where(eq(ladderStandingsTable.seasonId, activeSeason.id))
+      .orderBy(asc(ladderStandingsTable.position));
+
+    const seasonStart = new Date(activeSeason.startDate);
+
+    for (const standing of standings) {
     const refDate = standing.lastMatchDate ?? standing.lastInactivityCheck ?? seasonStart;
     const daysSince = (now.getTime() - new Date(refDate).getTime()) / (1000 * 60 * 60 * 24);
 
@@ -65,6 +67,7 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
     }
 
     details.push(`Team ${standing.teamId} dropped from ${oldPos} to ${newPos}`);
+  }
   }
 
   res.json({ processed: details.length, details });

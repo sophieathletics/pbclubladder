@@ -25,21 +25,28 @@ import type {
   ChangePasswordBody,
   CreateChallengeBody,
   CreateInvitationBody,
+  CreateLadderBody,
   CreateSeasonBody,
   CronJobResult,
   DisputeScoreBody,
   DisputeWithDetails,
   ErrorResponse,
+  GetActiveSeasonParams,
   GetLadderParams,
+  GetMyLadderPositionParams,
+  GetMyTeamParams,
   GetTeamMatchesParams,
   HealthStatus,
   InactivityDrop,
   InvitationsResponse,
+  Ladder,
   LadderResponse,
   LadderStandingWithTeam,
+  LadderWithSeason,
   ListAdminPlayersParams,
   ListChallengesParams,
   ListDisputesParams,
+  ListLaddersParams,
   ListMatchesParams,
   ListNotificationsParams,
   ListPlayersParams,
@@ -58,6 +65,7 @@ import type {
   SuccessResponse,
   TeamInvitation,
   TeamWithPlayers,
+  UpdateLadderBody,
   UpdatePositionBody,
   UpdateProfileBody,
   UpdateTeamStatusBody,
@@ -820,6 +828,353 @@ export function useGetPlayer<
 }
 
 /**
+ * @summary List all ladders
+ */
+export const getListLaddersUrl = (params?: ListLaddersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ladders?${stringifiedParams}`
+    : `/api/ladders`;
+};
+
+export const listLadders = async (
+  params?: ListLaddersParams,
+  options?: RequestInit,
+): Promise<LadderWithSeason[]> => {
+  return customFetch<LadderWithSeason[]>(getListLaddersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLaddersQueryKey = (params?: ListLaddersParams) => {
+  return [`/api/ladders`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLaddersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLadders>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLaddersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLadders>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLaddersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLadders>>> = ({
+    signal,
+  }) => listLadders(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLadders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListLaddersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listLadders>>
+>;
+export type ListLaddersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all ladders
+ */
+
+export function useListLadders<
+  TData = Awaited<ReturnType<typeof listLadders>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListLaddersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listLadders>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListLaddersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new ladder (admin only)
+ */
+export const getCreateLadderUrl = () => {
+  return `/api/ladders`;
+};
+
+export const createLadder = async (
+  createLadderBody: CreateLadderBody,
+  options?: RequestInit,
+): Promise<Ladder> => {
+  return customFetch<Ladder>(getCreateLadderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createLadderBody),
+  });
+};
+
+export const getCreateLadderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLadder>>,
+    TError,
+    { data: BodyType<CreateLadderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLadder>>,
+  TError,
+  { data: BodyType<CreateLadderBody> },
+  TContext
+> => {
+  const mutationKey = ["createLadder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLadder>>,
+    { data: BodyType<CreateLadderBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createLadder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLadderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLadder>>
+>;
+export type CreateLadderMutationBody = BodyType<CreateLadderBody>;
+export type CreateLadderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new ladder (admin only)
+ */
+export const useCreateLadder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLadder>>,
+    TError,
+    { data: BodyType<CreateLadderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createLadder>>,
+  TError,
+  { data: BodyType<CreateLadderBody> },
+  TContext
+> => {
+  return useMutation(getCreateLadderMutationOptions(options));
+};
+
+export const getGetLadderInfoUrl = (id: string) => {
+  return `/api/ladders/${id}`;
+};
+
+export const getLadderInfo = async (
+  id: string,
+  options?: RequestInit,
+): Promise<LadderWithSeason> => {
+  return customFetch<LadderWithSeason>(getGetLadderInfoUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLadderInfoQueryKey = (id: string) => {
+  return [`/api/ladders/${id}`] as const;
+};
+
+export const getGetLadderInfoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLadderInfo>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLadderInfo>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLadderInfoQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLadderInfo>>> = ({
+    signal,
+  }) => getLadderInfo(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLadderInfo>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLadderInfoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLadderInfo>>
+>;
+export type GetLadderInfoQueryError = ErrorType<unknown>;
+
+export function useGetLadderInfo<
+  TData = Awaited<ReturnType<typeof getLadderInfo>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLadderInfo>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLadderInfoQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a ladder (admin only)
+ */
+export const getUpdateLadderUrl = (id: string) => {
+  return `/api/ladders/${id}`;
+};
+
+export const updateLadder = async (
+  id: string,
+  updateLadderBody: UpdateLadderBody,
+  options?: RequestInit,
+): Promise<Ladder> => {
+  return customFetch<Ladder>(getUpdateLadderUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateLadderBody),
+  });
+};
+
+export const getUpdateLadderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLadder>>,
+    TError,
+    { id: string; data: BodyType<UpdateLadderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateLadder>>,
+  TError,
+  { id: string; data: BodyType<UpdateLadderBody> },
+  TContext
+> => {
+  const mutationKey = ["updateLadder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateLadder>>,
+    { id: string; data: BodyType<UpdateLadderBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateLadder(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateLadderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateLadder>>
+>;
+export type UpdateLadderMutationBody = BodyType<UpdateLadderBody>;
+export type UpdateLadderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update a ladder (admin only)
+ */
+export const useUpdateLadder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLadder>>,
+    TError,
+    { id: string; data: BodyType<UpdateLadderBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateLadder>>,
+  TError,
+  { id: string; data: BodyType<UpdateLadderBody> },
+  TContext
+> => {
+  return useMutation(getUpdateLadderMutationOptions(options));
+};
+
+/**
  * @summary List all seasons
  */
 export const getListSeasonsUrl = () => {
@@ -979,43 +1334,59 @@ export const useCreateSeason = <
 };
 
 /**
- * @summary Get active season
+ * @summary Get active season for a ladder
  */
-export const getGetActiveSeasonUrl = () => {
-  return `/api/seasons/active`;
+export const getGetActiveSeasonUrl = (params?: GetActiveSeasonParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/seasons/active?${stringifiedParams}`
+    : `/api/seasons/active`;
 };
 
 export const getActiveSeason = async (
+  params?: GetActiveSeasonParams,
   options?: RequestInit,
 ): Promise<Season> => {
-  return customFetch<Season>(getGetActiveSeasonUrl(), {
+  return customFetch<Season>(getGetActiveSeasonUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetActiveSeasonQueryKey = () => {
-  return [`/api/seasons/active`] as const;
+export const getGetActiveSeasonQueryKey = (params?: GetActiveSeasonParams) => {
+  return [`/api/seasons/active`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetActiveSeasonQueryOptions = <
   TData = Awaited<ReturnType<typeof getActiveSeason>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getActiveSeason>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetActiveSeasonParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveSeason>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetActiveSeasonQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetActiveSeasonQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveSeason>>> = ({
     signal,
-  }) => getActiveSeason({ signal, ...requestOptions });
+  }) => getActiveSeason(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getActiveSeason>>,
@@ -1030,21 +1401,24 @@ export type GetActiveSeasonQueryResult = NonNullable<
 export type GetActiveSeasonQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Get active season
+ * @summary Get active season for a ladder
  */
 
 export function useGetActiveSeason<
   TData = Awaited<ReturnType<typeof getActiveSeason>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getActiveSeason>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetActiveSeasonQueryOptions(options);
+>(
+  params?: GetActiveSeasonParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getActiveSeason>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetActiveSeasonQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1396,37 +1770,57 @@ export function useListTeams<
 /**
  * @summary Get the current user's team for the active season
  */
-export const getGetMyTeamUrl = () => {
-  return `/api/teams/my-team`;
+export const getGetMyTeamUrl = (params?: GetMyTeamParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/teams/my-team?${stringifiedParams}`
+    : `/api/teams/my-team`;
 };
 
 export const getMyTeam = async (
+  params?: GetMyTeamParams,
   options?: RequestInit,
 ): Promise<TeamWithPlayers> => {
-  return customFetch<TeamWithPlayers>(getGetMyTeamUrl(), {
+  return customFetch<TeamWithPlayers>(getGetMyTeamUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetMyTeamQueryKey = () => {
-  return [`/api/teams/my-team`] as const;
+export const getGetMyTeamQueryKey = (params?: GetMyTeamParams) => {
+  return [`/api/teams/my-team`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetMyTeamQueryOptions = <
   TData = Awaited<ReturnType<typeof getMyTeam>>,
   TError = ErrorType<ErrorResponse>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getMyTeam>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetMyTeamParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyTeam>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetMyTeamQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetMyTeamQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyTeam>>> = ({
     signal,
-  }) => getMyTeam({ signal, ...requestOptions });
+  }) => getMyTeam(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMyTeam>>,
@@ -1447,11 +1841,93 @@ export type GetMyTeamQueryError = ErrorType<ErrorResponse>;
 export function useGetMyTeam<
   TData = Awaited<ReturnType<typeof getMyTeam>>,
   TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetMyTeamParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyTeam>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyTeamQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the current user's teams across all active ladders
+ */
+export const getGetMyTeamsUrl = () => {
+  return `/api/teams/my-teams`;
+};
+
+export const getMyTeams = async (
+  options?: RequestInit,
+): Promise<TeamWithPlayers[]> => {
+  return customFetch<TeamWithPlayers[]>(getGetMyTeamsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyTeamsQueryKey = () => {
+  return [`/api/teams/my-teams`] as const;
+};
+
+export const getGetMyTeamsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyTeams>>,
+  TError = ErrorType<unknown>,
 >(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getMyTeam>>, TError, TData>;
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyTeams>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyTeamsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyTeams>>> = ({
+    signal,
+  }) => getMyTeams({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyTeams>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyTeamsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyTeams>>
+>;
+export type GetMyTeamsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current user's teams across all active ladders
+ */
+
+export function useGetMyTeams<
+  TData = Awaited<ReturnType<typeof getMyTeams>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyTeams>>,
+    TError,
+    TData
+  >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetMyTeamQueryOptions(options);
+  const queryOptions = getGetMyTeamsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -2311,41 +2787,63 @@ export function useGetTopLadder<
 /**
  * @summary Get current user's ladder position and nearby teams
  */
-export const getGetMyLadderPositionUrl = () => {
-  return `/api/ladder/my-position`;
+export const getGetMyLadderPositionUrl = (
+  params?: GetMyLadderPositionParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/ladder/my-position?${stringifiedParams}`
+    : `/api/ladder/my-position`;
 };
 
 export const getMyLadderPosition = async (
+  params?: GetMyLadderPositionParams,
   options?: RequestInit,
 ): Promise<MyLadderPosition> => {
-  return customFetch<MyLadderPosition>(getGetMyLadderPositionUrl(), {
+  return customFetch<MyLadderPosition>(getGetMyLadderPositionUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetMyLadderPositionQueryKey = () => {
-  return [`/api/ladder/my-position`] as const;
+export const getGetMyLadderPositionQueryKey = (
+  params?: GetMyLadderPositionParams,
+) => {
+  return [`/api/ladder/my-position`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetMyLadderPositionQueryOptions = <
   TData = Awaited<ReturnType<typeof getMyLadderPosition>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getMyLadderPosition>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetMyLadderPositionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyLadderPosition>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetMyLadderPositionQueryKey();
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMyLadderPositionQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getMyLadderPosition>>
-  > = ({ signal }) => getMyLadderPosition({ signal, ...requestOptions });
+  > = ({ signal }) =>
+    getMyLadderPosition(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getMyLadderPosition>>,
@@ -2366,15 +2864,18 @@ export type GetMyLadderPositionQueryError = ErrorType<unknown>;
 export function useGetMyLadderPosition<
   TData = Awaited<ReturnType<typeof getMyLadderPosition>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getMyLadderPosition>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetMyLadderPositionQueryOptions(options);
+>(
+  params?: GetMyLadderPositionParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMyLadderPosition>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyLadderPositionQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

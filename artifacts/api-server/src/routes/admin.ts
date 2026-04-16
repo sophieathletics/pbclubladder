@@ -12,22 +12,24 @@ const router: IRouter = Router();
 
 router.get("/admin/stats", requireAdmin, async (_req, res): Promise<void> => {
   const [totalPlayers] = await db.select({ count: sql<number>`count(*)::int` }).from(playersTable).where(eq(playersTable.isActive, true));
-  const [activeSeason] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
 
   let totalTeams = 0;
   let matchesThisSeason = 0;
 
-  if (activeSeason) {
-    const [teamsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(teamsTable).where(eq(teamsTable.seasonId, activeSeason.id));
-    totalTeams = teamsCount?.count ?? 0;
+  if (activeSeasons.length > 0) {
+    const seasonIds = activeSeasons.map(s => s.id);
+    const allTeams = await db.select().from(teamsTable);
+    totalTeams = allTeams.filter(t => seasonIds.includes(t.seasonId)).length;
 
-    const challenges = await db.select().from(challengesTable).where(eq(challengesTable.seasonId, activeSeason.id));
-    const challengeIds = challenges.map(c => c.id);
+    const allChallenges = await db.select().from(challengesTable);
+    const challengeIds = allChallenges.filter(c => seasonIds.includes(c.seasonId)).map(c => c.id);
     if (challengeIds.length > 0) {
       const matches = await db.select().from(matchesTable);
       matchesThisSeason = matches.filter(m => challengeIds.includes(m.challengeId) && m.status === "completed").length;
     }
   }
+  const activeSeason = activeSeasons[0];
 
   const disputes = await db.select().from(matchResultsTable)
     .where(and(sql`dispute_reason IS NOT NULL`, eq(matchResultsTable.disputeResolved, false)));
@@ -59,18 +61,16 @@ router.get("/admin/players", requireAdmin, async (req, res): Promise<void> => {
     players = await db.select().from(playersTable).limit(limit).offset(offset);
   }
 
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  const seasonIds = activeSeasons.map(s => s.id);
 
   const enriched = await Promise.all(players.map(async (player) => {
     let currentTeam = null;
-    if (active) {
-      const [team] = await db.select().from(teamsTable).where(
-        and(
-          eq(teamsTable.seasonId, active.id),
-          or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id))
-        )
-      ).limit(1);
-      currentTeam = team ?? null;
+    if (seasonIds.length > 0) {
+      const teams = await db.select().from(teamsTable).where(
+        or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id))
+      );
+      currentTeam = teams.find(t => seasonIds.includes(t.seasonId)) ?? null;
     }
     return { ...sanitizePlayer(player), currentTeam };
   }));

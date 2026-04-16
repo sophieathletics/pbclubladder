@@ -1,16 +1,31 @@
 import { Router, type IRouter } from "express";
-import { db, seasonsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../lib/auth";
+import { db, seasonsTable, laddersTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
+import { requireAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/seasons", async (_req, res): Promise<void> => {
-  const seasons = await db.select().from(seasonsTable).orderBy(seasonsTable.createdAt);
+router.get("/seasons", async (req, res): Promise<void> => {
+  const ladderId = req.query.ladder_id as string | undefined;
+  let seasons = await db.select().from(seasonsTable).orderBy(seasonsTable.createdAt);
+  if (ladderId) seasons = seasons.filter(s => s.ladderId === ladderId);
   res.json(seasons);
 });
 
-router.get("/seasons/active", async (_req, res): Promise<void> => {
+router.get("/seasons/active", async (req, res): Promise<void> => {
+  const ladderId = req.query.ladder_id as string | undefined;
+  if (ladderId) {
+    const [season] = await db.select().from(seasonsTable)
+      .where(and(eq(seasonsTable.ladderId, ladderId), eq(seasonsTable.isActive, true)))
+      .limit(1);
+    if (!season) {
+      res.status(404).json({ error: "No active season for this ladder" });
+      return;
+    }
+    res.json(season);
+    return;
+  }
+  // Backwards compat: return first active season anywhere
   const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
   if (!season) {
     res.status(404).json({ error: "No active season" });
@@ -30,24 +45,32 @@ router.get("/seasons/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/seasons", requireAdmin, async (req, res): Promise<void> => {
-  const { name, startDate, endDate } = req.body;
-  if (!name || !startDate || !endDate) {
-    res.status(400).json({ error: "name, startDate, endDate required" });
+  const { ladderId, name, startDate, endDate } = req.body;
+  if (!ladderId || !name || !startDate || !endDate) {
+    res.status(400).json({ error: "ladderId, name, startDate, endDate required" });
     return;
   }
-  const [season] = await db.insert(seasonsTable).values({ name, startDate, endDate, isActive: false }).returning();
+  const [ladder] = await db.select().from(laddersTable).where(eq(laddersTable.id, ladderId)).limit(1);
+  if (!ladder) {
+    res.status(400).json({ error: "Ladder not found" });
+    return;
+  }
+  const [season] = await db.insert(seasonsTable).values({ ladderId, name, startDate, endDate, isActive: false }).returning();
   res.status(201).json(season);
 });
 
 router.post("/seasons/:id/activate", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  // Deactivate all other seasons
-  await db.update(seasonsTable).set({ isActive: false });
-  const [season] = await db.update(seasonsTable).set({ isActive: true }).where(eq(seasonsTable.id, id)).returning();
-  if (!season) {
+  const [target] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, id)).limit(1);
+  if (!target) {
     res.status(404).json({ error: "Season not found" });
     return;
   }
+  // Deactivate other seasons in the same ladder
+  if (target.ladderId) {
+    await db.update(seasonsTable).set({ isActive: false }).where(eq(seasonsTable.ladderId, target.ladderId));
+  }
+  const [season] = await db.update(seasonsTable).set({ isActive: true }).where(eq(seasonsTable.id, id)).returning();
   res.json(season);
 });
 

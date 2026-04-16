@@ -82,35 +82,37 @@ router.get("/challenges", requireAuth, async (req, res): Promise<void> => {
 
 router.get("/challenges/my-active", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  if (!active) {
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  if (activeSeasons.length === 0) {
     res.status(404).json({ error: "No active season" });
     return;
   }
 
-  const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
-  ).limit(1);
+  const seasonIds = activeSeasons.map(s => s.id);
+  const myTeams = (await db.select().from(teamsTable).where(
+    or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id))
+  )).filter(t => seasonIds.includes(t.seasonId));
 
-  if (!myTeam) {
+  if (myTeams.length === 0) {
     res.status(404).json({ error: "No team found" });
     return;
   }
 
-  const challenges = await db.select().from(challengesTable).where(
-    and(
-      eq(challengesTable.seasonId, active.id),
-      or(eq(challengesTable.challengerTeamId, myTeam.id), eq(challengesTable.challengedTeamId, myTeam.id))
-    )
+  const myTeamIds = myTeams.map(t => t.id);
+  const challenges = await db.select().from(challengesTable);
+  const myChallenges = challenges.filter(c =>
+    seasonIds.includes(c.seasonId) &&
+    (myTeamIds.includes(c.challengerTeamId) || myTeamIds.includes(c.challengedTeamId))
   );
 
-  const activeChallenge = challenges.find(c => ["pending", "accepted", "scheduling", "scheduled"].includes(c.status));
+  const activeChallenge = myChallenges.find(c => ["pending", "accepted", "scheduling", "scheduled"].includes(c.status));
   if (!activeChallenge) {
     res.status(404).json({ error: "No active challenge" });
     return;
   }
 
-  const enriched = await enrichChallenge(activeChallenge, myTeam.id);
+  const myTeamForChallenge = myTeams.find(t => t.seasonId === activeChallenge.seasonId);
+  const enriched = await enrichChallenge(activeChallenge, myTeamForChallenge?.id);
   res.json(enriched);
 });
 
@@ -123,17 +125,12 @@ router.get("/challenges/:id", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Find player's team to set myTeamId
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  let myTeamId: string | undefined;
-  if (active) {
-    const [myTeam] = await db.select().from(teamsTable).where(
-      and(eq(teamsTable.seasonId, active.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
-    ).limit(1);
-    myTeamId = myTeam?.id;
-  }
+  // Find player's team in this challenge's season
+  const [myTeam] = await db.select().from(teamsTable).where(
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+  ).limit(1);
 
-  const enriched = await enrichChallenge(challenge, myTeamId);
+  const enriched = await enrichChallenge(challenge, myTeam?.id);
   res.json(enriched);
 });
 
@@ -146,9 +143,16 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  // Derive season from the challenged team, ensure it is active
+  const [challengedTeamRow] = await db.select().from(teamsTable).where(eq(teamsTable.id, challengedTeamId)).limit(1);
+  if (!challengedTeamRow) {
+    res.status(404).json({ error: "Challenged team not found" });
+    return;
+  }
+  const [active] = await db.select().from(seasonsTable)
+    .where(and(eq(seasonsTable.id, challengedTeamRow.seasonId), eq(seasonsTable.isActive, true))).limit(1);
   if (!active) {
-    res.status(400).json({ error: "No active season" });
+    res.status(400).json({ error: "Challenged team's season is not active" });
     return;
   }
 
@@ -156,7 +160,7 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     and(eq(teamsTable.seasonId, active.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
   if (!myTeam) {
-    res.status(400).json({ error: "You are not on a team this season" });
+    res.status(400).json({ error: "You are not on a team in that ladder" });
     return;
   }
 
@@ -236,10 +240,9 @@ router.post("/challenges/:id/accept", requireAuth, async (req, res): Promise<voi
     return;
   }
 
-  // Verify player is on challenged team
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  // Verify player is on challenged team (use challenge's season)
   const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active!.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
   if (!myTeam || myTeam.id !== challenge.challengedTeamId) {
     res.status(403).json({ error: "Only the challenged team can accept" });
@@ -275,9 +278,8 @@ router.post("/challenges/:id/decline", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
   const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active!.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
   if (!myTeam || myTeam.id !== challenge.challengedTeamId) {
     res.status(403).json({ error: "Only the challenged team can decline" });
@@ -312,9 +314,8 @@ router.post("/challenges/:id/cancel", requireAuth, async (req, res): Promise<voi
     return;
   }
 
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
   const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active!.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
   if (!myTeam || (myTeam.id !== challenge.challengerTeamId && myTeam.id !== challenge.challengedTeamId)) {
     res.status(403).json({ error: "You are not part of this challenge" });
@@ -342,11 +343,10 @@ router.post("/challenges/:id/book", requireAuth, async (req, res): Promise<void>
     return;
   }
 
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
   const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active!.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
-  if (!myTeam) {
+  if (!myTeam || (myTeam.id !== challenge.challengerTeamId && myTeam.id !== challenge.challengedTeamId)) {
     res.status(403).json({ error: "You are not part of this challenge" });
     return;
   }

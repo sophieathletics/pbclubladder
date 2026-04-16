@@ -50,10 +50,9 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
     return;
   }
 
-  // Find player's team
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
+  // Find player's team in this challenge's season
   const [myTeam] = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, active!.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);
 
   if (!myTeam || (myTeam.id !== challenge.challengerTeamId && myTeam.id !== challenge.challengedTeamId)) {

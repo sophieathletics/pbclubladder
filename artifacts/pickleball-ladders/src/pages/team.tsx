@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { useGetCurrentPlayer, useGetMyTeam, useListInvitations, useListPlayers, useCreateInvitation, useAcceptInvitation, useDeclineInvitation, useResendInvitation, useGetMyLadderPosition } from "@workspace/api-client-react";
+import {
+  useGetCurrentPlayer,
+  useGetMyTeams,
+  useListInvitations,
+  useListPlayers,
+  useCreateInvitation,
+  useAcceptInvitation,
+  useDeclineInvitation,
+  useResendInvitation,
+  useGetMyLadderPosition,
+  useListLadders,
+} from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Send, CheckCircle, XCircle, Trophy, Mail, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,10 +38,14 @@ export default function Team() {
 
 function TeamContent() {
   const { data: player } = useGetCurrentPlayer();
-  const { data: team } = useGetMyTeam();
+  const { data: myTeams } = useGetMyTeams();
   const { data: invitations } = useListInvitations();
-  const { data: ladderPos } = useGetMyLadderPosition();
-  const myStanding = ladderPos?.myStanding;
+  const { data: ladders } = useListLadders();
+  const ladderList = (ladders as any[]) ?? [];
+  const teams = (myTeams as any[]) ?? [];
+  const laddersWithoutTeam = ladderList.filter(
+    l => l.activeSeason && !teams.some(t => t.season?.ladderId === l.id),
+  );
 
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -39,6 +55,9 @@ function TeamContent() {
   const [inviteeEmail, setInviteeEmail] = useState<string | null>(null);
   const [teamName, setTeamName] = useState("");
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [selectedLadderId, setSelectedLadderId] = useState<string | undefined>(undefined);
+
+  const effectiveLadderId = selectedLadderId ?? laddersWithoutTeam[0]?.id;
 
   const { data: players } = useListPlayers(
     { search: searchQuery, limit: 8 },
@@ -53,18 +72,15 @@ function TeamContent() {
   const filteredPlayers = (players as any[] | undefined)?.filter((p: any) => p.id !== player?.id) ?? [];
   const showDropdown = filteredPlayers.length > 0 && !inviteeId && !inviteeEmail;
 
-  // Can send if we have a team name AND either a selected player or a valid typed email
   const emailFromInput = !inviteeId && !inviteeEmail && isValidEmail(searchQuery) ? searchQuery.trim() : null;
-  const canSend = !!teamName && (!!inviteeId || !!inviteeEmail || !!emailFromInput);
+  const canSend = !!teamName && !!effectiveLadderId && (!!inviteeId || !!inviteeEmail || !!emailFromInput);
 
   const handleSendInvite = () => {
     if (!canSend) return;
-    const payload: any = { data: { teamName } };
-    if (inviteeId) {
-      payload.data.inviteeId = inviteeId;
-    } else {
-      payload.data.inviteeEmail = inviteeEmail ?? emailFromInput;
-    }
+    const payload: any = { data: { teamName, ladderId: effectiveLadderId } };
+    if (inviteeId) payload.data.inviteeId = inviteeId;
+    else payload.data.inviteeEmail = inviteeEmail ?? emailFromInput;
+
     sendInvite.mutate(payload, {
       onSuccess: () => {
         toast({ title: "Invitation sent!" });
@@ -73,6 +89,7 @@ function TeamContent() {
         setInviteeEmail(null);
         setTeamName("");
         setSearchQuery("");
+        setSelectedLadderId(undefined);
         qc.invalidateQueries();
       },
       onError: (err: any) => {
@@ -95,25 +112,15 @@ function TeamContent() {
 
   const handleAccept = (id: string) => {
     acceptInv.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Invitation accepted! Welcome to the ladder!" });
-        qc.invalidateQueries();
-      },
-      onError: (err: any) => {
-        toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" });
-      },
+      onSuccess: () => { toast({ title: "Invitation accepted! Welcome to the ladder!" }); qc.invalidateQueries(); },
+      onError: (err: any) => toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" }),
     });
   };
 
   const handleDecline = (id: string) => {
     declineInv.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Invitation declined" });
-        qc.invalidateQueries();
-      },
-      onError: (err: any) => {
-        toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" });
-      },
+      onSuccess: () => { toast({ title: "Invitation declined" }); qc.invalidateQueries(); },
+      onError: (err: any) => toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" }),
     });
   };
 
@@ -125,78 +132,61 @@ function TeamContent() {
       <div className="max-w-3xl mx-auto py-8 px-4">
         <h1 className="text-3xl font-black mb-6 flex items-center gap-2">
           <Users className="w-8 h-8 text-primary" />
-          My Team
+          My Teams
         </h1>
 
-        {/* Current Team */}
-        {team ? (
-          <Card className="border-primary/20 mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>{(team as any).teamName}</span>
-                {myStanding && (
-                  <Badge className="text-base font-bold px-3 py-1">
-                    #{myStanding.position}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 1</p>
-                  <p className="font-semibold">{(team as any).player1?.fullName ?? "—"}</p>
-                  <p className="text-sm text-muted-foreground">{(team as any).player1?.email ?? ""}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 2</p>
-                  <p className="font-semibold">{(team as any).player2?.fullName ?? "—"}</p>
-                  <p className="text-sm text-muted-foreground">{(team as any).player2?.email ?? ""}</p>
-                </div>
-              </div>
-              {myStanding && (
-                <div className="mt-4 pt-4 border-t flex gap-6">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Wins</p>
-                    <p className="text-2xl font-black text-green-600">{myStanding.wins}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Losses</p>
-                    <p className="text-2xl font-black text-red-500">{myStanding.losses}</p>
-                  </div>
-                  <div className="ml-auto flex items-end">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="/leaderboard">
-                        <Trophy className="w-4 h-4 mr-1" />
-                        View Ladder
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* Current Teams */}
+        {teams.length > 0 ? (
+          <div className="space-y-4 mb-6">
+            {teams.map((team: any) => (
+              <TeamCard key={team.id} team={team} ladders={ladderList} />
+            ))}
+          </div>
         ) : (
           <Card className="border-primary/10 mb-6">
             <CardContent className="py-10 text-center">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-semibold mb-2">You're not on a team yet</p>
-              <p className="text-muted-foreground mb-6">Invite a partner to form a team and join the ladder.</p>
-              <Button onClick={() => setShowInviteForm(true)}>
+              <p className="text-lg font-semibold mb-2">You're not on any team yet</p>
+              <p className="text-muted-foreground mb-6">Invite a partner to form a team and join a ladder.</p>
+              <Button onClick={() => setShowInviteForm(true)} disabled={laddersWithoutTeam.length === 0}>
                 <Send className="w-4 h-4 mr-2" />
                 Invite a Partner
               </Button>
+              {laddersWithoutTeam.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-3">No ladders with active seasons available.</p>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* Invite Form */}
-        {!team && (showInviteForm ? (
+        {/* Invite Form: Available if any ladder still has no team */}
+        {laddersWithoutTeam.length > 0 && (showInviteForm ? (
           <Card className="border-primary/10 mb-6">
             <CardHeader>
               <CardTitle>Invite a Partner</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {laddersWithoutTeam.length > 1 && (
+                <div>
+                  <Label>Ladder</Label>
+                  <Select value={effectiveLadderId} onValueChange={setSelectedLadderId}>
+                    <SelectTrigger className="mt-1" data-testid="select-invite-ladder">
+                      <SelectValue placeholder="Select ladder" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {laddersWithoutTeam.map((l: any) => (
+                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {laddersWithoutTeam.length === 1 && (
+                <p className="text-sm text-muted-foreground">
+                  Ladder: <span className="font-semibold text-foreground">{laddersWithoutTeam[0].name}</span>
+                </p>
+              )}
+
               <div>
                 <Label>Team Name</Label>
                 <Input
@@ -214,7 +204,6 @@ function TeamContent() {
                   Search for someone already on the app, or type their email to invite them to join.
                 </p>
 
-                {/* Show selected player or email badge */}
                 {(inviteeId || inviteeEmail) ? (
                   <div className="flex items-center gap-2 p-3 border rounded-lg bg-green-50 border-green-200">
                     <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
@@ -236,7 +225,6 @@ function TeamContent() {
                       data-testid="input-search-partner"
                     />
 
-                    {/* Dropdown: matching registered players */}
                     {showDropdown && (
                       <div className="absolute z-10 w-full mt-1 border rounded-lg bg-white shadow-lg divide-y">
                         {filteredPlayers.map((p: any) => (
@@ -257,7 +245,6 @@ function TeamContent() {
                       </div>
                     )}
 
-                    {/* Hint: if valid email typed but no player found */}
                     {searchQuery.length > 1 && isValidEmail(searchQuery) && filteredPlayers.length === 0 && (
                       <div className="mt-2 p-3 border rounded-lg bg-blue-50 border-blue-200 flex items-center gap-2">
                         <Mail className="w-4 h-4 text-blue-600 shrink-0" />
@@ -290,7 +277,7 @@ function TeamContent() {
         ) : (
           <div className="mb-6">
             <Button variant="outline" onClick={() => setShowInviteForm(true)}>
-              <Send className="w-4 h-4 mr-2" /> Invite a Partner
+              <Send className="w-4 h-4 mr-2" /> Invite a Partner for Another Ladder
             </Button>
           </div>
         ))}
@@ -307,7 +294,13 @@ function TeamContent() {
                   <div>
                     <p className="font-semibold">{inv.teamName}</p>
                     <p className="text-sm text-muted-foreground">From: {inv.inviter?.fullName}</p>
-                    <p className="text-xs text-muted-foreground">Season: {inv.season?.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Season: {inv.season?.name}
+                      {inv.season?.ladderId && (() => {
+                        const l = ladderList.find((x: any) => x.id === inv.season.ladderId);
+                        return l ? <> · Ladder: {l.name}</> : null;
+                      })()}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleAccept(inv.id)} data-testid={`btn-accept-${inv.id}`}>
@@ -374,5 +367,63 @@ function TeamContent() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
+  const ladderName = useMemo(() => {
+    const l = ladders.find((x: any) => x.id === team.season?.ladderId);
+    return l?.name ?? "Ladder";
+  }, [ladders, team.season?.ladderId]);
+
+  const { data: pos } = useGetMyLadderPosition({ ladder_id: team.season?.ladderId });
+  const myStanding = pos?.myStanding;
+
+  return (
+    <Card className="border-primary/20">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>{team.teamName}</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{ladderName}</Badge>
+            {myStanding && <Badge className="text-base font-bold px-3 py-1">#{myStanding.position}</Badge>}
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 1</p>
+            <p className="font-semibold">{team.player1?.fullName ?? "—"}</p>
+            <p className="text-sm text-muted-foreground">{team.player1?.email ?? ""}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 2</p>
+            <p className="font-semibold">{team.player2?.fullName ?? "—"}</p>
+            <p className="text-sm text-muted-foreground">{team.player2?.email ?? ""}</p>
+          </div>
+        </div>
+        {myStanding && (
+          <div className="mt-4 pt-4 border-t flex gap-6">
+            <div>
+              <p className="text-xs text-muted-foreground">Wins</p>
+              <p className="text-2xl font-black text-green-600">{myStanding.wins}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Losses</p>
+              <p className="text-2xl font-black text-red-500">{myStanding.losses}</p>
+            </div>
+            <div className="ml-auto flex items-end">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/leaderboard">
+                  <Trophy className="w-4 h-4 mr-1" />
+                  View Ladder
+                </Link>
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

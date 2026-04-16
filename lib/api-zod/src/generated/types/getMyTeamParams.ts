@@ -6,9 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface CreateSeasonBody {
-  ladderId: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-}
+export type GetMyTeamParams = {
+  ladder_id?: string;
+};

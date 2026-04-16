@@ -1,9 +1,11 @@
 import { pgTable, text, uuid, timestamp, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { laddersTable } from "./ladders";
 
 export const seasonsTable = pgTable("seasons", {
   id: uuid("id").primaryKey().defaultRandom(),
+  ladderId: uuid("ladder_id").references(() => laddersTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
