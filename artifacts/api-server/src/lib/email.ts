@@ -42,7 +42,7 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
 
 function baseTemplate(content: string, ctaText?: string, ctaUrl?: string): string {
   const cta = ctaText && ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;margin-top:16px">${ctaText}</a>` : "";
-  return `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px"><h2 style="color:#15803d">${CLUB_NAME}</h2>${content}${cta}<hr style="margin:24px 0"/><p style="color:#6b7280;font-size:12px">You received this email because you are a member of ${CLUB_NAME}.</p></div>`;
+  return `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px"><h2 style="color:#15803d">${CLUB_NAME}</h2>${content}${cta}</div>`;
 }
 
 export async function sendTeamInvitationEmail(to: string, inviterName: string, teamName: string, seasonName: string): Promise<void> {
