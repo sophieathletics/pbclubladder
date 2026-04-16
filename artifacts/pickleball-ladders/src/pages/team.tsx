@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useGetCurrentPlayer, useGetMyTeam, useListInvitations, useListPlayers, useCreateInvitation, useAcceptInvitation, useDeclineInvitation, useGetMyLadderPosition } from "@workspace/api-client-react";
+import { useGetCurrentPlayer, useGetMyTeam, useListInvitations, useListPlayers, useCreateInvitation, useAcceptInvitation, useDeclineInvitation, useResendInvitation, useGetMyLadderPosition } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,6 +48,7 @@ function TeamContent() {
   const sendInvite = useCreateInvitation();
   const acceptInv = useAcceptInvitation();
   const declineInv = useDeclineInvitation();
+  const resendInv = useResendInvitation();
 
   const filteredPlayers = (players as any[] | undefined)?.filter((p: any) => p.id !== player?.id) ?? [];
   const showDropdown = filteredPlayers.length > 0 && !inviteeId && !inviteeEmail;
@@ -330,10 +331,10 @@ function TeamContent() {
             </CardHeader>
             <CardContent className="space-y-2">
               {sentInvitations.map((inv: any) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
+                <div key={inv.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold">{inv.teamName}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground truncate">
                       To: {inv.invitee?.fullName ?? inv.inviteeEmail ?? "—"}
                     </p>
                     {inv.inviteeEmail && (
@@ -342,9 +343,30 @@ function TeamContent() {
                       </p>
                     )}
                   </div>
-                  <Badge variant={inv.status === "pending" ? "outline" : inv.status === "accepted" ? "default" : "secondary"}>
-                    {inv.status}
-                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {inv.status === "pending" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          resendInv.mutate({ id: inv.id }, {
+                            onSuccess: () => toast({ title: "Invitation resent!" }),
+                            onError: (err: any) => toast({ title: "Failed to resend", description: err?.data?.error, variant: "destructive" }),
+                          });
+                        }}
+                        disabled={resendInv.isPending}
+                        data-testid={`btn-resend-${inv.id}`}
+                      >
+                        {resendInv.isPending && resendInv.variables?.id === inv.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Send className="w-4 h-4 mr-1" />}
+                        Resend
+                      </Button>
+                    )}
+                    <Badge variant={inv.status === "pending" ? "outline" : inv.status === "accepted" ? "default" : "secondary"}>
+                      {inv.status}
+                    </Badge>
+                  </div>
                 </div>
               ))}
             </CardContent>

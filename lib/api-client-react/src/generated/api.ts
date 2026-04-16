@@ -2056,6 +2056,90 @@ export const useDeclineInvitation = <
 };
 
 /**
+ * @summary Resend a pending team invitation email
+ */
+export const getResendInvitationUrl = (id: string) => {
+  return `/api/invitations/${id}/resend`;
+};
+
+export const resendInvitation = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getResendInvitationUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResendInvitationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendInvitation>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendInvitation>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["resendInvitation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendInvitation>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resendInvitation(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resendInvitation>>
+>;
+
+export type ResendInvitationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Resend a pending team invitation email
+ */
+export const useResendInvitation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendInvitation>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resendInvitation>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getResendInvitationMutationOptions(options));
+};
+
+/**
  * @summary Get full ladder standings for active season
  */
 export const getGetLadderUrl = (params?: GetLadderParams) => {

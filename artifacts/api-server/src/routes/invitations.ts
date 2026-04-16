@@ -175,6 +175,41 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
   res.json(enriched);
 });
 
+router.post("/invitations/:id/resend", requireAuth, async (req, res): Promise<void> => {
+  const player = (req as any).player;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const [inv] = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.id, id)).limit(1);
+  if (!inv || inv.inviterId !== player.id) {
+    res.status(404).json({ error: "Invitation not found" });
+    return;
+  }
+  if (inv.status !== "pending") {
+    res.status(400).json({ error: "Can only resend pending invitations" });
+    return;
+  }
+
+  const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
+  const seasonName = season?.name ?? "current season";
+
+  const emailTarget = inv.inviteeEmail ?? (inv.inviteeId
+    ? await db.select().from(playersTable).where(eq(playersTable.id, inv.inviteeId)).limit(1).then(r => r[0]?.email ?? null)
+    : null);
+
+  if (!emailTarget) {
+    res.status(400).json({ error: "No email address on file for this invitation" });
+    return;
+  }
+
+  sendTeamInvitationEmail(emailTarget, player.fullName, inv.teamName, seasonName);
+
+  if (inv.inviteeId) {
+    notifyPlayers([inv.inviteeId], "invitation_received", `${player.fullName} resent their invitation for team "${inv.teamName}"`, "/team");
+  }
+
+  res.json({ success: true, message: "Invitation resent" });
+});
+
 router.post("/invitations/:id/decline", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

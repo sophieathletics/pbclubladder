@@ -863,6 +863,18 @@ export const DeclineInvitationResponse = zod.object({
 });
 
 /**
+ * @summary Resend a pending team invitation email
+ */
+export const ResendInvitationParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ResendInvitationResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary Get full ladder standings for active season
  */
 export const GetLadderQueryParams = zod.object({

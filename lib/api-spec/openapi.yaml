@@ -511,6 +511,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /invitations/{id}/resend:
+    post:
+      operationId: resendInvitation
+      tags: [invitations]
+      summary: Resend a pending team invitation email
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invitation resent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   # LADDER
   /ladder:
     get:
