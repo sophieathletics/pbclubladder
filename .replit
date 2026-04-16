@@ -33,3 +33,8 @@ externalPort = 3000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+FROM_EMAIL = "Pickleball Club Ladder <notifications@sophiepickleballco.com>"
