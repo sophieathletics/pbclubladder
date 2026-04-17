@@ -1,0 +1,211 @@
+Add Stripe payment integration to this pickleball ladder app. Some ladders charge an entry fee (stored as entryFeeCents on the laddersTable — this field already exists). When a player accepts a team invitation for a paid ladder, they must pay before the team is created. Free ladders (entryFeeCents = 0) are unaffected.
+
+Install required packages:
+  pnpm add stripe @stripe/stripe-js @stripe/react-stripe-js --filter api
+  pnpm add @stripe/stripe-js @stripe/react-stripe-js --filter web
+
+Add these to .env and Replit Secrets:
+  STRIPE_SECRET_KEY=
+  STRIPE_PUBLISHABLE_KEY=
+  STRIPE_WEBHOOK_SECRET=
+
+---
+
+## 1. Database migration
+
+Add two columns to the teams table:
+
+  stripePaymentIntentId: text("stripe_payment_intent_id")
+  paymentStatus: text("payment_status").notNull().default("unpaid")
+  -- valid values: "unpaid" | "paid" | "waived"
+
+Also create a new table called payment_intents for auditing:
+  id: uuid primary key default gen_random_uuid()
+  teamId: uuid references teams(id)
+  invitationId: uuid references team_invitations(id)
+  stripePaymentIntentId: text not null
+  amountCents: integer not null
+  status: text not null default "pending"  -- "pending" | "succeeded" | "failed"
+  createdAt: timestamp default now()
+
+Write a Drizzle migration for these changes.
+
+---
+
+## 2. Stripe backend setup
+
+Create a new file: apps/api/src/lib/stripe.ts
+
+import Stripe from "stripe";
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-06-20",
+});
+
+---
+
+## 3. New backend route file: apps/api/src/routes/payments.ts
+
+Register it in apps/api/src/app.ts as /api/payments.
+
+### POST /api/payments/create-intent
+Requires auth (use existing requireAuth middleware).
+
+- Accept body: { invitationId: string }
+- Look up the invitation by invitationId, verify it belongs to the current player (inviteeId matches), verify status is "pending"
+- Look up the season for the invitation, then look up the ladder for that season to get entryFeeCents
+- If entryFeeCents === 0, return { free: true } — no payment needed
+- Check if a payment_intent already exists for this invitation with status "pending" — if so, return the existing clientSecret instead of creating a new one (idempotency)
+- Create a Stripe PaymentIntent:
+    const intent = await stripe.paymentIntents.create({
+      amount: ladder.entryFeeCents,
+      currency: "usd",
+      metadata: {
+        invitationId,
+        playerId: req.player.id,
+        seasonId: invitation.seasonId,
+      },
+    });
+- Insert a row into payment_intents table
+- Return { clientSecret: intent.client_secret, amountCents: ladder.entryFeeCents }
+
+### POST /api/payments/webhook
+This endpoint must use express.raw({ type: "application/json" }) middleware — NOT express.json(). Register it BEFORE the json middleware in app.ts.
+
+- Verify the webhook signature using stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET!)
+- Handle these events:
+
+  payment_intent.succeeded:
+    - Find the payment_intents row by stripePaymentIntentId
+    - Update payment_intents.status = "succeeded"
+    - Find the team linked to this payment intent (via invitationId in metadata)
+    - If the team exists, set teams.paymentStatus = "paid" and teams.stripePaymentIntentId
+    - If no team yet (payment succeeded before invitation was formally accepted), store the intent ID on the invitation record for use when accept is called
+    - Send a payment confirmation email via the existing Resend email setup
+
+  payment_intent.payment_failed:
+    - Update payment_intents.status = "failed"
+    - Log the failure
+
+Return res.json({ received: true }) in all cases. Never throw from a webhook handler — catch all errors and log them.
+
+---
+
+## 4. Guard the invitation accept endpoint
+
+File: apps/api/src/routes/invitations.ts — POST /invitations/:id/accept
+
+After the existing validation checks, add:
+
+- Look up the ladder's entryFeeCents for this invitation's season
+- If entryFeeCents > 0:
+  - Check if there is a payment_intents row for this invitation with status = "succeeded"
+  - If not, return 402 with body: { error: "Payment required before accepting this invitation", entryFeeCents }
+- If entryFeeCents === 0, set paymentStatus = "waived" on the new team
+- If payment exists, set paymentStatus = "paid" and stripePaymentIntentId on the new team
+
+---
+
+## 5. Frontend — new payment page
+
+Create: apps/web/src/pages/accept-invite-pay.tsx
+Route: /invitations/:invitationId/pay
+
+This page handles the payment step before a team invitation is accepted.
+
+Flow:
+1. On mount, call POST /api/payments/create-intent with the invitationId
+2. If response is { free: true }, immediately redirect to call the existing accept invitation API and then go to /team
+3. Otherwise, render the Stripe payment UI:
+
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
+Show:
+- A clear heading: "Complete Payment to Join Ladder"
+- The entry fee amount formatted as currency (e.g. "$25.00")
+- The ladder/season name
+- The <PaymentElement /> component (handles card, Apple Pay, Google Pay automatically)
+- A "Pay and Join Ladder" submit button that:
+    - Calls stripe.confirmPayment({ elements, confirmParams: { return_url: window.location.origin + "/payment-complete?invitationId=" + invitationId } })
+- A loading state while the PaymentIntent is being created
+- Error display if payment fails
+
+Add VITE_STRIPE_PUBLISHABLE_KEY to the web app's .env.
+
+---
+
+## 6. Frontend — payment complete redirect page
+
+Create: apps/web/src/pages/payment-complete.tsx
+Route: /payment-complete
+
+Stripe redirects here after a payment attempt with ?payment_intent=...&redirect_status=... query params.
+
+- Read the redirect_status and invitationId from URL query params
+- If redirect_status === "succeeded":
+  - Call POST /api/invitations/:invitationId/accept
+  - Show a success message: "Payment successful! You've joined the ladder."
+  - Redirect to /team after 2 seconds
+- If redirect_status === "failed" or "canceled":
+  - Show an error message with a link back to retry: /invitations/:invitationId/pay
+
+---
+
+## 7. Update the existing team invitation accept button
+
+File: apps/web/src/pages/team.tsx
+
+Find the "Accept" button for received invitations. Change its onClick behavior:
+
+- Instead of directly calling the accept invitation mutation, navigate to /invitations/:invitationId/pay
+- The pay page will handle both the free (immediate accept) and paid (payment first) flows
+
+---
+
+## 8. Admin UI — entry fee display
+
+File: apps/web/src/pages/admin.tsx
+
+The entry fee input already exists in the admin ladder form. Make sure:
+- It displays the current entryFeeCents value formatted as dollars (divide by 100)
+- It saves as cents (multiply input by 100 before sending to API)
+- Add a helper text below the field: "Set to 0 for a free ladder. Players will be charged this amount via Stripe when they accept a team invitation."
+
+Also add a new section in the admin dashboard stats showing:
+- Total payments collected this season (sum of payment_intents where status = "succeeded" for the active season)
+- Number of paid teams
+
+---
+
+## 9. Email for successful payment
+
+File: apps/api/src/lib/email.ts
+
+Add a new function sendPaymentConfirmationEmail({ to, playerName, ladderName, amountCents }):
+- Subject: "Payment confirmed — you're in the ladder!"
+- Body: confirm the amount paid, the ladder they joined, and a link to /team
+
+Call this from the payment_intent.succeeded webhook handler.
+
+---
+
+## 10. Testing notes
+
+Use these Stripe test card numbers:
+- Success: 4242 4242 4242 4242, any future expiry, any CVC
+- Decline: 4000 0000 0000 0002
+- Requires auth: 4000 0025 0000 3155
+
+To test webhooks locally, use the Stripe CLI:
+  stripe listen --forward-to localhost:3000/api/payments/webhook
+
+After completing the implementation, verify this end-to-end flow:
+1. Admin creates a ladder with entryFeeCents = 2500 ($25.00)
+2. Player A invites Player B to a team in that ladder
+3. Player B clicks Accept → is taken to the payment page
+4. Player B enters test card 4242 4242 4242 4242 → pays
+5. Player B is redirected to /payment-complete → team is created → /team shows the new team
+6. In the admin dashboard, the payment is reflected in the stats
+7. Repeat with a free ladder (entryFeeCents = 0) and confirm the payment page is skipped entirely
