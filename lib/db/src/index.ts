@@ -4,7 +4,12 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
+const connectionUrl =
+  process.env.NODE_ENV === "production"
+    ? (process.env.PROD_DATABASE_URL ?? process.env.DATABASE_URL)
+    : process.env.DATABASE_URL;
+
+if (!connectionUrl) {
   throw new Error(
     "DATABASE_URL must be set. Did you forget to provision a database?",
   );
