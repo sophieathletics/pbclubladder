@@ -23,7 +23,7 @@ export default function MatchDetail() {
 
 function MatchDetailContent() {
   const { id } = useParams<{ id: string }>();
-  const { data: match, isLoading } = useGetMatch({ id: id! });
+  const { data: match, isLoading } = useGetMatch(id!);
   const { data: player } = useGetCurrentPlayer();
   const { data: myTeam } = useGetMyTeam();
   const submitScore = useSubmitScore();
