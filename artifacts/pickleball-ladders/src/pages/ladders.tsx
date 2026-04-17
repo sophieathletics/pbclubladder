@@ -1,13 +1,41 @@
+import { useMemo } from "react";
 import { Link } from "wouter";
-import { useListLadders } from "@workspace/api-client-react";
+import { useListLadders, useGetCurrentPlayer, useGetMyTeams } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Users, ArrowRight, Calendar, MapPin, Tag, DollarSign } from "lucide-react";
+import { Trophy, Users, ArrowRight, Calendar, MapPin, Tag, DollarSign, Check } from "lucide-react";
+
+function isLadderEligible(sex: string | null | undefined, category: string | null | undefined): boolean {
+  const cat = category ?? "coed";
+  if (!sex) return true;
+  if (cat === "men") return sex === "male";
+  if (cat === "women") return sex === "female";
+  if (cat === "mixed") return sex === "male" || sex === "female";
+  return true;
+}
 
 export default function Ladders() {
-  const { data: ladders, isLoading } = useListLadders();
+  const { data: laddersData, isLoading } = useListLadders();
+  const { data: currentPlayer } = useGetCurrentPlayer();
+  const { data: myTeamsData } = useGetMyTeams();
+  const playerSex = (currentPlayer as any)?.sex as string | undefined;
+  const myLadderIds = useMemo(
+    () => new Set(((myTeamsData as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
+    [myTeamsData]
+  );
+  const ladders = useMemo(() => {
+    const list = (laddersData as any[]) ?? [];
+    return [...list].sort((a, b) => {
+      const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
+      const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
+      if (aElig !== bElig) return aElig - bElig;
+      const aIn = myLadderIds.has(a.id) ? 1 : 0;
+      const bIn = myLadderIds.has(b.id) ? 1 : 0;
+      return aIn - bIn;
+    });
+  }, [laddersData, playerSex, myLadderIds]);
 
   return (
     <MainLayout>
@@ -34,10 +62,13 @@ export default function Ladders() {
               </CardContent>
             </Card>
           ) : (
-            ladders.map((ladder) => (
+            ladders.map((ladder: any) => {
+              const eligible = isLadderEligible(playerSex, ladder.category);
+              const alreadyIn = myLadderIds.has(ladder.id);
+              return (
               <Card
                 key={ladder.id}
-                className="hover:border-primary/40 transition-colors"
+                className={`transition-colors ${eligible ? "hover:border-primary/40" : "opacity-70"}`}
                 data-testid={`ladder-card-${ladder.id}`}
               >
                 <CardContent className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
@@ -91,16 +122,28 @@ export default function Ladders() {
                         Standings
                       </Link>
                     </Button>
-                    <Button asChild data-testid={`btn-join-${ladder.id}`}>
-                      <Link href={`/team?ladder=${ladder.id}`} className="flex items-center gap-1">
-                        Join
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </Button>
+                    {alreadyIn ? (
+                      <Button variant="secondary" disabled data-testid={`btn-joined-${ladder.id}`} className="cursor-default">
+                        <Check className="w-4 h-4 mr-1" />
+                        Joined
+                      </Button>
+                    ) : eligible ? (
+                      <Button asChild data-testid={`btn-join-${ladder.id}`}>
+                        <Link href={`/team?ladder=${ladder.id}`} className="flex items-center gap-1">
+                          Join
+                          <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" disabled className="cursor-default text-xs italic">
+                        Not your category
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            })
           )}
         </div>
       </div>

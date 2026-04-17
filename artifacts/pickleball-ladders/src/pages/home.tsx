@@ -1,16 +1,42 @@
+import { useMemo } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MainLayout } from "@/components/layout/main-layout";
-import { Trophy, ArrowRight, Activity, Users, MapPin, Tag, DollarSign } from "lucide-react";
-import { useGetTopLadder, useGetCurrentPlayer, useListLadders } from "@workspace/api-client-react";
+import { Trophy, ArrowRight, Activity, Users, MapPin, Tag, DollarSign, Check } from "lucide-react";
+import { useGetTopLadder, useGetCurrentPlayer, useListLadders, useGetMyTeams } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function isLadderEligible(sex: string | null | undefined, category: string | null | undefined): boolean {
+  const cat = category ?? "coed";
+  if (!sex) return true;
+  if (cat === "men") return sex === "male";
+  if (cat === "women") return sex === "female";
+  if (cat === "mixed") return sex === "male" || sex === "female";
+  return true;
+}
 
 export default function Home() {
   const { data: ladderResponse, isLoading: isLoadingStandings } = useGetTopLadder();
   const { data: currentPlayer } = useGetCurrentPlayer();
   const { data: laddersData, isLoading: isLoadingLadders } = useListLadders();
-  const ladders = ((laddersData as any[]) ?? []).filter(l => l.isActive);
+  const { data: myTeamsData } = useGetMyTeams();
+  const playerSex = (currentPlayer as any)?.sex as string | undefined;
+  const myLadderIds = useMemo(
+    () => new Set(((myTeamsData as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
+    [myTeamsData]
+  );
+  const ladders = useMemo(() => {
+    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive);
+    return [...list].sort((a, b) => {
+      const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
+      const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
+      if (aElig !== bElig) return aElig - bElig;
+      const aIn = myLadderIds.has(a.id) ? 1 : 0;
+      const bIn = myLadderIds.has(b.id) ? 1 : 0;
+      return aIn - bIn;
+    });
+  }, [laddersData, playerSex, myLadderIds]);
   const joinHref = currentPlayer ? "/ladders" : "/register";
   const hasStandings = !!ladderResponse?.standings?.length;
   const isLoading = isLoadingStandings || (!hasStandings && isLoadingLadders);
@@ -74,7 +100,7 @@ export default function Home() {
           </div>
 
           {/* Right column: Standings or Ladders */}
-          <div>
+          <div className="md:pl-4">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
@@ -120,8 +146,10 @@ export default function Home() {
                       {ladders.slice(0, 5).map((l: any) => {
                         const cat = l.category ?? "coed";
                         const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+                        const eligible = isLadderEligible(playerSex, cat);
+                        const alreadyIn = myLadderIds.has(l.id);
                         return (
-                          <div key={l.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
+                          <div key={l.id} className={`p-4 flex items-center gap-4 transition-colors ${eligible ? "hover:bg-muted/50" : "opacity-60"}`}>
                             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                               <Trophy className="w-5 h-5" />
                             </div>
@@ -140,9 +168,17 @@ export default function Home() {
                                 </span>
                               </p>
                             </div>
-                            <Button size="sm" asChild className="shrink-0" data-testid={`btn-join-${l.id}`}>
-                              <Link href={joinHref}>Join</Link>
-                            </Button>
+                            {alreadyIn ? (
+                              <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-500/10 px-2.5 py-1.5 rounded-md">
+                                <Check className="w-3.5 h-3.5" /> Joined
+                              </span>
+                            ) : eligible ? (
+                              <Button size="sm" asChild className="shrink-0" data-testid={`btn-join-${l.id}`}>
+                                <Link href={currentPlayer ? `/team?ladder=${l.id}` : "/register"}>Join</Link>
+                              </Button>
+                            ) : (
+                              <span className="shrink-0 text-[11px] text-muted-foreground italic">Not your category</span>
+                            )}
                           </div>
                         );
                       })}

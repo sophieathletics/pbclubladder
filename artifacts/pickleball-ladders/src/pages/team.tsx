@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "wouter";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useSearch } from "wouter";
 import {
   useGetCurrentPlayer,
   useGetMyTeams,
@@ -47,6 +47,15 @@ function TeamContent() {
     l => l.activeSeason && !teams.some(t => t.season?.ladderId === l.id),
   );
 
+  const search = useSearch();
+  const requestedLadderId = useMemo(() => new URLSearchParams(search).get("ladder") ?? undefined, [search]);
+  const requestedLadder = useMemo(
+    () => ladderList.find(l => l.id === requestedLadderId),
+    [ladderList, requestedLadderId]
+  );
+  const alreadyOnRequestedLadder = !!requestedLadderId && teams.some((t: any) => t.season?.ladderId === requestedLadderId);
+  const canJoinRequested = !!requestedLadderId && laddersWithoutTeam.some(l => l.id === requestedLadderId);
+
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -57,7 +66,14 @@ function TeamContent() {
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [selectedLadderId, setSelectedLadderId] = useState<string | undefined>(undefined);
 
-  const effectiveLadderId = selectedLadderId ?? laddersWithoutTeam[0]?.id;
+  useEffect(() => {
+    if (canJoinRequested && requestedLadderId) {
+      setSelectedLadderId(requestedLadderId);
+      setShowInviteForm(true);
+    }
+  }, [canJoinRequested, requestedLadderId]);
+
+  const effectiveLadderId = selectedLadderId ?? requestedLadderId ?? laddersWithoutTeam[0]?.id;
 
   const { data: players } = useListPlayers(
     { search: searchQuery, limit: 8 },
@@ -134,6 +150,45 @@ function TeamContent() {
           <Users className="w-8 h-8 text-primary" />
           My Teams
         </h1>
+
+        {/* Banner shown when arriving via Join button on a specific ladder */}
+        {requestedLadder && (
+          <Card className="border-2 border-primary/40 bg-primary/5 mb-6 shadow-sm">
+            <CardContent className="py-4 px-5">
+              {alreadyOnRequestedLadder ? (
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">You're already on the {requestedLadder.name} ladder.</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Find your team below, or pick a different ladder from the <Link href="/ladders" className="text-primary underline">ladder list</Link>.
+                    </p>
+                  </div>
+                </div>
+              ) : canJoinRequested ? (
+                <div className="flex items-start gap-3">
+                  <Send className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">To join {requestedLadder.name}, you need a team first.</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Invite a partner below to form a new team — or accept a pending invitation if someone already invited you.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3">
+                  <XCircle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">{requestedLadder.name} isn't open right now.</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      It either has no active season yet, or you can't join based on your category. <Link href="/ladders" className="text-primary underline">Browse other ladders</Link>.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Prominent CTA at top — visible whenever any ladder still needs a team */}
         {laddersWithoutTeam.length > 0 && !showInviteForm && (
