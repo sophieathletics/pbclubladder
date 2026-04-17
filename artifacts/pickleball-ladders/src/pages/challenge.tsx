@@ -59,7 +59,13 @@ function ChallengeContent() {
           setLocation(`/challenges/${data.id}`);
         },
         onError: (err: any) => {
-          toast({ title: "Failed to send challenge", description: err?.data?.error, variant: "destructive" });
+          const msg: string = err?.data?.error ?? "Failed to send challenge";
+          const isPaymentBlock = /entry fee/i.test(msg);
+          if (isPaymentBlock) {
+            toast({ title: "Entry fees needed first", description: msg });
+          } else {
+            toast({ title: "Failed to send challenge", description: msg, variant: "destructive" });
+          }
         },
       }
     );

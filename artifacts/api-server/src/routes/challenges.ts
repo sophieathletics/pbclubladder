@@ -166,11 +166,11 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     return;
   }
   if (myTeam.paymentStatus === "unpaid") {
-    res.status(400).json({ error: "Pay your team's entry fee before issuing challenges." });
+    res.status(400).json({ error: "You can't challenge yet — you and your partner both need to pay your entry fees first." });
     return;
   }
   if (challengedTeamRow.paymentStatus === "unpaid") {
-    res.status(400).json({ error: "That team hasn't paid their entry fee yet." });
+    res.status(400).json({ error: "That team can't be challenged yet — both of their players still need to pay their entry fees." });
     return;
   }
 
