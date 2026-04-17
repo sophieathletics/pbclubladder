@@ -136,7 +136,7 @@ export default function Leaderboard() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Challenge teams 2-3 spots above you to climb the ladder. Win to take their place.
+          Challenge teams 1-3 spots above you to climb the ladder. Win to take their place.
         </p>
       </div>
     </MainLayout>

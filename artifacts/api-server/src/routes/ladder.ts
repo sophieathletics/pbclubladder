@@ -138,8 +138,8 @@ router.get("/ladder/my-position", requireAuth, async (req, res): Promise<void> =
 
   const myStanding = await enrichStanding(myStandingRaw);
 
-  // Get teams 2-3 spots above
-  const challengePositions = [myStandingRaw.position - 2, myStandingRaw.position - 3].filter(p => p >= 1);
+  // Get teams 1-3 spots above
+  const challengePositions = [myStandingRaw.position - 1, myStandingRaw.position - 2, myStandingRaw.position - 3].filter(p => p >= 1);
   const challengeableRaw = await db.select().from(ladderStandingsTable).where(
     and(
       eq(ladderStandingsTable.seasonId, active.id),

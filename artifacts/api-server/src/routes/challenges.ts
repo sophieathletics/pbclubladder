@@ -176,7 +176,7 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Check position eligibility (must be 2-3 spots above)
+  // Check position eligibility (must be 1-3 spots above)
   const [myStanding] = await db.select().from(ladderStandingsTable)
     .where(and(eq(ladderStandingsTable.seasonId, active.id), eq(ladderStandingsTable.teamId, myTeam.id))).limit(1);
   const [challengedStanding] = await db.select().from(ladderStandingsTable)
@@ -188,8 +188,8 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
   }
 
   const diff = myStanding.position - challengedStanding.position;
-  if (diff < 2 || diff > 3) {
-    res.status(400).json({ error: "You can only challenge teams that are 2-3 spots above you" });
+  if (diff < 1 || diff > 3) {
+    res.status(400).json({ error: "You can only challenge teams that are 1-3 spots above you" });
     return;
   }
 

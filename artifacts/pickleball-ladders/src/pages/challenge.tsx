@@ -130,7 +130,7 @@ function ChallengeContent() {
                       ? "Your team hasn't been placed on the ladder yet."
                       : myStanding.position <= 2
                       ? "You're at or near the top — keep defending!"
-                      : "Teams 2-3 spots above you may already have active challenges."}
+                      : "Teams 1-3 spots above you may already have active challenges."}
                   </p>
                 </CardContent>
               </Card>
