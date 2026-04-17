@@ -201,6 +201,17 @@ function ChallengeDetailContent() {
                 </Link>
               </Button>
 
+              {c.challengerAvailabilitySubmitted && c.challengedAvailabilitySubmitted && (!c.overlappingSlots || c.overlappingSlots.length === 0) && (
+                <div className="mt-4 p-3 rounded-lg border border-orange-200 bg-orange-50/60 text-sm">
+                  <p className="font-semibold text-orange-700 mb-1 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" /> No common availability
+                  </p>
+                  <p className="text-orange-700/90 text-xs">
+                    Both teams submitted availability but no time slots overlap. One or both teams should update their availability to find a match time.
+                  </p>
+                </div>
+              )}
+
               {c.overlappingSlots?.length > 0 && (isChallenger || isChallenged) && (() => {
                 const flatSlots: { date: string; time: string; key: string; label: string }[] = [];
                 for (const s of c.overlappingSlots) {
