@@ -46,4 +46,4 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-FROM_EMAIL = "Pickleball Club Ladder <notifications@sophiepickleballco.com>"
+FROM_EMAIL = "Pb Club Ladder <info@pbclubladder.com>"
