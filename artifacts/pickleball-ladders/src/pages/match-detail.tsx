@@ -177,12 +177,26 @@ function MatchDetailContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {m.scores?.map((s: any) => (
-                <div key={s.id} className="flex items-center gap-4 mb-2">
-                  <span className="text-sm text-muted-foreground w-16">Game {s.gameNumber}</span>
-                  <span className="font-bold">{s.team1Score} – {s.team2Score}</span>
-                </div>
-              ))}
+              <div className="grid grid-cols-[auto_1fr_auto_auto_1fr] gap-x-3 gap-y-1 items-center text-sm mb-2">
+                <span></span>
+                <span className="text-right text-xs text-muted-foreground truncate">{challengerTeam?.teamName ?? "Team 1"}</span>
+                <span></span>
+                <span className="text-left text-xs text-muted-foreground truncate">{challengedTeam?.teamName ?? "Team 2"}</span>
+                <span></span>
+                {m.scores?.map((s: any) => {
+                  const t1Win = s.team1Score > s.team2Score;
+                  const t2Win = s.team2Score > s.team1Score;
+                  return (
+                    <div key={s.id} className="contents">
+                      <span className="text-xs text-muted-foreground">Game {s.gameNumber}</span>
+                      <span className={`text-right font-bold ${t1Win ? "text-green-700" : ""}`}>{s.team1Score}</span>
+                      <span className="text-muted-foreground">–</span>
+                      <span className={`text-left font-bold ${t2Win ? "text-green-700" : ""}`}>{s.team2Score}</span>
+                      <span></span>
+                    </div>
+                  );
+                })}
+              </div>
               {m.result.winnerTeamId && (
                 <p className="mt-3 font-semibold text-green-700 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4" />
