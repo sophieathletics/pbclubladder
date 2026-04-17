@@ -18,4 +18,6 @@ export type ChallengeWithTeams = Challenge & {
   overlappingSlots?: TimeSlot[];
   challengerAvailabilitySubmitted?: boolean;
   challengedAvailabilitySubmitted?: boolean;
+  challengerSlots?: TimeSlot[];
+  challengedSlots?: TimeSlot[];
 };

@@ -760,6 +760,22 @@ export const GetTeamMatchesResponseItem = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -1767,6 +1783,22 @@ export const ListChallengesResponseItem = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 export const ListChallengesResponse = zod.array(ListChallengesResponseItem);
@@ -1974,6 +2006,22 @@ export const GetMyActiveChallengeResponse = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -2174,6 +2222,22 @@ export const GetChallengeResponse = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -2374,6 +2438,22 @@ export const AcceptChallengeResponse = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -2574,6 +2654,22 @@ export const DeclineChallengeResponse = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -2774,6 +2870,22 @@ export const CancelChallengeResponse = zod
         .optional(),
       challengerAvailabilitySubmitted: zod.boolean().optional(),
       challengedAvailabilitySubmitted: zod.boolean().optional(),
+      challengerSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
+      challengedSlots: zod
+        .array(
+          zod.object({
+            date: zod.string(),
+            times: zod.array(zod.string()),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -2954,6 +3066,22 @@ export const BookMatchResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3262,6 +3390,22 @@ export const ListMatchesResponseItem = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3463,6 +3607,22 @@ export const GetMatchResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3677,6 +3837,22 @@ export const SubmitScoreResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3880,6 +4056,22 @@ export const ConfirmScoreResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -4087,6 +4279,22 @@ export const DisputeScoreResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -4449,6 +4657,22 @@ export const ListDisputesResponseItem = zod.object({
                 .optional(),
               challengerAvailabilitySubmitted: zod.boolean().optional(),
               challengedAvailabilitySubmitted: zod.boolean().optional(),
+              challengerSlots: zod
+                .array(
+                  zod.object({
+                    date: zod.string(),
+                    times: zod.array(zod.string()),
+                  }),
+                )
+                .optional(),
+              challengedSlots: zod
+                .array(
+                  zod.object({
+                    date: zod.string(),
+                    times: zod.array(zod.string()),
+                  }),
+                )
+                .optional(),
             }),
           )
           .optional(),
@@ -4665,6 +4889,22 @@ export const ResolveDisputeResponse = zod
               .optional(),
             challengerAvailabilitySubmitted: zod.boolean().optional(),
             challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),

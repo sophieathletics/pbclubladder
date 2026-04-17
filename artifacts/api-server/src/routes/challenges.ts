@@ -65,6 +65,8 @@ async function enrichChallenge(challenge: any, myTeamId?: string) {
     overlappingSlots,
     challengerAvailabilitySubmitted: !!challengerAvail,
     challengedAvailabilitySubmitted: !!challengedAvail,
+    challengerSlots: challengerAvail?.slots ?? [],
+    challengedSlots: challengedAvail?.slots ?? [],
   };
 }
 

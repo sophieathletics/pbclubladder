@@ -1734,6 +1734,14 @@ components:
               type: boolean
             challengedAvailabilitySubmitted:
               type: boolean
+            challengerSlots:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeSlot"
+            challengedSlots:
+              type: array
+              items:
+                $ref: "#/components/schemas/TimeSlot"
 
     CreateChallengeBody:
       type: object

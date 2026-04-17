@@ -201,6 +201,79 @@ function ChallengeDetailContent() {
                 </Link>
               </Button>
 
+              {(c.challengerAvailabilitySubmitted || c.challengedAvailabilitySubmitted) && (() => {
+                const fmtSlots = (slots: any[]) => {
+                  if (!slots || slots.length === 0) return null;
+                  return slots
+                    .slice()
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map(s => {
+                      const d = new Date(s.date + "T00:00:00");
+                      const dayLabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+                      const times = (s.times as string[]).slice().sort().map(t => {
+                        const [hh, mm] = t.split(":");
+                        const hr = parseInt(hh, 10);
+                        const ampm = hr >= 12 ? "PM" : "AM";
+                        const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+                        return `${hr12}${mm !== "00" ? ":" + mm : ""}${ampm}`;
+                      });
+                      return { dayLabel, times };
+                    });
+                };
+                const overlapKey = new Set<string>();
+                for (const s of c.overlappingSlots ?? []) {
+                  for (const t of s.times) overlapKey.add(`${s.date}|${t}`);
+                }
+                const renderTeam = (name: string, submitted: boolean, slots: any[]) => {
+                  const formatted = fmtSlots(slots);
+                  return (
+                    <div className="border rounded-lg p-3 bg-muted/20">
+                      <p className="text-xs font-semibold mb-2">{name}</p>
+                      {!submitted ? (
+                        <p className="text-xs text-muted-foreground italic">Not submitted yet</p>
+                      ) : !formatted || formatted.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">No slots selected</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {formatted.map((row, i) => {
+                            const dateRaw = (slots as any[]).slice().sort((a, b) => a.date.localeCompare(b.date))[i].date;
+                            const rawTimes = ((slots as any[]).find((s: any) => s.date === dateRaw)?.times ?? []).slice().sort();
+                            return (
+                              <div key={i} className="text-xs">
+                                <span className="font-medium">{row.dayLabel}</span>
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  {row.times.map((t, j) => {
+                                    const isOverlap = overlapKey.has(`${dateRaw}|${rawTimes[j]}`);
+                                    return (
+                                      <span
+                                        key={j}
+                                        className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                          isOverlap
+                                            ? "bg-green-100 text-green-700 border border-green-300"
+                                            : "bg-background border border-border text-muted-foreground"
+                                        }`}
+                                      >
+                                        {t}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                };
+                return (
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {renderTeam(c.challengerTeam?.teamName, c.challengerAvailabilitySubmitted, c.challengerSlots ?? [])}
+                    {renderTeam(c.challengedTeam?.teamName, c.challengedAvailabilitySubmitted, c.challengedSlots ?? [])}
+                  </div>
+                );
+              })()}
+
               {c.challengerAvailabilitySubmitted && c.challengedAvailabilitySubmitted && (!c.overlappingSlots || c.overlappingSlots.length === 0) && (
                 <div className="mt-4 p-3 rounded-lg border border-orange-200 bg-orange-50/60 text-sm">
                   <p className="font-semibold text-orange-700 mb-1 flex items-center gap-2">
