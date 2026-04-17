@@ -68,7 +68,7 @@ export default function Home() {
 
         {/* Standings or Open Ladders panel — on top */}
         <section className="max-w-3xl mx-auto w-full">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 px-2 sm:px-4">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
                 {isLoading ? "Top 10 Standings" : hasStandings ? "Top 10 Standings" : "Open Ladders"}

@@ -1,0 +1,201 @@
+Fix the following bugs and code quality issues in this pickleball ladder app. Work through them in order.
+
+---
+
+## 1. Profile page fields initialize empty
+
+File: apps/web/src/pages/profile.tsx
+
+The fullName, phone, and sex fields use useState which captures undefined on first render before the player data loads. Fix this by adding a useEffect that syncs the form state once player data arrives:
+
+useEffect(() => {
+  if (player) {
+    setFullName((player as any).fullName ?? "");
+    setPhone((player as any).phone ?? "");
+    setSex((player as any).sex ?? "");
+  }
+}, [player]);
+
+---
+
+## 2. Availability grid doesn't pre-populate prior submission
+
+File: apps/web/src/pages/availability.tsx
+
+The `selected` state initializes as an empty Set even when the player has already submitted availability. Add a useEffect to initialize `selected` from the player's existing availability once `availData` loads. The existing availability is in availData — find the current player's team's submitted slots and pre-populate the Set with keys in the format "date|time".
+
+---
+
+## 3. No confirmation dialogs before irreversible actions
+
+Files: apps/web/src/pages/challenge-detail.tsx, apps/web/src/pages/admin.tsx
+
+Add a confirmation dialog (using the existing AlertDialog component from Radix UI/shadcn) before:
+- Cancelling a challenge (challenge-detail.tsx handleCancel)
+- Declining a challenge (challenge-detail.tsx handleDecline)
+- "Cancel Result" in admin dispute resolution (admin.tsx handleResolve with action="cancel")
+- "Confirm Original" in admin dispute resolution (admin.tsx handleResolve with action="confirm")
+
+---
+
+## 4. Challenge buttons visible on leaderboard even when user has an active challenge
+
+File: apps/web/src/pages/leaderboard.tsx
+
+The canChallenge() function doesn't check whether the user already has an active challenge. Fetch the active challenge using useGetMyActiveChallenge() and update canChallenge() to return false if an active challenge exists. Show a tooltip or disabled state explaining why the button is disabled.
+
+---
+
+## 5. Stale data — add polling to time-sensitive queries
+
+File: apps/web/src/pages/dashboard.tsx, challenge-detail.tsx, match-detail.tsx, notifications.tsx
+
+The app has no real-time updates. Add refetchInterval to these specific queries:
+- useGetMyActiveChallenge → refetchInterval: 15000
+- useGetNotifications (unread count in navbar) → refetchInterval: 20000
+- useGetMatch in match-detail.tsx when match status is not "completed" → refetchInterval: 15000
+- useGetChallenge in challenge-detail.tsx when challenge status is not "completed" or "cancelled" → refetchInterval: 15000
+
+---
+
+## 6. invalidateQueries() called with no arguments — refetch storm
+
+Files: apps/web/src/pages/challenge-detail.tsx, challenge.tsx, availability.tsx, match-detail.tsx, team.tsx, notifications.tsx
+
+Every mutation's onSuccess calls qc.invalidateQueries() with no arguments, which invalidates every cached query at once. Replace each one with targeted invalidations. Examples:
+- After accepting a challenge: invalidate ['challenges', 'ladder', 'notifications']
+- After submitting availability: invalidate ['availability', 'challenges']
+- After submitting a score: invalidate ['matches', 'ladder', 'notifications']
+- After accepting an invitation: invalidate ['teams', 'invitations', 'ladder']
+- After marking a notification read: invalidate ['notifications']
+
+Use the actual query keys from the generated API client in lib/api-client-react.
+
+---
+
+## 7. Score entry form is duplicated — extract to a component
+
+File: apps/web/src/pages/match-detail.tsx, apps/web/src/pages/admin.tsx
+
+The score entry form (game rows, add/remove game buttons, score inputs, tie-breaker section, submit button) is copy-pasted 2-3 times. Extract it into a reusable component at apps/web/src/components/score-entry-form.tsx that accepts:
+- games: { gameNumber: number, team1Score: number, team2Score: number }[]
+- onChange: (games) => void
+- team1Name: string
+- team2Name: string
+
+Replace all duplicated instances with this component.
+
+---
+
+## 8. setAuthTokenGetter called on every render
+
+File: apps/web/src/lib/auth-context.tsx
+
+The call to setAuthTokenGetter(() => localStorage.getItem(TOKEN_KEY)) is inside the component body and runs on every render. Move it inside a useEffect with an empty dependency array so it only runs once on mount.
+
+---
+
+## 9. Position swap is not wrapped in a database transaction
+
+File: apps/api/src/lib/ladder.ts (swapLadderPositions function)
+
+The 3-step position swap (set to -999, update winner, update loser) is not atomic. If the process crashes between steps, the ladder data is corrupted. Wrap all three UPDATE statements in a db.transaction() call:
+
+await db.transaction(async (tx) => {
+  await tx.update(ladderStandingsTable).set({ position: -999 }).where(...)
+  await tx.update(ladderStandingsTable).set({ position: winnerPos, wins: ... }).where(...)
+  await tx.update(ladderStandingsTable).set({ position: loserPos, losses: ... }).where(...)
+});
+
+Apply the same transaction wrapping to the inactivity drop swap in apps/api/src/routes/cron.ts.
+
+---
+
+## 10. Logout is a no-op — tokens remain valid after logout
+
+File: apps/api/src/routes/auth.ts
+
+The POST /auth/logout endpoint currently does nothing. Add a token revocation table to the database:
+
+CREATE TABLE revoked_tokens (token_hash text PRIMARY KEY, revoked_at timestamp NOT NULL);
+
+On logout, insert a hash of the token. In the auth middleware (lib/auth.ts), after verifying the token, check if its hash exists in revoked_tokens and reject with 401 if so. Clean up tokens older than 7 days (the JWT expiry) periodically or on each auth check.
+
+---
+
+## 11. CORS is open to all origins
+
+File: apps/api/src/app.ts line 29
+
+Change:
+  app.use(cors({ origin: true, credentials: true }));
+
+To use the specific frontend origin from an environment variable:
+  app.use(cors({
+    origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
+    credentials: true
+  }));
+
+Add FRONTEND_URL to the .env file and Replit secrets.
+
+---
+
+## 12. No minimum password length enforcement on backend
+
+File: apps/api/src/routes/auth.ts
+
+In both POST /auth/register and POST /auth/change-password, add server-side validation:
+- Password must be at least 8 characters
+- Return a 400 error with message "Password must be at least 8 characters" if not met
+
+---
+
+## 13. Accepted/scheduling challenges never time out
+
+File: apps/api/src/routes/cron.ts (expire-challenges endpoint)
+
+The cron currently only expires challenges with status = "pending". Extend it to also expire challenges stuck in "accepted" or "scheduling" status for more than 7 days (a separate, longer timeout). Send a different notification/email for these explaining that the challenge timed out due to no availability being submitted.
+
+---
+
+## 14. Inactivity cron drops teams that have an active challenge
+
+File: apps/api/src/routes/cron.ts (inactivity-drop endpoint)
+
+Teams with an active challenge (status in ["accepted", "scheduling", "scheduled"]) should not be dropped for inactivity. Before applying the drop, query the challenges table to check if the team has any active challenge and skip them if so.
+
+---
+
+## 15. sortOrder on ladders stored as text breaks sorting above 9
+
+File: packages/db/src/schema/ladders.ts (or wherever laddersTable is defined)
+
+The sortOrder column is type text with default "0". Lexicographic sort makes "10" sort before "2". Change the column type to integer with default 0. Write a migration to alter the column type and cast existing values to integer.
+
+---
+
+## 16. notifyPlayers is never awaited — failures silently dropped
+
+File: apps/api/src/lib/notifications.ts and all callers in routes/
+
+Add .catch(err => console.error("Failed to send notification:", err)) to all notifyPlayers() calls throughout the routes. Do the same for all sendEmail*() calls. This won't block the response but will at least log failures rather than silently dropping them.
+
+---
+
+## 17. No password reset flow
+
+Add a complete forgot-password / reset-password flow:
+
+Backend — add two endpoints to apps/api/src/routes/auth.ts:
+- POST /auth/forgot-password: accepts { email }, generates a secure random token, stores it in a new password_reset_tokens table (columns: token, player_id, expires_at set to 1 hour from now), sends a reset email via Resend with a link to /reset-password?token=TOKEN
+- POST /auth/reset-password: accepts { token, newPassword }, validates the token exists and hasn't expired, updates the player's password hash, deletes the used token
+
+Frontend — add two new pages:
+- apps/web/src/pages/forgot-password.tsx: simple form with email input
+- apps/web/src/pages/reset-password.tsx: reads token from URL query param, shows new password + confirm password fields
+
+Add links to the forgot password page from the login page.
+
+---
+
+After completing all fixes, run the TypeScript compiler (tsc --noEmit) across all packages to confirm no new type errors were introduced.
