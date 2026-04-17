@@ -117,12 +117,10 @@ export default function Leaderboard() {
                 {ladderList.map((l: any) => {
                   const cat = l.category ?? "coed";
                   const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
-                  const catEmoji: Record<string, string> = { men: "♂️", women: "♀️", mixed: "⚥", coed: "🎾" };
                   return (
                     <SelectItem key={l.id} value={l.id} className="py-3">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-medium flex items-center gap-1.5">
-                          <span>{catEmoji[cat]}</span>
                           <span>{l.name}</span>
                           <Badge variant="outline" className="text-[10px] ml-1">{catLabel[cat]}</Badge>
                         </span>
