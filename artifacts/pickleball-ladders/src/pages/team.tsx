@@ -295,13 +295,7 @@ function TeamContent() {
               </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="mb-6">
-            <Button variant="outline" onClick={() => setShowInviteForm(true)}>
-              <Send className="w-4 h-4 mr-2" /> Invite a Partner for Another Ladder
-            </Button>
-          </div>
-        ))}
+        )}
 
         {/* Received Invitations */}
         {pendingReceived.length > 0 && (

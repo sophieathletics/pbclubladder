@@ -10,7 +10,7 @@ import { Trophy, Users, Medal, Search, Swords } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
