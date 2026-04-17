@@ -53,6 +53,7 @@ export default function Home() {
   const joinHref = currentPlayer ? "/ladders" : "/register";
   const hasStandings = !!ladderResponse?.standings?.length;
   const isLoading = isLoadingStandings || (!hasStandings && isLoadingLadders);
+  const showOpenLadders = !isLoadingLadders && ladders.length > 0 && (!currentPlayer || !hasStandings);
 
   return (
     <MainLayout>
@@ -213,6 +214,90 @@ export default function Home() {
             </CardContent>
           </Card>
         </section>
+
+        {/* Open Ladders — additionally shown to logged-out visitors when standings are above */}
+        {showOpenLadders && hasStandings && (
+          <section className="max-w-3xl mx-auto w-full">
+            <div className="flex items-center justify-between mb-6 px-2 sm:px-4">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-primary" />
+                Open Ladders
+              </h2>
+              <Button variant="ghost" size="sm" className="group" asChild data-testid="btn-browse-ladders">
+                <Link href="/ladders" className="flex items-center gap-2">
+                  Browse all
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
+            <Card className="border-primary/10 shadow-lg shadow-primary/5">
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {ladders.slice(0, 5).map((l: any) => {
+                    const cat = l.category ?? "coed";
+                    const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+                    const eligible = isLadderEligible(playerSex, cat);
+                    const alreadyIn = myLadderIds.has(l.id);
+                    return (
+                      <div key={l.id} className={`p-4 flex items-center gap-4 transition-colors ${eligible ? "hover:bg-muted/50" : "opacity-60"}`}>
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <Trophy className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground truncate flex items-center gap-2 flex-wrap">
+                            {l.name}
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground">{catLabel[cat]}</span>
+                            {l.activeSeason && (() => {
+                              const c = signupCutoff(l.activeSeason.endDate);
+                              return c ? (
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700" title={`Signup closes ${c.toLocaleDateString()}`}>
+                                  Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                </span>
+                              ) : null;
+                            })()}
+                          </h3>
+                          <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                            {l.location && (
+                              l.address ? (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-1 hover:text-primary hover:underline"
+                                >
+                                  <MapPin className="w-3 h-3" />{l.location}
+                                </a>
+                              ) : (
+                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>
+                              )
+                            )}
+                            {l.level && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />Level {l.level}</span>}
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              {l.entryFeeCents != null ? `$${(l.entryFeeCents / 100).toFixed(2)}` : "Free"}
+                            </span>
+                          </p>
+                        </div>
+                        {alreadyIn ? (
+                          <span className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-500/10 px-2.5 py-1.5 rounded-md">
+                            <Check className="w-3.5 h-3.5" /> Joined
+                          </span>
+                        ) : eligible ? (
+                          <Button size="sm" asChild className="shrink-0" data-testid={`btn-join-open-${l.id}`}>
+                            <Link href={currentPlayer ? `/team?ladder=${l.id}` : "/register"}>Join</Link>
+                          </Button>
+                        ) : (
+                          <span className="shrink-0 text-[11px] text-muted-foreground italic">Not your category</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Feature cards — below */}
         <section className="max-w-5xl mx-auto w-full grid sm:grid-cols-3 gap-6">
