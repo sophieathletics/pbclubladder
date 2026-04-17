@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useMemo } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { useLoginPlayer } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const search = useSearch();
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const redirectTo = params.get("redirect") || "/dashboard";
+  const prefillEmail = params.get("email") || "";
+  const registerHref = `/register?redirect=${encodeURIComponent(redirectTo)}${prefillEmail ? `&email=${encodeURIComponent(prefillEmail)}` : ""}`;
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -24,7 +29,7 @@ export default function Login() {
       {
         onSuccess: (data: any) => {
           setToken(data.token);
-          setLocation("/dashboard");
+          setLocation(redirectTo);
         },
         onError: (err: any) => {
           toast({
@@ -90,7 +95,7 @@ export default function Login() {
             </form>
             <p className="text-sm text-center text-muted-foreground mt-4">
               Don't have an account?{" "}
-              <Link href="/register" className="text-primary hover:underline font-medium">
+              <Link href={registerHref} className="text-primary hover:underline font-medium">
                 Register
               </Link>
             </p>

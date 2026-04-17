@@ -57,19 +57,46 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
   }
 }
 
+function escapeHtml(s: string): string {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function baseTemplate(content: string, ctaText?: string, ctaUrl?: string): string {
-  const cta = ctaText && ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;margin-top:16px">${ctaText}</a>` : "";
-  return `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px"><h2 style="color:#15803d">${CLUB_NAME}</h2>${content}${cta}</div>`;
+  const cta = ctaText && ctaUrl
+    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0"><tr><td align="center" bgcolor="#16a34a" style="border-radius:8px"><a href="${ctaUrl}" style="display:inline-block;background:#16a34a;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">${ctaText}</a></td></tr></table>`
+    : "";
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f7f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2937">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f7f6;padding:32px 16px"><tr><td align="center">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
+    <tr><td style="background:linear-gradient(135deg,#16a34a,#15803d);padding:28px 32px;text-align:center">
+      <div style="font-size:28px;margin-bottom:6px">🏓</div>
+      <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.3px">${CLUB_NAME}</div>
+    </td></tr>
+    <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#1f2937">
+      ${content}
+      ${cta}
+    </td></tr>
+    <tr><td style="padding:18px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:12px;color:#6b7280;text-align:center">
+      You're receiving this email from ${CLUB_NAME}. If this wasn't meant for you, you can safely ignore it.
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
 }
 
 export async function sendTeamInvitationEmail(to: string, inviterName: string, teamName: string, seasonName: string): Promise<void> {
+  const redirect = encodeURIComponent("/team");
+  const emailParam = encodeURIComponent(to);
+  const ctaUrl = `${APP_URL}/register?redirect=${redirect}&email=${emailParam}`;
   sendEmail({
     to,
     subject: `You've been invited to join a team on the Pickleball Ladder`,
     html: baseTemplate(
-      `<p>${inviterName} has invited you to form a team called <strong>${teamName}</strong> for the <strong>${seasonName}</strong> season. Accept or decline below.</p>`,
+      `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">You're invited to join a team! 🎾</h2>
+<p style="margin:0 0 12px"><strong>${escapeHtml(inviterName)}</strong> has invited you to form a team called <strong>${escapeHtml(teamName)}</strong> for the <strong>${escapeHtml(seasonName)}</strong> season.</p>
+<p style="margin:0 0 8px;color:#4b5563">Click below to create your free account — you'll be taken straight to the invitation so you can accept and start competing.</p>`,
       "View Invitation",
-      `${APP_URL}/team`
+      ctaUrl
     ),
   });
 }

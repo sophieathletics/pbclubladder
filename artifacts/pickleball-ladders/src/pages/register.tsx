@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useMemo } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { useRegisterPlayer } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +24,14 @@ const RATING_DESCRIPTIONS: Record<string, string> = {
 };
 
 export default function Register() {
+  const search = useSearch();
+  const params = useMemo(() => new URLSearchParams(search), [search]);
+  const redirectTo = params.get("redirect") || "/ladders";
+  const prefillEmail = params.get("email") || "";
+  const loginHref = `/login?redirect=${encodeURIComponent(redirectTo)}${prefillEmail ? `&email=${encodeURIComponent(prefillEmail)}` : ""}`;
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [selfRating, setSelfRating] = useState("");
@@ -63,7 +68,7 @@ export default function Register() {
       {
         onSuccess: (data: any) => {
           setToken(data.token);
-          setLocation("/ladders");
+          setLocation(redirectTo);
         },
         onError: (err: any) => {
           toast({
@@ -221,7 +226,7 @@ export default function Register() {
             </form>
             <p className="text-sm text-center text-muted-foreground mt-4">
               Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline font-medium">
+              <Link href={loginHref} className="text-primary hover:underline font-medium">
                 Sign in
               </Link>
             </p>
