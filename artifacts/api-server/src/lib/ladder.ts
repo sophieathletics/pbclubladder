@@ -45,13 +45,24 @@ export async function applyMatchResult(
   seasonId: string,
   winnerTeamId: string,
   loserTeamId: string,
-  challengerTeamId: string
+  _challengerTeamId: string
 ): Promise<void> {
-  // If challenger wins, swap positions
-  if (winnerTeamId === challengerTeamId) {
+  // Look up both standings; if the winner is currently ranked below the loser,
+  // swap their positions. Otherwise just update wins/losses.
+  const standings = await db.select().from(ladderStandingsTable).where(
+    and(
+      eq(ladderStandingsTable.seasonId, seasonId),
+      sql`${ladderStandingsTable.teamId} IN (${winnerTeamId}, ${loserTeamId})`
+    )
+  );
+  const winnerStanding = standings.find(s => s.teamId === winnerTeamId);
+  const loserStanding = standings.find(s => s.teamId === loserTeamId);
+
+  if (winnerStanding && loserStanding && winnerStanding.position > loserStanding.position) {
+    // Winner is currently ranked below loser → climb up by swapping
     await swapLadderPositions(seasonId, winnerTeamId, loserTeamId);
   } else {
-    // Loser is challenger, no position change, just update wins/losses
+    // Winner already ranked above (or equal); just record W/L
     const now = new Date();
     await db.update(ladderStandingsTable)
       .set({ wins: sql`wins + 1`, lastMatchDate: now })
