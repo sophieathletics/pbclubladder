@@ -217,7 +217,7 @@ function MatchDetailContent() {
           </Card>
         )}
 
-        {/* Score entry */}
+        {/* Score entry — initial submission */}
         {m.status === "scheduled" && isTeamInMatch && !m.result && (
           <Card className="border-primary/10 mb-6">
             <CardHeader><CardTitle>Submit Score</CardTitle></CardHeader>
@@ -295,25 +295,105 @@ function MatchDetailContent() {
           </Card>
         )}
 
-        {/* Confirm / Dispute */}
-        {m.result && !m.result.confirmedAt && !m.result.disputeReason && isTeamInMatch && (
+        {/* Edit score — submitter only, while pending confirmation */}
+        {m.result && !m.result.confirmedAt && !m.result.disputeReason && isTeamInMatch && myTeam?.id === m.result.submittedByTeamId && (
+          <Card className="border-primary/10 mb-6">
+            <CardHeader><CardTitle>Edit Submitted Score</CardTitle></CardHeader>
+            <CardContent>
+              {!showScoreForm ? (
+                <>
+                  <p className="text-sm text-muted-foreground italic mb-3">
+                    Waiting for {[challengerTeam, challengedTeam].find((t: any) => t?.id !== myTeam.id)?.teamName ?? "the other team"} to confirm or dispute this score. You can still edit it until they do.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setGames(
+                        (m.scores ?? []).length > 0
+                          ? m.scores.map((s: any) => ({ gameNumber: s.gameNumber, team1Score: s.team1Score, team2Score: s.team2Score }))
+                          : [{ gameNumber: 1, team1Score: 0, team2Score: 0 }]
+                      );
+                      setTieBreakerWinnerId("");
+                      setShowScoreForm(true);
+                    }}
+                    data-testid="btn-edit-score"
+                  >
+                    Edit Score
+                  </Button>
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <Label>Winner</Label>
+                    {effectiveWinnerTeamId && !isTie ? (
+                      <div className="mt-2 p-3 rounded-lg border border-primary bg-primary/10 text-primary text-sm font-semibold flex items-center justify-between">
+                        <span>{[challengerTeam, challengedTeam].find((t: any) => t?.id === effectiveWinnerTeamId)?.teamName}</span>
+                        <span className="text-xs font-normal text-muted-foreground">Won {Math.max(team1Wins, team2Wins)} of {team1Wins + team2Wins} games</span>
+                      </div>
+                    ) : isTie ? (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-1 mb-2">Games are tied {team1Wins}–{team2Wins}. Pick the overall winner:</p>
+                        <div className="flex gap-3">
+                          {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
+                            <button
+                              key={t.id}
+                              onClick={() => setTieBreakerWinnerId(t.id)}
+                              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium ${tieBreakerWinnerId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
+                            >
+                              {t.teamName}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-1">Enter game scores below — winner is selected automatically.</p>
+                    )}
+                  </div>
+
+                  {games.map((game, i) => (
+                    <div key={i} className="grid grid-cols-2 gap-4 p-3 border rounded-lg">
+                      <div>
+                        <Label className="text-xs">{challengerTeam?.teamName ?? "Team 1"}</Label>
+                        <Input type="number" min={0} value={game.team1Score} onChange={e => updateScore(i, "team1Score", parseInt(e.target.value) || 0)} className="mt-1" />
+                      </div>
+                      <div>
+                        <Label className="text-xs">{challengedTeam?.teamName ?? "Team 2"}</Label>
+                        <Input type="number" min={0} value={game.team2Score} onChange={e => updateScore(i, "team2Score", parseInt(e.target.value) || 0)} className="mt-1" />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={addGame}><Plus className="w-4 h-4 mr-1" /> Add Game</Button>
+                    {games.length > 1 && (
+                      <Button variant="ghost" size="sm" onClick={removeGame}><Minus className="w-4 h-4 mr-1" /> Remove</Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSubmitScore} disabled={submitScore.isPending || !effectiveWinnerTeamId} data-testid="btn-save-edited-score">
+                      {submitScore.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                      Save Changes
+                    </Button>
+                    <Button variant="outline" onClick={() => setShowScoreForm(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Confirm / Dispute — opposing team only */}
+        {m.result && !m.result.confirmedAt && !m.result.disputeReason && isTeamInMatch && myTeam?.id !== m.result.submittedByTeamId && (
           <div className="space-y-4">
-            {myTeam?.id === m.result.submittedByTeamId ? (
-              <p className="text-sm text-muted-foreground italic">
-                Waiting for {[challengerTeam, challengedTeam].find((t: any) => t?.id !== myTeam.id)?.teamName ?? "the other team"} to confirm or dispute this score.
-              </p>
-            ) : (
-              <div className="flex gap-3">
-                <Button onClick={handleConfirm} disabled={confirmScore.isPending} data-testid="btn-confirm-score">
-                  <CheckCircle className="w-4 h-4 mr-1" />
-                  Confirm Score
-                </Button>
-                <Button variant="outline" onClick={() => setShowDisputeForm(true)} data-testid="btn-dispute">
-                  <AlertTriangle className="w-4 h-4 mr-1" />
-                  Dispute
-                </Button>
-              </div>
-            )}
+            <div className="flex gap-3">
+              <Button onClick={handleConfirm} disabled={confirmScore.isPending} data-testid="btn-confirm-score">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Confirm Score
+              </Button>
+              <Button variant="outline" onClick={() => setShowDisputeForm(true)} data-testid="btn-dispute">
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                Dispute
+              </Button>
+            </div>
             {showDisputeForm && (
               <Card className="border-orange-200">
                 <CardContent className="pt-4 space-y-3">

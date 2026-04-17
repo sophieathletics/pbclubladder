@@ -97,11 +97,23 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
-  // Check no score submitted yet
+  // If a score already exists, only the original submitter can edit it,
+  // and only while it is not yet confirmed and not disputed.
   const existing = await db.select().from(matchResultsTable).where(eq(matchResultsTable.matchId, id)).limit(1);
-  if (existing.length > 0) {
-    res.status(400).json({ error: "Score already submitted" });
-    return;
+  const existingResult = existing[0];
+  if (existingResult) {
+    if (existingResult.confirmedAt) {
+      res.status(400).json({ error: "Score has already been confirmed and can no longer be edited" });
+      return;
+    }
+    if (existingResult.disputeReason) {
+      res.status(400).json({ error: "Score is under dispute and can no longer be edited" });
+      return;
+    }
+    if (existingResult.submittedByTeamId !== myTeam.id) {
+      res.status(403).json({ error: "Only the team that submitted the score can edit it" });
+      return;
+    }
   }
 
   // Validate: winnerTeamId must be one of the two teams
@@ -131,7 +143,8 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
 
   const loserTeamId = winnerTeamId === challenge.challengerTeamId ? challenge.challengedTeamId : challenge.challengerTeamId;
 
-  // Insert scores
+  // Replace existing scores (if editing) and upsert the match result
+  await db.delete(matchScoresTable).where(eq(matchScoresTable.matchId, id));
   for (const game of games) {
     await db.insert(matchScoresTable).values({
       matchId: id,
@@ -141,15 +154,20 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
     });
   }
 
-  // Insert result
-  const [result] = await db.insert(matchResultsTable).values({
-    matchId: id,
-    winnerTeamId,
-    loserTeamId,
-    submittedByTeamId: myTeam.id,
-    autoConfirmed: false,
-    disputeResolved: false,
-  }).returning();
+  if (existingResult) {
+    await db.update(matchResultsTable)
+      .set({ winnerTeamId, loserTeamId, submittedByTeamId: myTeam.id })
+      .where(eq(matchResultsTable.matchId, id));
+  } else {
+    await db.insert(matchResultsTable).values({
+      matchId: id,
+      winnerTeamId,
+      loserTeamId,
+      submittedByTeamId: myTeam.id,
+      autoConfirmed: false,
+      disputeResolved: false,
+    });
+  }
 
   await db.update(matchesTable).set({ status: "completed" }).where(eq(matchesTable.id, id));
   await db.update(challengesTable).set({ status: "completed" }).where(eq(challengesTable.id, match.challengeId));
