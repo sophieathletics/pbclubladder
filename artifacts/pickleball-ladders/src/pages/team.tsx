@@ -135,6 +135,34 @@ function TeamContent() {
           My Teams
         </h1>
 
+        {/* Prominent CTA at top — visible whenever any ladder still needs a team */}
+        {laddersWithoutTeam.length > 0 && !showInviteForm && (
+          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 mb-6 shadow-md">
+            <CardContent className="py-5 px-5 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 mb-1">
+                  <Send className="w-5 h-5 text-primary" />
+                  {teams.length === 0 ? "Start your first team" : "Join another ladder"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {teams.length === 0
+                    ? "Invite a partner to form a team and start competing."
+                    : `${laddersWithoutTeam.length} ladder${laddersWithoutTeam.length === 1 ? "" : "s"} ${laddersWithoutTeam.length === 1 ? "is" : "are"} open — invite a partner to join.`}
+                </p>
+              </div>
+              <Button
+                size="lg"
+                onClick={() => setShowInviteForm(true)}
+                className="w-full sm:w-auto shrink-0 font-semibold"
+                data-testid="btn-invite-cta"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Invite a Partner
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Current Teams */}
         {teams.length > 0 ? (
           <div className="space-y-4 mb-6">
@@ -142,25 +170,18 @@ function TeamContent() {
               <TeamCard key={team.id} team={team} ladders={ladderList} />
             ))}
           </div>
-        ) : (
+        ) : laddersWithoutTeam.length === 0 && !showInviteForm ? (
           <Card className="border-primary/10 mb-6">
             <CardContent className="py-10 text-center">
               <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-lg font-semibold mb-2">You're not on any team yet</p>
-              <p className="text-muted-foreground mb-6">Invite a partner to form a team and join a ladder.</p>
-              <Button onClick={() => setShowInviteForm(true)} disabled={laddersWithoutTeam.length === 0}>
-                <Send className="w-4 h-4 mr-2" />
-                Invite a Partner
-              </Button>
-              {laddersWithoutTeam.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-3">No ladders with active seasons available.</p>
-              )}
+              <p className="text-xs text-muted-foreground mt-3">No ladders with active seasons available.</p>
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Invite Form: Available if any ladder still has no team */}
-        {laddersWithoutTeam.length > 0 && (showInviteForm ? (
+        {laddersWithoutTeam.length > 0 && showInviteForm && (
           <Card className="border-primary/10 mb-6">
             <CardHeader>
               <CardTitle>Invite a Partner</CardTitle>
