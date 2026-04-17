@@ -13,6 +13,8 @@ export interface UpdateLadderBody {
   category?: UpdateLadderBodyCategory;
   location?: string;
   address?: string;
+  city?: string;
+  state?: string;
   level?: string;
   entryFeeCents?: number | null;
   isActive?: boolean;

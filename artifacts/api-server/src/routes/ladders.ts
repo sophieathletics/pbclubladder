@@ -51,9 +51,19 @@ function validateFee(v: any): { ok: boolean; value?: number | null; error?: stri
 }
 
 router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
-  const { name, description, sortOrder, category, location, address, level, entryFeeCents } = req.body;
+  const { name, description, sortOrder, category, location, address, city, state, level, entryFeeCents } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const cityTrim = typeof city === "string" ? city.trim() : "";
+  const stateTrim = typeof state === "string" ? state.trim().toUpperCase() : "";
+  if (!cityTrim) {
+    res.status(400).json({ error: "city is required" });
+    return;
+  }
+  if (!/^[A-Z]{2}$/.test(stateTrim)) {
+    res.status(400).json({ error: "state is required (2-letter code)" });
     return;
   }
   const cat = category ?? "coed";
@@ -69,6 +79,8 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
     category: cat,
     location: location?.trim() || null,
     address: address?.trim() || null,
+    city: cityTrim,
+    state: stateTrim,
     level: level?.trim() || null,
     entryFeeCents: fee.value ?? null,
     isActive: true,
@@ -79,7 +91,7 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
 
 router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { name, description, isActive, sortOrder, category, location, address, level, entryFeeCents } = req.body;
+  const { name, description, isActive, sortOrder, category, location, address, city, state, level, entryFeeCents } = req.body;
   const updates: any = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
@@ -87,6 +99,16 @@ router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
   if (location !== undefined) updates.location = (typeof location === "string" && location.trim()) ? location.trim() : null;
   if (address !== undefined) updates.address = (typeof address === "string" && address.trim()) ? address.trim() : null;
+  if (city !== undefined) {
+    const c = typeof city === "string" ? city.trim() : "";
+    if (!c) { res.status(400).json({ error: "city cannot be empty" }); return; }
+    updates.city = c;
+  }
+  if (state !== undefined) {
+    const s = typeof state === "string" ? state.trim().toUpperCase() : "";
+    if (!/^[A-Z]{2}$/.test(s)) { res.status(400).json({ error: "state must be a 2-letter code" }); return; }
+    updates.state = s;
+  }
   if (level !== undefined) updates.level = (typeof level === "string" && level.trim()) ? level.trim() : null;
   if (entryFeeCents !== undefined) {
     const fee = validateFee(entryFeeCents);

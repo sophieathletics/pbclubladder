@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Users, BarChart3, CheckCircle, AlertTriangle, Activity, Loader2, Layers, Edit3, Plus, Minus } from "lucide-react";
+import { US_STATES, STATE_NAME } from "@/lib/us-states";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Admin() {
@@ -51,7 +52,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; address: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", address: "", level: "", isPaid: false, entryFeeDollars: "" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; address: string; city: string; state: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -73,6 +74,14 @@ function AdminContent() {
       toast({ title: "Ladder name is required", variant: "destructive" });
       return;
     }
+    if (!newLadder.city.trim()) {
+      toast({ title: "City is required", variant: "destructive" });
+      return;
+    }
+    if (!newLadder.state) {
+      toast({ title: "State is required", variant: "destructive" });
+      return;
+    }
     let entryFeeCents: number | null = null;
     if (newLadder.isPaid) {
       const parsed = parseFloat(newLadder.entryFeeDollars);
@@ -90,12 +99,14 @@ function AdminContent() {
           category: newLadder.category,
           location: newLadder.location || undefined,
           address: newLadder.address || undefined,
+          city: newLadder.city.trim(),
+          state: newLadder.state,
           level: newLadder.level || undefined,
           entryFeeCents,
         },
       },
       {
-        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", level: "", isPaid: false, entryFeeDollars: "" }); },
+        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "" }); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
       }
     );
@@ -222,6 +233,21 @@ function AdminContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
+                    <Label className="text-xs">City <span className="text-destructive">*</span></Label>
+                    <Input value={newLadder.city} onChange={e => setNewLadder(p => ({ ...p, city: e.target.value }))} placeholder="e.g. Austin" className="mt-1" data-testid="input-new-ladder-city" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">State <span className="text-destructive">*</span></Label>
+                    <Select value={newLadder.state} onValueChange={(v) => setNewLadder(p => ({ ...p, state: v }))}>
+                      <SelectTrigger className="mt-1" data-testid="select-new-ladder-state"><SelectValue placeholder="Select state" /></SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {US_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
                     <Label className="text-xs">Location name (optional)</Label>
                     <Input value={newLadder.location} onChange={e => setNewLadder(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Westside Courts" className="mt-1" data-testid="input-new-ladder-location" />
                   </div>
@@ -231,8 +257,8 @@ function AdminContent() {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Address (optional, opens in Google Maps)</Label>
-                  <Input value={newLadder.address} onChange={e => setNewLadder(p => ({ ...p, address: e.target.value }))} placeholder="123 Court St, City, State ZIP" className="mt-1" data-testid="input-new-ladder-address" />
+                  <Label className="text-xs">Street address (optional, opens in Google Maps)</Label>
+                  <Input value={newLadder.address} onChange={e => setNewLadder(p => ({ ...p, address: e.target.value }))} placeholder="123 Court St" className="mt-1" data-testid="input-new-ladder-address" />
                 </div>
                 <div>
                   <Label className="text-xs">Pricing</Label>
@@ -481,6 +507,8 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [category, setCategory] = useState<"men" | "women" | "mixed" | "coed">(ladder.category ?? "coed");
   const [location, setLocation] = useState(ladder.location ?? "");
   const [address, setAddress] = useState(ladder.address ?? "");
+  const [city, setCity] = useState(ladder.city ?? "");
+  const [stateCode, setStateCode] = useState(ladder.state ?? "");
   const [level, setLevel] = useState(ladder.level ?? "");
   const [feeDollars, setFeeDollars] = useState(ladder.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : "");
   const [isActive, setIsActive] = useState(ladder.isActive);
@@ -488,6 +516,8 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const qc = useQueryClient();
 
   const handleSave = () => {
+    if (!city.trim()) { toast({ title: "City is required", variant: "destructive" }); return; }
+    if (!stateCode) { toast({ title: "State is required", variant: "destructive" }); return; }
     onUpdate.mutate(
       {
         id: ladder.id,
@@ -495,6 +525,8 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           name, description, isActive, category,
           location: location || undefined,
           address: address || undefined,
+          city: city.trim(),
+          state: stateCode,
           level: level || undefined,
           entryFeeCents: feeDollars === "" ? null : Math.round(parseFloat(feeDollars) * 100),
         },
@@ -512,10 +544,19 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name" />
         <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
         <div className="grid grid-cols-2 gap-2">
+          <Input value={city} onChange={e => setCity(e.target.value)} placeholder="City *" />
+          <Select value={stateCode} onValueChange={setStateCode}>
+            <SelectTrigger><SelectValue placeholder="State *" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {US_STATES.map(s => <SelectItem key={s.code} value={s.code}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location name" />
           <Input value={level} onChange={e => setLevel(e.target.value)} placeholder="Level" />
         </div>
-        <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Address (opens in Google Maps)" />
+        <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Street address (opens in Google Maps)" />
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -569,7 +610,10 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           {!ladder.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
           {ladder.activeSeason && <Badge variant="outline" className="text-xs">{ladder.activeSeason.name}</Badge>}
         </div>
-        {ladder.location && <p className="text-xs text-muted-foreground">📍 {ladder.location}</p>}
+        {(ladder.city || ladder.state) && (
+          <p className="text-xs text-muted-foreground">📍 {[ladder.city, ladder.state].filter(Boolean).join(", ")}{ladder.location ? ` — ${ladder.location}` : ""}</p>
+        )}
+        {!ladder.city && !ladder.state && ladder.location && <p className="text-xs text-muted-foreground">📍 {ladder.location}</p>}
         {ladder.address && <p className="text-xs text-muted-foreground truncate">🗺️ {ladder.address}</p>}
         {ladder.description && <p className="text-xs text-muted-foreground truncate">{ladder.description}</p>}
       </div>

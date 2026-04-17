@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Trophy, ArrowRight, Activity, Users, MapPin, Tag, DollarSign, Check } from "lucide-react";
 import { useGetTopLadder, useGetCurrentPlayer, useListLadders, useGetMyTeams } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { STATE_NAME } from "@/lib/us-states";
 
 function isLadderEligible(sex: string | null | undefined, category: string | null | undefined): boolean {
   const cat = category ?? "coed";
@@ -39,8 +41,15 @@ export default function Home() {
     () => new Set(((myTeamsData as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
     [myTeamsData]
   );
+  const [filterState, setFilterState] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
   const ladders = useMemo(() => {
-    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason && isSignupOpen(l.activeSeason?.endDate));
+    const list = ((laddersData as any[]) ?? []).filter(l => {
+      if (!l.isActive || !l.activeSeason || !isSignupOpen(l.activeSeason?.endDate)) return false;
+      if (filterState !== "all" && l.state !== filterState) return false;
+      if (filterCity !== "all" && l.city !== filterCity) return false;
+      return true;
+    });
     return [...list].sort((a, b) => {
       const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
       const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
@@ -49,11 +58,32 @@ export default function Home() {
       const bIn = myLadderIds.has(b.id) ? 1 : 0;
       return aIn - bIn;
     });
-  }, [laddersData, playerSex, myLadderIds]);
+  }, [laddersData, playerSex, myLadderIds, filterState, filterCity]);
   const joinHref = currentPlayer ? "/ladders" : "/register";
   const hasStandings = !!ladderResponse?.standings?.length;
   const isLoading = isLoadingStandings || (!hasStandings && isLoadingLadders);
-  const showOpenLadders = !isLoadingLadders && ladders.length > 0 && (!currentPlayer || !hasStandings);
+
+  const allActiveLadders = useMemo(
+    () => ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason && isSignupOpen(l.activeSeason?.endDate)),
+    [laddersData]
+  );
+  const availableStates = useMemo(() => {
+    const s = new Set<string>();
+    allActiveLadders.forEach(l => { if (l.state) s.add(l.state); });
+    return Array.from(s).sort();
+  }, [allActiveLadders]);
+  const availableCities = useMemo(() => {
+    const s = new Set<string>();
+    allActiveLadders.forEach(l => {
+      if (!l.city) return;
+      if (filterState !== "all" && l.state !== filterState) return;
+      s.add(l.city);
+    });
+    return Array.from(s).sort();
+  }, [allActiveLadders, filterState]);
+
+  const hasFilters = filterState !== "all" || filterCity !== "all";
+  const showOpenLadders = !isLoadingLadders && (ladders.length > 0 || hasFilters) && (!currentPlayer || !hasStandings || hasFilters);
 
   return (
     <MainLayout>
@@ -95,6 +125,17 @@ export default function Home() {
               </Button>
             </div>
 
+            {!isLoading && !hasStandings && (
+              <LadderFilterBar
+                filterState={filterState}
+                filterCity={filterCity}
+                availableStates={availableStates}
+                availableCities={availableCities}
+                setFilterState={(v) => { setFilterState(v); setFilterCity("all"); }}
+                setFilterCity={setFilterCity}
+              />
+            )}
+
             <Card className="border-primary/10 shadow-lg shadow-primary/5">
             <CardContent className="p-0">
               <div className="divide-y">
@@ -112,9 +153,9 @@ export default function Home() {
                   ladders.length === 0 ? (
                     <div className="p-10 text-center flex flex-col items-center">
                       <Trophy className="w-12 h-12 mb-4 text-muted-foreground/50" />
-                      <p className="font-semibold">No ladders open yet</p>
+                      <p className="font-semibold">{hasFilters ? "No ladders match your filters" : "No ladders open yet"}</p>
                       <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                        Once an admin creates a ladder and starts a season, teams and standings will appear here.
+                        {hasFilters ? "Try clearing the state or city filter." : "Once an admin creates a ladder and starts a season, teams and standings will appear here."}
                       </p>
                     </div>
                   ) : (
@@ -143,6 +184,9 @@ export default function Home() {
                                 })()}
                               </h3>
                               <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                                {(l.city || l.state) && (
+                                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[l.city, l.state].filter(Boolean).join(", ")}</span>
+                                )}
                                 {l.location && (
                                   l.address ? (
                                     <a
@@ -150,13 +194,13 @@ export default function Home() {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
-                                      className="flex items-center gap-1 hover:text-primary hover:underline"
+                                      className="hover:text-primary hover:underline"
                                       data-testid={`link-map-${l.id}`}
                                     >
-                                      <MapPin className="w-3 h-3" />{l.location}
+                                      {l.location}
                                     </a>
                                   ) : (
-                                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>
+                                    <span>{l.location}</span>
                                   )
                                 )}
                                 {l.level && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />Level {l.level}</span>}
@@ -230,10 +274,22 @@ export default function Home() {
                 </Link>
               </Button>
             </div>
+            <LadderFilterBar
+              filterState={filterState}
+              filterCity={filterCity}
+              availableStates={availableStates}
+              availableCities={availableCities}
+              setFilterState={(v) => { setFilterState(v); setFilterCity("all"); }}
+              setFilterCity={setFilterCity}
+            />
             <Card className="border-primary/10 shadow-lg shadow-primary/5">
               <CardContent className="p-0">
                 <div className="divide-y">
-                  {ladders.slice(0, 5).map((l: any) => {
+                  {ladders.length === 0 ? (
+                    <div className="p-10 text-center text-sm text-muted-foreground">
+                      No ladders match your filters. Try clearing the state or city.
+                    </div>
+                  ) : ladders.slice(0, 5).map((l: any) => {
                     const cat = l.category ?? "coed";
                     const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
                     const eligible = isLadderEligible(playerSex, cat);
@@ -257,6 +313,9 @@ export default function Home() {
                             })()}
                           </h3>
                           <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                            {(l.city || l.state) && (
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[l.city, l.state].filter(Boolean).join(", ")}</span>
+                            )}
                             {l.location && (
                               l.address ? (
                                 <a
@@ -264,12 +323,12 @@ export default function Home() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="flex items-center gap-1 hover:text-primary hover:underline"
+                                  className="hover:text-primary hover:underline"
                                 >
-                                  <MapPin className="w-3 h-3" />{l.location}
+                                  {l.location}
                                 </a>
                               ) : (
-                                <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>
+                                <span>{l.location}</span>
                               )
                             )}
                             {l.level && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />Level {l.level}</span>}
@@ -336,4 +395,53 @@ export default function Home() {
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}>{children}</span>;
+}
+
+function LadderFilterBar({
+  filterState,
+  filterCity,
+  availableStates,
+  availableCities,
+  setFilterState,
+  setFilterCity,
+}: {
+  filterState: string;
+  filterCity: string;
+  availableStates: string[];
+  availableCities: string[];
+  setFilterState: (v: string) => void;
+  setFilterCity: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mb-4 px-2 sm:px-4" data-testid="ladder-filter-bar">
+      <div className="flex-1 min-w-[140px]">
+        <Select value={filterState} onValueChange={setFilterState}>
+          <SelectTrigger data-testid="filter-state"><SelectValue placeholder="All states" /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">All states</SelectItem>
+            {availableStates.map(code => <SelectItem key={code} value={code}>{STATE_NAME[code] ?? code}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex-1 min-w-[140px]">
+        <Select value={filterCity} onValueChange={setFilterCity} disabled={availableCities.length === 0}>
+          <SelectTrigger data-testid="filter-city"><SelectValue placeholder="All cities" /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">All cities</SelectItem>
+            {availableCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      {(filterState !== "all" || filterCity !== "all") && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => { setFilterState("all"); setFilterCity("all"); }}
+          data-testid="btn-clear-filters"
+        >
+          Clear
+        </Button>
+      )}
+    </div>
+  );
 }

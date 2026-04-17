@@ -1,11 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useListLadders, useGetCurrentPlayer, useGetMyTeams } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Users, ArrowRight, Calendar, MapPin, Tag, DollarSign, Check } from "lucide-react";
+import { STATE_NAME } from "@/lib/us-states";
 
 function isLadderEligible(sex: string | null | undefined, category: string | null | undefined): boolean {
   const cat = category ?? "coed";
@@ -25,12 +27,36 @@ export default function Ladders() {
     () => new Set(((myTeamsData as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
     [myTeamsData]
   );
-  const ladders = useMemo(() => {
-    const list = ((laddersData as any[]) ?? []).filter(l => {
+  const [filterState, setFilterState] = useState<string>("all");
+  const [filterCity, setFilterCity] = useState<string>("all");
+  const openLadders = useMemo(
+    () => ((laddersData as any[]) ?? []).filter(l => {
       if (!l.isActive || !l.activeSeason?.endDate) return false;
       const cutoff = new Date(l.activeSeason.endDate);
       cutoff.setUTCDate(cutoff.getUTCDate() - 30);
       return Date.now() <= cutoff.getTime();
+    }),
+    [laddersData]
+  );
+  const availableStates = useMemo(() => {
+    const s = new Set<string>();
+    openLadders.forEach(l => { if (l.state) s.add(l.state); });
+    return Array.from(s).sort();
+  }, [openLadders]);
+  const availableCities = useMemo(() => {
+    const s = new Set<string>();
+    openLadders.forEach(l => {
+      if (!l.city) return;
+      if (filterState !== "all" && l.state !== filterState) return;
+      s.add(l.city);
+    });
+    return Array.from(s).sort();
+  }, [openLadders, filterState]);
+  const ladders = useMemo(() => {
+    const list = openLadders.filter(l => {
+      if (filterState !== "all" && l.state !== filterState) return false;
+      if (filterCity !== "all" && l.city !== filterCity) return false;
+      return true;
     });
     return [...list].sort((a, b) => {
       const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
@@ -40,7 +66,7 @@ export default function Ladders() {
       const bIn = myLadderIds.has(b.id) ? 1 : 0;
       return aIn - bIn;
     });
-  }, [laddersData, playerSex, myLadderIds]);
+  }, [openLadders, playerSex, myLadderIds, filterState, filterCity]);
 
   return (
     <MainLayout>
@@ -55,6 +81,34 @@ export default function Ladders() {
           </p>
         </div>
 
+        {!isLoading && openLadders.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4" data-testid="ladder-filter-bar">
+            <div className="flex-1 min-w-[140px]">
+              <Select value={filterState} onValueChange={(v) => { setFilterState(v); setFilterCity("all"); }}>
+                <SelectTrigger data-testid="filter-state"><SelectValue placeholder="All states" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">All states</SelectItem>
+                  {availableStates.map(code => <SelectItem key={code} value={code}>{STATE_NAME[code] ?? code}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <Select value={filterCity} onValueChange={setFilterCity} disabled={availableCities.length === 0}>
+                <SelectTrigger data-testid="filter-city"><SelectValue placeholder="All cities" /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="all">All cities</SelectItem>
+                  {availableCities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {(filterState !== "all" || filterCity !== "all") && (
+              <Button variant="ghost" size="sm" onClick={() => { setFilterState("all"); setFilterCity("all"); }} data-testid="btn-clear-filters">
+                Clear
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="space-y-3">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -63,7 +117,7 @@ export default function Ladders() {
           ) : !ladders?.length ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
-                No ladders are available yet. Check back soon.
+                {openLadders.length === 0 ? "No ladders are available yet. Check back soon." : "No ladders match your filters. Try clearing the state or city."}
               </CardContent>
             </Card>
           ) : (
@@ -85,6 +139,12 @@ export default function Ladders() {
                       </p>
                     ) : null}
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+                      {(ladder.city || ladder.state) && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {[ladder.city, ladder.state].filter(Boolean).join(", ")}
+                        </span>
+                      )}
                       {ladder.location && (
                         ladder.address ? (
                           <a
@@ -94,12 +154,10 @@ export default function Ladders() {
                             className="inline-flex items-center gap-1 hover:text-primary hover:underline"
                             data-testid={`link-map-${ladder.id}`}
                           >
-                            <MapPin className="w-3.5 h-3.5" />
                             {ladder.location}
                           </a>
                         ) : (
                           <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3.5 h-3.5" />
                             {ladder.location}
                           </span>
                         )

@@ -202,6 +202,8 @@ export interface Ladder {
   category: LadderCategory;
   location?: string | null;
   address?: string | null;
+  city?: string | null;
+  state?: string | null;
   level?: string | null;
   entryFeeCents?: number | null;
   isActive: boolean;
@@ -230,6 +232,8 @@ export interface CreateLadderBody {
   category: CreateLadderBodyCategory;
   location?: string;
   address?: string;
+  city: string;
+  state: string;
   level?: string;
   entryFeeCents?: number | null;
   sortOrder?: string;
@@ -251,6 +255,8 @@ export interface UpdateLadderBody {
   category?: UpdateLadderBodyCategory;
   location?: string;
   address?: string;
+  city?: string;
+  state?: string;
   level?: string;
   entryFeeCents?: number | null;
   isActive?: boolean;
