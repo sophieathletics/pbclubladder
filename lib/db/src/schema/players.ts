@@ -5,8 +5,13 @@ import { z } from "zod/v4";
 export const playersTable = pgTable("players", {
   id: uuid("id").primaryKey().defaultRandom(),
   fullName: text("full_name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   email: text("email").notNull().unique(),
   phone: text("phone"),
+  selfRating: text("self_rating"),
+  sex: text("sex"),
+  shareContact: boolean("share_contact").notNull().default(false),
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("player"),
   isActive: boolean("is_active").notNull().default(true),

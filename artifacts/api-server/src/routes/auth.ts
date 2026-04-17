@@ -7,9 +7,22 @@ import { logger } from "../lib/logger";
 const router: IRouter = Router();
 
 router.post("/auth/register", async (req, res): Promise<void> => {
-  const { fullName, email, phone, password } = req.body;
-  if (!fullName || !email || !password) {
-    res.status(400).json({ error: "fullName, email and password are required" });
+  const { firstName, lastName, email, phone, password, selfRating, sex, shareContact } = req.body;
+  const finalFirst = (firstName ?? "").trim();
+  const finalLast = (lastName ?? "").trim();
+  const finalFullName = `${finalFirst} ${finalLast}`.trim();
+
+  if (!finalFirst || !finalLast || !email || !password) {
+    res.status(400).json({ error: "First name, last name, email and password are required" });
+    return;
+  }
+  if (!selfRating) {
+    res.status(400).json({ error: "Self-rating is required" });
+    return;
+  }
+  const allowedSex = ["male", "female", "other"];
+  if (!sex || !allowedSex.includes(sex)) {
+    res.status(400).json({ error: "Sex must be one of: male, female, other" });
     return;
   }
 
@@ -21,9 +34,14 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   const passwordHash = hashPassword(password);
   const [player] = await db.insert(playersTable).values({
-    fullName,
+    fullName: finalFullName,
+    firstName: finalFirst || null,
+    lastName: finalLast || null,
     email: email.toLowerCase(),
     phone: phone ?? null,
+    selfRating: selfRating ?? null,
+    sex: sex ?? null,
+    shareContact: shareContact === true,
     passwordHash,
     role: "player",
     isActive: true,

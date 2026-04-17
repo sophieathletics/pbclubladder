@@ -19,17 +19,17 @@ export default function Home() {
             Competitive Ladder Season Active
           </Badge>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground max-w-3xl mb-6">
-            The Digital Home of <span className="text-primary">Club Rivalries</span>
+            <span className="text-primary">Pickleball Club Ladder</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-10">
-            Challenge teams, record scores, and climb the ranks. The most organized and competitive way to play doubles pickleball.
+            Challenge teams, record scores, and climb the ranks.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" asChild className="font-semibold px-8" data-testid="hero-btn-leaderboard">
-              <Link href="/leaderboard">View Leaderboard</Link>
+            <Button size="lg" asChild className="font-semibold px-8" data-testid="hero-btn-join">
+              <Link href="/register">Join a Ladder</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="font-semibold px-8" data-testid="hero-btn-login">
-              <Link href="/login">Join the Ladder</Link>
+            <Button size="lg" variant="outline" asChild className="font-semibold px-8" data-testid="hero-btn-leaderboard">
+              <Link href="/leaderboard">View Leaderboard</Link>
             </Button>
           </div>
         </section>

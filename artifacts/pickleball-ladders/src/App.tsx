@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import Ladders from "@/pages/ladders";
 import Leaderboard from "@/pages/leaderboard";
 import Dashboard from "@/pages/dashboard";
 import Team from "@/pages/team";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
+      <Route path="/ladders" component={Ladders} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/team" component={Team} />

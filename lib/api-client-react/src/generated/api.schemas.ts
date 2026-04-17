@@ -18,11 +18,24 @@ export interface SuccessResponse {
   message?: string;
 }
 
+export type RegisterBodySex =
+  (typeof RegisterBodySex)[keyof typeof RegisterBodySex];
+
+export const RegisterBodySex = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
+
 export interface RegisterBody {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
   password: string;
+  selfRating: string;
+  sex: RegisterBodySex;
+  shareContact?: boolean;
 }
 
 export interface LoginBody {

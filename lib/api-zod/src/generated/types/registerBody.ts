@@ -5,10 +5,15 @@
  * Pickleball Club Ladder API
  * OpenAPI spec version: 0.1.0
  */
+import type { RegisterBodySex } from "./registerBodySex";
 
 export interface RegisterBody {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone?: string;
   password: string;
+  selfRating: string;
+  sex: RegisterBodySex;
+  shareContact?: boolean;
 }

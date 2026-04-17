@@ -18,10 +18,14 @@ export const HealthCheckResponse = zod.object({
  * @summary Register a new player
  */
 export const RegisterPlayerBody = zod.object({
-  fullName: zod.string(),
+  firstName: zod.string(),
+  lastName: zod.string(),
   email: zod.string(),
   phone: zod.string().optional(),
   password: zod.string(),
+  selfRating: zod.string(),
+  sex: zod.enum(["male", "female", "other"]),
+  shareContact: zod.boolean().optional(),
 });
 
 /**

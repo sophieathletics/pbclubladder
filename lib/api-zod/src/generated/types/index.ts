@@ -57,6 +57,7 @@ export * from "./player";
 export * from "./playerRole";
 export * from "./playerWithTeam";
 export * from "./registerBody";
+export * from "./registerBodySex";
 export * from "./resolveDisputeBody";
 export * from "./resolveDisputeBodyAction";
 export * from "./resolveDisputeBodyCorrectedGamesItem";

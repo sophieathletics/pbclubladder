@@ -1288,7 +1288,9 @@ components:
     RegisterBody:
       type: object
       properties:
-        fullName:
+        firstName:
+          type: string
+        lastName:
           type: string
         email:
           type: string
@@ -1296,10 +1298,20 @@ components:
           type: string
         password:
           type: string
+        selfRating:
+          type: string
+        sex:
+          type: string
+          enum: [male, female, other]
+        shareContact:
+          type: boolean
       required:
-        - fullName
+        - firstName
+        - lastName
         - email
         - password
+        - selfRating
+        - sex
 
     LoginBody:
       type: object
