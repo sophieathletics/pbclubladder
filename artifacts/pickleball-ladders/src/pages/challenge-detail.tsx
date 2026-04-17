@@ -43,8 +43,7 @@ function ChallengeDetailContent() {
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [bookDate, setBookDate] = useState("");
-  const [bookTime, setBookTime] = useState("");
+  const [bookSlot, setBookSlot] = useState<string | null>(null);
   const [bookLocation, setBookLocation] = useState("");
   const [showBookForm, setShowBookForm] = useState(false);
 
@@ -95,10 +94,11 @@ function ChallengeDetailContent() {
   };
 
   const handleBook = () => {
-    if (!bookDate || !bookTime || !bookLocation) {
-      toast({ title: "Fill in all fields", variant: "destructive" });
+    if (!bookSlot || !bookLocation) {
+      toast({ title: "Pick a slot and add the court location", variant: "destructive" });
       return;
     }
+    const [bookDate, bookTime] = bookSlot.split("|");
     bookMatch.mutate(
       { id: id!, data: { date: bookDate, time: bookTime, courtLocation: bookLocation } },
       {
@@ -195,56 +195,75 @@ function ChallengeDetailContent() {
                 </div>
               </div>
 
-              {c.overlappingSlots && c.overlappingSlots.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-green-700 mb-2">Common availability found:</p>
-                  <ul className="text-sm space-y-1">
-                    {c.overlappingSlots.map((slot: any) => (
-                      slot.times.map((t: string) => (
-                        <li key={`${slot.date}-${t}`} className="text-muted-foreground">• {slot.date} at {t}</li>
-                      ))
-                    ))}
-                  </ul>
-                </div>
-              )}
-
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/availability/${id}`}>
                   <Calendar className="w-4 h-4 mr-1" /> Submit Availability
                 </Link>
               </Button>
 
-              {c.overlappingSlots?.length > 0 && (isChallenger || isChallenged) && (
-                <div className="mt-4">
-                  {!showBookForm ? (
-                    <Button size="sm" onClick={() => setShowBookForm(true)}>
-                      Book the Match
-                    </Button>
-                  ) : (
-                    <div className="space-y-3 mt-2">
-                      <div>
-                        <Label className="text-xs">Date</Label>
-                        <Input type="date" value={bookDate} onChange={e => setBookDate(e.target.value)} className="mt-1" />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Time</Label>
-                        <Input type="time" value={bookTime} onChange={e => setBookTime(e.target.value)} className="mt-1" />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Court Location</Label>
-                        <Input placeholder="e.g. Riverside Courts, Court 3" value={bookLocation} onChange={e => setBookLocation(e.target.value)} className="mt-1" />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleBook} disabled={bookMatch.isPending} size="sm">
-                          {bookMatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                          Confirm Booking
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setShowBookForm(false)}>Cancel</Button>
-                      </div>
+              {c.overlappingSlots?.length > 0 && (isChallenger || isChallenged) && (() => {
+                const flatSlots: { date: string; time: string; key: string; label: string }[] = [];
+                for (const s of c.overlappingSlots) {
+                  for (const t of s.times) {
+                    const d = new Date(s.date + "T00:00:00");
+                    const dayLabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+                    const [hh, mm] = t.split(":");
+                    const hr = parseInt(hh, 10);
+                    const ampm = hr >= 12 ? "PM" : "AM";
+                    const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+                    const timeLabel = `${hr12}${mm !== "00" ? ":" + mm : ""} ${ampm}`;
+                    flatSlots.push({ date: s.date, time: t, key: `${s.date}|${t}`, label: `${dayLabel} • ${timeLabel}` });
+                  }
+                }
+
+                return (
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold text-green-700 mb-2">Common availability found — pick a slot:</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                      {flatSlots.map(s => {
+                        const isSelected = bookSlot === s.key;
+                        return (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => { setBookSlot(s.key); setShowBookForm(true); }}
+                            data-testid={`slot-${s.key}`}
+                            className={`text-left text-xs px-3 py-2 rounded-md border transition-colors ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-border hover-elevate active-elevate-2"
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {showBookForm && bookSlot && (
+                      <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                        <div>
+                          <Label className="text-xs">Court Location</Label>
+                          <Input
+                            placeholder="e.g. Riverside Courts, Court 3"
+                            value={bookLocation}
+                            onChange={e => setBookLocation(e.target.value)}
+                            className="mt-1"
+                            data-testid="input-court-location"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={handleBook} disabled={bookMatch.isPending} size="sm" data-testid="btn-confirm-booking">
+                            {bookMatch.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                            Confirm Booking
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => { setShowBookForm(false); setBookSlot(null); }}>Cancel</Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         )}
