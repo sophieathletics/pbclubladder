@@ -18,7 +18,7 @@ export default function Availability() {
   );
 }
 
-const TIME_SLOTS = [
+const ALL_TIME_SLOTS = [
   { label: "9am", value: "09:00" },
   { label: "10am", value: "10:00" },
   { label: "11am", value: "11:00" },
@@ -27,7 +27,21 @@ const TIME_SLOTS = [
   { label: "2pm", value: "14:00" },
   { label: "3pm", value: "15:00" },
   { label: "4pm", value: "16:00" },
+  { label: "5pm", value: "17:00" },
+  { label: "6pm", value: "18:00" },
+  { label: "7pm", value: "19:00" },
 ];
+
+const WEEKEND_END_VALUE = "16:00"; // Sat/Sun end at 4pm
+const WEEKDAY_END_VALUE = "19:00"; // Mon-Fri end at 7pm
+
+function slotsForDate(dateValue: string) {
+  const d = new Date(dateValue + "T00:00:00");
+  const dow = d.getDay();
+  const isWeekend = dow === 0 || dow === 6;
+  const endValue = isWeekend ? WEEKEND_END_VALUE : WEEKDAY_END_VALUE;
+  return ALL_TIME_SLOTS.filter(t => t.value <= endValue);
+}
 
 function formatDate(d: Date): string {
   const yyyy = d.getFullYear();
@@ -45,15 +59,13 @@ function AvailabilityContent() {
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Generate the next 4 weekends (Saturdays and Sundays only) within the next 28 days
+  // Generate the next 14 days
   const dates = useMemo(() => {
     const out: { value: string; weekday: string; day: string; month: string }[] = [];
     const today = new Date();
-    for (let i = 0; i < 28 && out.length < 8; i++) {
+    for (let i = 0; i < 14; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      const dow = d.getDay();
-      if (dow !== 0 && dow !== 6) continue;
       out.push({
         value: formatDate(d),
         weekday: d.toLocaleDateString(undefined, { weekday: "short" }),
@@ -80,11 +92,12 @@ function AvailabilityContent() {
   const toggleAllForDate = (date: string) => {
     setSelected(prev => {
       const next = new Set(prev);
-      const allSelected = TIME_SLOTS.every(t => next.has(`${date}|${t.value}`));
+      const slots = slotsForDate(date);
+      const allSelected = slots.every(t => next.has(`${date}|${t.value}`));
       if (allSelected) {
-        TIME_SLOTS.forEach(t => next.delete(`${date}|${t.value}`));
+        slots.forEach(t => next.delete(`${date}|${t.value}`));
       } else {
-        TIME_SLOTS.forEach(t => next.add(`${date}|${t.value}`));
+        slots.forEach(t => next.add(`${date}|${t.value}`));
       }
       return next;
     });
@@ -139,7 +152,7 @@ function AvailabilityContent() {
           Submit Availability
         </h1>
         <p className="text-muted-foreground mb-6">
-          Tap the times when you and your teammate are both available to play. Matches run Saturdays and Sundays, 9 AM – 4 PM.
+          Tap the times when you and your teammate are both available to play. Weekdays 9 AM – 7 PM, weekends 9 AM – 4 PM.
           {c && <span> Challenge: <strong>{c.challengerTeam?.teamName}</strong> vs <strong>{c.challengedTeam?.teamName}</strong></span>}
         </p>
 
@@ -179,8 +192,9 @@ function AvailabilityContent() {
           <CardContent>
             <div className="space-y-3">
               {dates.map(date => {
-                const allSelected = TIME_SLOTS.every(t => selected.has(`${date.value}|${t.value}`));
-                const anySelected = TIME_SLOTS.some(t => selected.has(`${date.value}|${t.value}`));
+                const slotsForThisDate = slotsForDate(date.value);
+                const allSelected = slotsForThisDate.every(t => selected.has(`${date.value}|${t.value}`));
+                const anySelected = slotsForThisDate.some(t => selected.has(`${date.value}|${t.value}`));
                 return (
                   <div key={date.value} className="border rounded-lg p-3" data-testid={`row-date-${date.value}`}>
                     <div className="flex items-center justify-between mb-2">
@@ -197,7 +211,7 @@ function AvailabilityContent() {
                         </div>
                         <div className="text-left">
                           <div className="text-sm font-medium">
-                            {anySelected ? `${TIME_SLOTS.filter(t => selected.has(`${date.value}|${t.value}`)).length} times` : "Tap times below"}
+                            {anySelected ? `${slotsForThisDate.filter(t => selected.has(`${date.value}|${t.value}`)).length} times` : "Tap times below"}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {allSelected ? "Tap day to clear" : "Tap day to select all"}
@@ -206,7 +220,7 @@ function AvailabilityContent() {
                       </button>
                     </div>
                     <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                      {TIME_SLOTS.map(slot => {
+                      {slotsForThisDate.map(slot => {
                         const key = `${date.value}|${slot.value}`;
                         const isSelected = selected.has(key);
                         return (
