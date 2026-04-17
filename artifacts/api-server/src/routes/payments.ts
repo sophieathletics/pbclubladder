@@ -8,8 +8,33 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-// Webhook MUST receive raw body. This route is also mounted with raw parser
-// at the app level to ensure express.json() doesn't consume the body first.
+// Mark a specific player as paid, and if both teammates have paid, mark the team paid.
+async function markPlayerPaid(teamId: string, payerId: string, paymentIntentId: string) {
+  const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, teamId)).limit(1);
+  if (!team) return;
+
+  const patch: any = {};
+  if (team.player1Id === payerId && !team.player1PaidAt) {
+    patch.player1PaidAt = new Date();
+    patch.player1StripePaymentIntentId = paymentIntentId;
+  } else if (team.player2Id === payerId && !team.player2PaidAt) {
+    patch.player2PaidAt = new Date();
+    patch.player2StripePaymentIntentId = paymentIntentId;
+  }
+
+  const bothPaid =
+    (team.player1PaidAt || patch.player1PaidAt) && (team.player2PaidAt || patch.player2PaidAt);
+  if (bothPaid && team.paymentStatus !== "paid") {
+    patch.paymentStatus = "paid";
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await db.update(teamsTable).set(patch).where(eq(teamsTable.id, teamId));
+    logger.info({ teamId, payerId, paymentIntentId, bothPaid }, "Player marked paid");
+  }
+}
+
+// Webhook MUST receive raw body.
 router.post(
   "/payments/webhook",
   express.raw({ type: "application/json" }),
@@ -27,7 +52,6 @@ router.post(
       if (secret && sig) {
         event = stripe.webhooks.constructEvent(req.body as Buffer, sig as string, secret);
       } else {
-        // Dev fallback: parse raw JSON without verification
         event = JSON.parse((req.body as Buffer).toString("utf8"));
         logger.warn("Stripe webhook signature not verified (no secret or signature)");
       }
@@ -41,16 +65,13 @@ router.post(
       if (event.type === "payment_intent.succeeded") {
         const pi = event.data.object;
         const teamId = pi.metadata?.teamId;
-        if (teamId) {
-          await db.update(teamsTable)
-            .set({ paymentStatus: "paid", stripePaymentIntentId: pi.id })
-            .where(eq(teamsTable.id, teamId));
-          logger.info({ teamId, paymentIntentId: pi.id }, "Team marked paid via webhook");
+        const payerId = pi.metadata?.payerId;
+        if (teamId && payerId) {
+          await markPlayerPaid(teamId, payerId, pi.id);
         }
       } else if (event.type === "payment_intent.payment_failed") {
         const pi = event.data.object;
-        const teamId = pi.metadata?.teamId;
-        logger.warn({ teamId, paymentIntentId: pi.id }, "Payment failed");
+        logger.warn({ teamId: pi.metadata?.teamId, payerId: pi.metadata?.payerId, paymentIntentId: pi.id }, "Payment failed");
       }
     } catch (err: any) {
       logger.error({ err: err?.message }, "Webhook handler error");
@@ -60,9 +81,7 @@ router.post(
   }
 );
 
-// Create a PaymentIntent for a team's entry fee
-// NOTE: This router is mounted BEFORE express.json() (so the webhook can use raw body),
-// so JSON-bodied routes need express.json() applied per-route.
+// Create a PaymentIntent for the CURRENT player's share of the entry fee.
 router.post("/payments/create-intent", express.json(), requireAuth, async (req, res): Promise<void> => {
   if (!isStripeConfigured()) {
     res.status(503).json({ error: "Payments are not configured on this server" });
@@ -80,12 +99,16 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
     res.status(404).json({ error: "Team not found" });
     return;
   }
-  if (team.player1Id !== player.id && team.player2Id !== player.id) {
+  const isPlayer1 = team.player1Id === player.id;
+  const isPlayer2 = team.player2Id === player.id;
+  if (!isPlayer1 && !isPlayer2) {
     res.status(403).json({ error: "You are not on this team" });
     return;
   }
-  if (team.paymentStatus === "paid") {
-    res.status(400).json({ error: "This team has already been paid for" });
+
+  const myPaidAt = isPlayer1 ? team.player1PaidAt : team.player2PaidAt;
+  if (myPaidAt) {
+    res.status(400).json({ error: "You have already paid your entry fee" });
     return;
   }
 
@@ -101,12 +124,17 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
   }
 
   const stripe = getStripe();
+  const myIntentId = isPlayer1 ? team.player1StripePaymentIntentId : team.player2StripePaymentIntentId;
 
   // Reuse existing intent if it's still actionable
-  if (team.stripePaymentIntentId) {
+  if (myIntentId) {
     try {
-      const existing = await stripe.paymentIntents.retrieve(team.stripePaymentIntentId);
-      if (existing.status === "requires_payment_method" || existing.status === "requires_confirmation" || existing.status === "requires_action") {
+      const existing = await stripe.paymentIntents.retrieve(myIntentId);
+      if (
+        existing.status === "requires_payment_method" ||
+        existing.status === "requires_confirmation" ||
+        existing.status === "requires_action"
+      ) {
         res.json({
           clientSecret: existing.client_secret,
           amount: existing.amount,
@@ -117,8 +145,8 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
         return;
       }
       if (existing.status === "succeeded") {
-        await db.update(teamsTable).set({ paymentStatus: "paid" }).where(eq(teamsTable.id, team.id));
-        res.status(400).json({ error: "Already paid" });
+        await markPlayerPaid(team.id, player.id, existing.id);
+        res.status(400).json({ error: "You have already paid your entry fee" });
         return;
       }
     } catch (err: any) {
@@ -130,7 +158,7 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
     amount: ladder.entryFeeCents,
     currency: "usd",
     automatic_payment_methods: { enabled: true },
-    description: `${ladder.name} entry fee — Team ${team.teamName}`,
+    description: `${ladder.name} entry fee — ${player.fullName}`,
     metadata: {
       teamId: team.id,
       ladderId: ladder.id,
@@ -139,9 +167,10 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
     },
   });
 
-  await db.update(teamsTable)
-    .set({ stripePaymentIntentId: intent.id })
-    .where(eq(teamsTable.id, team.id));
+  const patch: any = {};
+  if (isPlayer1) patch.player1StripePaymentIntentId = intent.id;
+  else patch.player2StripePaymentIntentId = intent.id;
+  await db.update(teamsTable).set(patch).where(eq(teamsTable.id, team.id));
 
   res.json({
     clientSecret: intent.client_secret,
@@ -152,7 +181,7 @@ router.post("/payments/create-intent", express.json(), requireAuth, async (req, 
   });
 });
 
-// Allow client to confirm-by-poll after redirect (defensive — webhook is source of truth)
+// Client-triggered sync (defensive — webhook is source of truth) for the CURRENT player.
 router.post("/payments/sync/:teamId", express.json(), requireAuth, async (req, res): Promise<void> => {
   if (!isStripeConfigured()) {
     res.status(503).json({ error: "Stripe not configured" });
@@ -166,19 +195,23 @@ router.post("/payments/sync/:teamId", express.json(), requireAuth, async (req, r
     res.status(404).json({ error: "Team not found" });
     return;
   }
-  if (team.player1Id !== player.id && team.player2Id !== player.id) {
+  const isPlayer1 = team.player1Id === player.id;
+  const isPlayer2 = team.player2Id === player.id;
+  if (!isPlayer1 && !isPlayer2) {
     res.status(403).json({ error: "You are not on this team" });
     return;
   }
-  if (!team.stripePaymentIntentId) {
+  const myIntentId = isPlayer1 ? team.player1StripePaymentIntentId : team.player2StripePaymentIntentId;
+  if (!myIntentId) {
     res.json({ paymentStatus: team.paymentStatus });
     return;
   }
   const stripe = getStripe();
-  const pi = await stripe.paymentIntents.retrieve(team.stripePaymentIntentId);
-  if (pi.status === "succeeded" && team.paymentStatus !== "paid") {
-    await db.update(teamsTable).set({ paymentStatus: "paid" }).where(eq(teamsTable.id, team.id));
-    res.json({ paymentStatus: "paid" });
+  const pi = await stripe.paymentIntents.retrieve(myIntentId);
+  if (pi.status === "succeeded") {
+    await markPlayerPaid(team.id, player.id, pi.id);
+    const [fresh] = await db.select().from(teamsTable).where(eq(teamsTable.id, team.id)).limit(1);
+    res.json({ paymentStatus: fresh?.paymentStatus, myPaid: true });
     return;
   }
   res.json({ paymentStatus: team.paymentStatus, stripeStatus: pi.status });

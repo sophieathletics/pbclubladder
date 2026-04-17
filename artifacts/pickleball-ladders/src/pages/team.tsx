@@ -441,6 +441,7 @@ function TeamContent() {
 }
 
 function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
+  const { data: me } = useGetCurrentPlayer();
   const ladder = useMemo(
     () => ladders.find((x: any) => x.id === team.season?.ladderId),
     [ladders, team.season?.ladderId]
@@ -450,8 +451,17 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
   const { data: pos } = useGetMyLadderPosition({ ladder_id: team.season?.ladderId });
   const myStanding = pos?.myStanding;
 
-  const isUnpaid = team.paymentStatus === "unpaid";
+  const feeRequired = team.paymentStatus !== "not_required";
   const feeDollars = ladder?.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : null;
+
+  const amIPlayer1 = me?.id === team.player1Id;
+  const amIPlayer2 = me?.id === team.player2Id;
+  const iPaid = amIPlayer1 ? !!team.player1PaidAt : amIPlayer2 ? !!team.player2PaidAt : false;
+  const partnerPaid = amIPlayer1 ? !!team.player2PaidAt : amIPlayer2 ? !!team.player1PaidAt : false;
+  const partnerName = amIPlayer1 ? team.player2?.fullName : amIPlayer2 ? team.player1?.fullName : null;
+
+  const fullyPaid = team.paymentStatus === "paid";
+  const showPayCta = feeRequired && !iPaid;
 
   return (
     <Card className="border-primary/20">
@@ -466,22 +476,27 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
         <div className="flex flex-wrap items-center gap-2 mt-2">
           <span className="text-sm text-muted-foreground">Team:</span>
           <span className="text-sm font-semibold break-words">{team.teamName}</span>
-          {team.paymentStatus === "paid" && (
-            <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
+          {fullyPaid && (
+            <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Team Paid</Badge>
           )}
-          {isUnpaid && (
+          {feeRequired && !fullyPaid && (
             <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Payment due</Badge>
           )}
         </div>
       </CardHeader>
       <CardContent>
-        {isUnpaid && (
+        {showPayCta && (
           <div className="mb-4 p-3 rounded-lg border border-amber-300 bg-amber-50 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-amber-900">
-                Pay the {feeDollars ? `$${feeDollars}` : ""} entry fee to start challenging.
+                Pay your {feeDollars ? `$${feeDollars}` : ""} entry fee to start challenging.
               </p>
-              <p className="text-xs text-amber-800 mt-0.5">Either teammate can pay for the team.</p>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Each player pays their own entry fee.
+                {partnerName && (partnerPaid
+                  ? ` ${partnerName} has paid.`
+                  : ` ${partnerName} hasn't paid yet.`)}
+              </p>
             </div>
             <Button asChild size="sm" className="shrink-0" data-testid={`btn-pay-${team.id}`}>
               <Link href={`/pay/${team.id}`}>
@@ -491,14 +506,35 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
             </Button>
           </div>
         )}
+        {feeRequired && iPaid && !partnerPaid && partnerName && (
+          <div className="mb-4 p-3 rounded-lg border border-blue-300 bg-blue-50 text-sm">
+            <p className="text-blue-900">
+              <span className="font-semibold">You're paid up.</span> Waiting on {partnerName} to pay before your team can challenge or be challenged.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 1</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Player 1</p>
+              {feeRequired && (
+                team.player1PaidAt
+                  ? <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
+                  : <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Unpaid</Badge>
+              )}
+            </div>
             <p className="font-semibold break-words">{team.player1?.fullName ?? "—"}</p>
             <p className="text-sm text-muted-foreground break-all">{team.player1?.email ?? ""}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 2</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Player 2</p>
+              {feeRequired && (
+                team.player2PaidAt
+                  ? <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
+                  : <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Unpaid</Badge>
+              )}
+            </div>
             <p className="font-semibold break-words">{team.player2?.fullName ?? "—"}</p>
             <p className="text-sm text-muted-foreground break-all">{team.player2?.email ?? ""}</p>
           </div>

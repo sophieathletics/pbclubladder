@@ -1668,6 +1668,12 @@ components:
         stripePaymentIntentId:
           type: string
           nullable: true
+        player1PaidAt:
+          type: string
+          nullable: true
+        player2PaidAt:
+          type: string
+          nullable: true
         createdAt:
           type: string
       required:

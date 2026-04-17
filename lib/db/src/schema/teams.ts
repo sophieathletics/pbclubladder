@@ -13,6 +13,10 @@ export const teamsTable = pgTable("teams", {
   status: text("status").notNull().default("pending"),
   paymentStatus: text("payment_status").notNull().default("not_required"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  player1PaidAt: timestamp("player1_paid_at", { withTimezone: true }),
+  player2PaidAt: timestamp("player2_paid_at", { withTimezone: true }),
+  player1StripePaymentIntentId: text("player1_stripe_payment_intent_id"),
+  player2StripePaymentIntentId: text("player2_stripe_payment_intent_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("teams_season_player1_unique").on(t.seasonId, t.player1Id),

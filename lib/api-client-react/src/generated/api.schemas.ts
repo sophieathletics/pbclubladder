@@ -150,6 +150,8 @@ export interface Team {
   status: TeamStatus;
   paymentStatus: TeamPaymentStatus;
   stripePaymentIntentId?: string | null;
+  player1PaidAt?: string | null;
+  player2PaidAt?: string | null;
   createdAt: string;
 }
 

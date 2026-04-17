@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { useCreatePaymentIntent, useGetMyTeams, useListLadders } from "@workspace/api-client-react";
+import { useCreatePaymentIntent, useGetCurrentPlayer, useGetMyTeams, useListLadders } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ export default function Pay() {
 
 function PayContent() {
   const { teamId } = useParams<{ teamId: string }>();
+  const { data: me } = useGetCurrentPlayer();
   const { data: myTeams } = useGetMyTeams();
   const { data: ladders } = useListLadders();
   const { toast } = useToast();
@@ -33,6 +34,10 @@ function PayContent() {
     [ladders, team]
   );
 
+  const amIPlayer1 = me && team && me.id === team.player1Id;
+  const amIPlayer2 = me && team && me.id === team.player2Id;
+  const iPaid = amIPlayer1 ? !!team?.player1PaidAt : amIPlayer2 ? !!team?.player2PaidAt : false;
+
   const createIntent = useCreatePaymentIntent();
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [intentInfo, setIntentInfo] = useState<{ amount: number; currency: string } | null>(null);
@@ -40,8 +45,8 @@ function PayContent() {
 
   useEffect(() => {
     if (!teamId || clientSecret) return;
-    if (team && team.paymentStatus === "paid") return;
     if (team && team.paymentStatus === "not_required") return;
+    if (iPaid) return;
 
     createIntent.mutate(
       { data: { teamId } },
@@ -72,13 +77,19 @@ function PayContent() {
     );
   }
 
-  if (team?.paymentStatus === "paid") {
+  if (team && iPaid) {
+    const partnerName = amIPlayer1 ? team.player2?.fullName : team.player1?.fullName;
+    const partnerPaid = amIPlayer1 ? !!team.player2PaidAt : !!team.player1PaidAt;
     return (
       <MainLayout>
         <div className="max-w-xl mx-auto py-12 px-4 text-center">
           <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
-          <h1 className="text-2xl font-bold mb-2">Already paid</h1>
-          <p className="text-muted-foreground mb-4">Your team is paid up for {ladder?.name ?? "this ladder"}.</p>
+          <h1 className="text-2xl font-bold mb-2">You're paid up</h1>
+          <p className="text-muted-foreground mb-4">
+            You've paid your entry fee for {ladder?.name ?? "this ladder"}.
+            {partnerName && !partnerPaid && ` Waiting on ${partnerName} to pay their fee before your team can challenge.`}
+            {partnerName && partnerPaid && ` Your team is fully paid up — go challenge!`}
+          </p>
           <Link href="/team"><Button>Back to my teams</Button></Link>
         </div>
       </MainLayout>
