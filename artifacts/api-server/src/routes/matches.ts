@@ -104,6 +104,31 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
+  // Validate: winnerTeamId must be one of the two teams
+  if (winnerTeamId !== challenge.challengerTeamId && winnerTeamId !== challenge.challengedTeamId) {
+    res.status(400).json({ error: "winnerTeamId must be one of the two teams in the match" });
+    return;
+  }
+
+  // Validate: winner must match the games-won majority (team1 = challenger, team2 = challenged).
+  // Ties are allowed and the caller decides the overall winner.
+  let team1Wins = 0;
+  let team2Wins = 0;
+  for (const g of games) {
+    const a = Number(g.team1Score) || 0;
+    const b = Number(g.team2Score) || 0;
+    if (a === b) continue;
+    if (a > b) team1Wins++;
+    else team2Wins++;
+  }
+  if (team1Wins !== team2Wins) {
+    const expectedWinner = team1Wins > team2Wins ? challenge.challengerTeamId : challenge.challengedTeamId;
+    if (winnerTeamId !== expectedWinner) {
+      res.status(400).json({ error: "Winner does not match the game scores. The team that won the most games must be the winner." });
+      return;
+    }
+  }
+
   const loserTeamId = winnerTeamId === challenge.challengerTeamId ? challenge.challengedTeamId : challenge.challengerTeamId;
 
   // Insert scores

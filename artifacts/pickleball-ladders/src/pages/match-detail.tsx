@@ -33,8 +33,7 @@ function MatchDetailContent() {
   const qc = useQueryClient();
 
   const [games, setGames] = useState([{ gameNumber: 1, team1Score: 0, team2Score: 0 }]);
-  const [winnerTeamId, setWinnerTeamId] = useState("");
-  const [winnerManuallySet, setWinnerManuallySet] = useState(false);
+  const [tieBreakerWinnerId, setTieBreakerWinnerId] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [showScoreForm, setShowScoreForm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -65,25 +64,30 @@ function MatchDetailContent() {
   const updateScore = (i: number, field: "team1Score" | "team2Score", val: number) =>
     setGames(prev => prev.map((g, gi) => gi === i ? { ...g, [field]: val } : g));
 
-  // Auto-pick winner based on games won (unless user manually overrode)
-  const computedWinnerTeamId = (() => {
-    if (!challengerTeam?.id || !challengedTeam?.id) return "";
-    let team1Wins = 0;
-    let team2Wins = 0;
+  // Compute games won from the entered scores
+  const { team1Wins, team2Wins } = (() => {
+    let t1 = 0;
+    let t2 = 0;
     for (const g of games) {
       const a = Number.isFinite(g.team1Score) ? g.team1Score : 0;
       const b = Number.isFinite(g.team2Score) ? g.team2Score : 0;
       if (a === 0 && b === 0) continue;
-      if (a > b) team1Wins++;
-      else if (b > a) team2Wins++;
+      if (a > b) t1++;
+      else if (b > a) t2++;
     }
+    return { team1Wins: t1, team2Wins: t2 };
+  })();
+
+  const computedWinnerTeamId = (() => {
+    if (!challengerTeam?.id || !challengedTeam?.id) return "";
     if (team1Wins === 0 && team2Wins === 0) return "";
     if (team1Wins > team2Wins) return challengerTeam.id;
     if (team2Wins > team1Wins) return challengedTeam.id;
-    return "";
+    return ""; // tie
   })();
 
-  const effectiveWinnerTeamId = winnerManuallySet ? winnerTeamId : computedWinnerTeamId;
+  const isTie = team1Wins > 0 && team1Wins === team2Wins;
+  const effectiveWinnerTeamId = computedWinnerTeamId || (isTie ? tieBreakerWinnerId : "");
 
   const handleSubmitScore = () => {
     const finalWinner = effectiveWinnerTeamId;
@@ -224,29 +228,35 @@ function MatchDetailContent() {
                 <div className="space-y-4">
                   <div>
                     <Label>Winner</Label>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      Auto-selected from the scores below — tap to override.
-                    </p>
-                    <div className="flex gap-3 mt-2">
-                      {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
-                        <button
-                          key={t.id}
-                          onClick={() => { setWinnerTeamId(t.id); setWinnerManuallySet(true); }}
-                          data-testid={`btn-winner-${t.id}`}
-                          className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${effectiveWinnerTeamId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
-                        >
-                          {t.teamName}
-                        </button>
-                      ))}
-                    </div>
-                    {winnerManuallySet && (
-                      <button
-                        type="button"
-                        className="text-xs text-muted-foreground underline mt-2"
-                        onClick={() => { setWinnerManuallySet(false); setWinnerTeamId(""); }}
-                      >
-                        Reset to auto
-                      </button>
+                    {effectiveWinnerTeamId && !isTie ? (
+                      <div className="mt-2 p-3 rounded-lg border border-primary bg-primary/10 text-primary text-sm font-semibold flex items-center justify-between">
+                        <span>
+                          {[challengerTeam, challengedTeam].find((t: any) => t?.id === effectiveWinnerTeamId)?.teamName}
+                        </span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          Won {Math.max(team1Wins, team2Wins)} of {team1Wins + team2Wins} games
+                        </span>
+                      </div>
+                    ) : isTie ? (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-1 mb-2">
+                          Games are tied {team1Wins}–{team2Wins}. Pick the overall winner:
+                        </p>
+                        <div className="flex gap-3">
+                          {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
+                            <button
+                              key={t.id}
+                              onClick={() => setTieBreakerWinnerId(t.id)}
+                              data-testid={`btn-winner-${t.id}`}
+                              className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${tieBreakerWinnerId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
+                            >
+                              {t.teamName}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-1">Enter game scores below — winner is selected automatically.</p>
                     )}
                   </div>
 
