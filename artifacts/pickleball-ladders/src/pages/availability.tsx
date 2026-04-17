@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useGetAvailability, useGetChallenge, useSubmitAvailability } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Plus, Minus, CheckCircle, Loader2 } from "lucide-react";
+import { Calendar, CheckCircle, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 export default function Availability() {
   return (
@@ -19,31 +18,100 @@ export default function Availability() {
   );
 }
 
+const TIME_SLOTS = [
+  { label: "7am", value: "07:00" },
+  { label: "8am", value: "08:00" },
+  { label: "9am", value: "09:00" },
+  { label: "10am", value: "10:00" },
+  { label: "11am", value: "11:00" },
+  { label: "12pm", value: "12:00" },
+  { label: "1pm", value: "13:00" },
+  { label: "2pm", value: "14:00" },
+  { label: "3pm", value: "15:00" },
+  { label: "4pm", value: "16:00" },
+  { label: "5pm", value: "17:00" },
+  { label: "6pm", value: "18:00" },
+  { label: "7pm", value: "19:00" },
+  { label: "8pm", value: "20:00" },
+];
+
+function formatDate(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function AvailabilityContent() {
   const { challengeId } = useParams<{ challengeId: string }>();
-  const { data: availData } = useGetAvailability({ challengeId: challengeId! });
-  const { data: challenge } = useGetChallenge({ id: challengeId! });
+  const { data: availData } = useGetAvailability(challengeId!);
+  const { data: challenge } = useGetChallenge(challengeId!);
   const submitAvail = useSubmitAvailability();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [slots, setSlots] = useState<Array<{ date: string; times: string[] }>>([{ date: "", times: [""] }]);
+  // Generate the next 14 days
+  const dates = useMemo(() => {
+    const out: { value: string; weekday: string; day: string; month: string }[] = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      out.push({
+        value: formatDate(d),
+        weekday: d.toLocaleDateString(undefined, { weekday: "short" }),
+        day: String(d.getDate()),
+        month: d.toLocaleDateString(undefined, { month: "short" }),
+      });
+    }
+    return out;
+  }, []);
 
-  const addSlot = () => setSlots(prev => [...prev, { date: "", times: [""] }]);
-  const removeSlot = (i: number) => setSlots(prev => prev.filter((_, idx) => idx !== i));
-  const updateDate = (i: number, val: string) => setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, date: val } : s));
-  const addTime = (i: number) => setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, times: [...s.times, ""] } : s));
-  const removeTime = (i: number, ti: number) => setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, times: s.times.filter((_, tidx) => tidx !== ti) } : s));
-  const updateTime = (i: number, ti: number, val: string) => setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, times: s.times.map((t, tidx) => tidx === ti ? val : t) } : s));
+  // selected: Set of "date|time"
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleCell = (date: string, time: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      const key = `${date}|${time}`;
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAllForDate = (date: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      const allSelected = TIME_SLOTS.every(t => next.has(`${date}|${t.value}`));
+      if (allSelected) {
+        TIME_SLOTS.forEach(t => next.delete(`${date}|${t.value}`));
+      } else {
+        TIME_SLOTS.forEach(t => next.add(`${date}|${t.value}`));
+      }
+      return next;
+    });
+  };
 
   const handleSubmit = () => {
-    const valid = slots.filter(s => s.date && s.times.some(t => t));
-    if (valid.length === 0) {
-      toast({ title: "Add at least one date and time", variant: "destructive" });
+    // Group selected cells by date
+    const byDate = new Map<string, string[]>();
+    selected.forEach(key => {
+      const [date, time] = key.split("|");
+      if (!byDate.has(date)) byDate.set(date, []);
+      byDate.get(date)!.push(time);
+    });
+
+    if (byDate.size === 0) {
+      toast({ title: "Pick at least one time slot", variant: "destructive" });
       return;
     }
-    const cleaned = valid.map(s => ({ date: s.date, times: s.times.filter(t => t) }));
+
+    const cleaned = Array.from(byDate.entries())
+      .map(([date, times]) => ({ date, times: times.sort() }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
     submitAvail.mutate(
       { challengeId: challengeId!, data: { slots: cleaned } },
       {
@@ -59,10 +127,11 @@ function AvailabilityContent() {
 
   const c = challenge as any;
   const avail = availData as any;
+  const totalSelected = selected.size;
 
   return (
     <MainLayout>
-      <div className="max-w-2xl mx-auto py-8 px-4">
+      <div className="max-w-4xl mx-auto py-8 px-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
           <Link href={`/challenges/${challengeId}`} className="hover:text-primary">Challenge</Link>
           <span>/</span>
@@ -74,14 +143,14 @@ function AvailabilityContent() {
           Submit Availability
         </h1>
         <p className="text-muted-foreground mb-6">
-          Add dates and times when you're available to play.
+          Tap the times when you're available to play over the next two weeks.
           {c && <span> Challenge: <strong>{c.challengerTeam?.teamName}</strong> vs <strong>{c.challengedTeam?.teamName}</strong></span>}
         </p>
 
         {/* Existing availability status */}
         {avail && (
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className={`p-3 rounded-lg border text-sm ${avail.challengerAvailability ? "border-green-200 bg-green-50" : "border-muted"}`}>
+            <div className={`p-3 rounded-lg border text-sm ${avail.challengerAvailability ? "border-green-200 bg-green-50" : "border-muted"}`} data-testid="status-challenger">
               <div className="flex items-center gap-2 font-medium">
                 {avail.challengerAvailability ? <CheckCircle className="w-4 h-4 text-green-500" /> : <span className="w-4 h-4 rounded-full border-2 inline-block" />}
                 {c?.challengerTeam?.teamName ?? "Challenger"}
@@ -90,7 +159,7 @@ function AvailabilityContent() {
                 {avail.challengerAvailability ? "Submitted" : "Not submitted yet"}
               </p>
             </div>
-            <div className={`p-3 rounded-lg border text-sm ${avail.challengedAvailability ? "border-green-200 bg-green-50" : "border-muted"}`}>
+            <div className={`p-3 rounded-lg border text-sm ${avail.challengedAvailability ? "border-green-200 bg-green-50" : "border-muted"}`} data-testid="status-challenged">
               <div className="flex items-center gap-2 font-medium">
                 {avail.challengedAvailability ? <CheckCircle className="w-4 h-4 text-green-500" /> : <span className="w-4 h-4 rounded-full border-2 inline-block" />}
                 {c?.challengedTeam?.teamName ?? "Challenged"}
@@ -104,45 +173,73 @@ function AvailabilityContent() {
 
         <Card className="border-primary/10 mb-6">
           <CardHeader>
-            <CardTitle>Your Available Dates & Times</CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle>Pick Your Times</CardTitle>
+              <span className="text-sm text-muted-foreground" data-testid="text-selected-count">
+                {totalSelected} {totalSelected === 1 ? "slot" : "slots"} selected
+              </span>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {slots.map((slot, i) => (
-              <div key={i} className="p-4 border rounded-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Date {i + 1}</Label>
-                  {slots.length > 1 && (
-                    <Button variant="ghost" size="sm" onClick={() => removeSlot(i)}>
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                <Input type="date" value={slot.date} onChange={e => updateDate(i, e.target.value)} />
-                <Label>Available Times</Label>
-                {slot.times.map((time, ti) => (
-                  <div key={ti} className="flex gap-2">
-                    <Input type="time" value={time} onChange={e => updateTime(i, ti, e.target.value)} className="flex-1" />
-                    {slot.times.length > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => removeTime(i, ti)}>
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                    )}
+          <CardContent>
+            <div className="space-y-3">
+              {dates.map(date => {
+                const allSelected = TIME_SLOTS.every(t => selected.has(`${date.value}|${t.value}`));
+                const anySelected = TIME_SLOTS.some(t => selected.has(`${date.value}|${t.value}`));
+                return (
+                  <div key={date.value} className="border rounded-lg p-3" data-testid={`row-date-${date.value}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleAllForDate(date.value)}
+                        className="flex items-center gap-3 hover-elevate active-elevate-2 rounded-md px-2 py-1 -ml-2 -mt-1"
+                        data-testid={`btn-date-${date.value}`}
+                      >
+                        <div className="flex flex-col items-center justify-center w-12 h-12 rounded-md bg-muted/50">
+                          <span className="text-[10px] font-medium uppercase text-muted-foreground">{date.weekday}</span>
+                          <span className="text-lg font-bold leading-none">{date.day}</span>
+                          <span className="text-[10px] text-muted-foreground">{date.month}</span>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-sm font-medium">
+                            {anySelected ? `${TIME_SLOTS.filter(t => selected.has(`${date.value}|${t.value}`)).length} times` : "Tap times below"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {allSelected ? "Tap day to clear" : "Tap day to select all"}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                      {TIME_SLOTS.map(slot => {
+                        const key = `${date.value}|${slot.value}`;
+                        const isSelected = selected.has(key);
+                        return (
+                          <button
+                            key={slot.value}
+                            type="button"
+                            onClick={() => toggleCell(date.value, slot.value)}
+                            data-testid={`cell-${date.value}-${slot.value}`}
+                            className={cn(
+                              "h-9 rounded-md text-xs font-medium border transition-colors",
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background border-border hover-elevate active-elevate-2"
+                            )}
+                          >
+                            {slot.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
-                <Button variant="outline" size="sm" onClick={() => addTime(i)}>
-                  <Plus className="w-4 h-4 mr-1" /> Add Time
-                </Button>
-              </div>
-            ))}
-
-            <Button variant="outline" onClick={addSlot} className="w-full">
-              <Plus className="w-4 h-4 mr-2" /> Add Another Date
-            </Button>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
 
         <div className="flex gap-3">
-          <Button onClick={handleSubmit} disabled={submitAvail.isPending}>
+          <Button onClick={handleSubmit} disabled={submitAvail.isPending} data-testid="btn-submit-availability">
             {submitAvail.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Submit Availability
           </Button>
