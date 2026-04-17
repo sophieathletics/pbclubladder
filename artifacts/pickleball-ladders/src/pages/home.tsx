@@ -40,22 +40,55 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Standings or Ladders to Join */}
-        <section className="max-w-4xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-primary" />
-              {isLoading ? "Top 10 Standings" : hasStandings ? "Top 10 Standings" : "Open Ladders"}
-            </h2>
-            <Button variant="ghost" className="group" asChild data-testid="btn-view-all-ladder">
-              <Link href={hasStandings ? "/leaderboard" : "/ladders"} className="flex items-center gap-2">
-                {hasStandings ? "Full Ladder" : "Browse all"}
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
+        {/* Features + Standings/Ladders combined section */}
+        <section className="max-w-5xl mx-auto w-full grid md:grid-cols-2 gap-6 md:gap-8">
+          {/* Left column: feature cards stacked */}
+          <div className="flex flex-col gap-6">
+            <Card className="bg-card">
+              <CardContent className="pt-6">
+                <Trophy className="w-10 h-10 text-primary mb-4" />
+                <h3 className="font-bold text-lg mb-2">Dynamic Rankings</h3>
+                <p className="text-muted-foreground text-sm">
+                  Challenge teams up to 3 spots above you. Win to take their place, lose and drop down.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card">
+              <CardContent className="pt-6">
+                <Activity className="w-10 h-10 text-primary mb-4" />
+                <h3 className="font-bold text-lg mb-2">Automated Scheduling</h3>
+                <p className="text-muted-foreground text-sm">
+                  Submit availability, find overlapping times, and book matches without the back-and-forth text messages.
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-card">
+              <CardContent className="pt-6">
+                <Users className="w-10 h-10 text-primary mb-4" />
+                <h3 className="font-bold text-lg mb-2">Player Profiles</h3>
+                <p className="text-muted-foreground text-sm">
+                  Track your personal and team stats across multiple seasons. Build your reputation on the courts.
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
-          <Card className="border-primary/10 shadow-lg shadow-primary/5">
+          {/* Right column: Standings or Ladders */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <Trophy className="w-6 h-6 text-primary" />
+                {isLoading ? "Top 10 Standings" : hasStandings ? "Top 10 Standings" : "Open Ladders"}
+              </h2>
+              <Button variant="ghost" size="sm" className="group" asChild data-testid="btn-view-all-ladder">
+                <Link href={hasStandings ? "/leaderboard" : "/ladders"} className="flex items-center gap-2">
+                  {hasStandings ? "Full Ladder" : "Browse all"}
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
+
+            <Card className="border-primary/10 shadow-lg shadow-primary/5">
             <CardContent className="p-0">
               <div className="divide-y">
                 {isLoading ? (
@@ -146,37 +179,7 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
-        </section>
-        
-        {/* Features grid */}
-        <section className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto w-full">
-          <Card className="bg-card">
-            <CardContent className="pt-6">
-              <Trophy className="w-10 h-10 text-primary mb-4" />
-              <h3 className="font-bold text-lg mb-2">Dynamic Rankings</h3>
-              <p className="text-muted-foreground text-sm">
-                Challenge teams up to 3 spots above you. Win to take their place, lose and drop down.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card">
-            <CardContent className="pt-6">
-              <Activity className="w-10 h-10 text-primary mb-4" />
-              <h3 className="font-bold text-lg mb-2">Automated Scheduling</h3>
-              <p className="text-muted-foreground text-sm">
-                Submit availability, find overlapping times, and book matches without the back-and-forth text messages.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="bg-card">
-            <CardContent className="pt-6">
-              <Users className="w-10 h-10 text-primary mb-4" />
-              <h3 className="font-bold text-lg mb-2">Player Profiles</h3>
-              <p className="text-muted-foreground text-sm">
-                Track your personal and team stats across multiple seasons. Build your reputation on the courts.
-              </p>
-            </CardContent>
-          </Card>
+          </div>
         </section>
       </div>
     </MainLayout>
