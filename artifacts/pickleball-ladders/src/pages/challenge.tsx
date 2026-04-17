@@ -81,18 +81,18 @@ function ChallengeContent() {
 
         {team && hasActiveChallenge && activeChallenge && (
           <Card className="border-primary/20 bg-primary/5 mb-6">
-            <CardContent className="py-6">
-              <div className="flex items-center justify-between">
-                <div>
+            <CardContent className="py-4 sm:py-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">You have an active challenge</p>
-                  <p className="font-bold text-lg mt-1">
+                  <p className="font-bold text-lg mt-1 break-words">
                     vs {activeChallenge.myTeamId === (activeChallenge as any).challengerTeam?.id
                       ? (activeChallenge as any).challengedTeam?.teamName
                       : (activeChallenge as any).challengerTeam?.teamName}
                   </p>
                   <Badge className="mt-1 capitalize">{activeChallenge.status}</Badge>
                 </div>
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto shrink-0">
                   <Link href={`/challenges/${(activeChallenge as any).id}`}>
                     View Challenge <ArrowRight className="w-4 h-4 ml-1" />
                   </Link>
@@ -139,16 +139,16 @@ function ChallengeContent() {
                 <h2 className="text-lg font-bold">Available Targets</h2>
                 {challengeableTeams.map((standing: any) => (
                   <Card key={standing.id} className="border-primary/10 hover:border-primary/30 transition-colors">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                    <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
                           #{standing.position}
                         </div>
-                        <div>
-                          <p className="font-bold">{standing.team?.teamName}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {standing.team?.player1?.fullName} &amp; {standing.team?.player2?.fullName}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate">{standing.team?.teamName}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 truncate">
+                            <Users className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{standing.team?.player1?.fullName} &amp; {standing.team?.player2?.fullName}</span>
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {standing.wins}W - {standing.losses}L
@@ -156,6 +156,7 @@ function ChallengeContent() {
                         </div>
                       </div>
                       <Button
+                        className="w-full sm:w-auto shrink-0"
                         onClick={() => handleChallenge(standing.team?.id, standing.team?.teamName)}
                         disabled={createChallenge.isPending}
                         data-testid={`btn-challenge-${standing.team?.id}`}

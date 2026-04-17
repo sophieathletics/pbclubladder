@@ -156,16 +156,16 @@ function MatchDetailContent() {
 
         {/* Teams */}
         <Card className="border-primary/10 mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenger</p>
-                <p className="font-bold">{challengerTeam?.teamName ?? "—"}</p>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex-1 min-w-0 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenger</p>
+                <p className="font-bold break-words">{challengerTeam?.teamName ?? "—"}</p>
               </div>
-              <div className="text-xl font-black text-muted-foreground">VS</div>
-              <div className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenged</p>
-                <p className="font-bold">{challengedTeam?.teamName ?? "—"}</p>
+              <div className="text-lg sm:text-xl font-black text-muted-foreground shrink-0">VS</div>
+              <div className="flex-1 min-w-0 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenged</p>
+                <p className="font-bold break-words">{challengedTeam?.teamName ?? "—"}</p>
               </div>
             </div>
           </CardContent>
@@ -181,22 +181,22 @@ function MatchDetailContent() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-[auto_1fr_auto_auto_1fr] gap-x-3 gap-y-1 items-center text-sm mb-2">
-                <span></span>
-                <span className="text-right text-xs text-muted-foreground truncate">{challengerTeam?.teamName ?? "Team 1"}</span>
-                <span></span>
-                <span className="text-left text-xs text-muted-foreground truncate">{challengedTeam?.teamName ?? "Team 2"}</span>
-                <span></span>
+              <div className="space-y-2 mb-2">
+                <div className="grid grid-cols-[60px_1fr_auto_1fr] gap-2 items-center text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">
+                  <span></span>
+                  <span className="text-right truncate">{challengerTeam?.teamName ?? "Team 1"}</span>
+                  <span></span>
+                  <span className="text-left truncate">{challengedTeam?.teamName ?? "Team 2"}</span>
+                </div>
                 {m.scores?.map((s: any) => {
                   const t1Win = s.team1Score > s.team2Score;
                   const t2Win = s.team2Score > s.team1Score;
                   return (
-                    <div key={s.id} className="contents">
+                    <div key={s.id} className="grid grid-cols-[60px_1fr_auto_1fr] gap-2 items-center text-sm">
                       <span className="text-xs text-muted-foreground">Game {s.gameNumber}</span>
-                      <span className={`text-right font-bold ${t1Win ? "text-green-700" : ""}`}>{s.team1Score}</span>
+                      <span className={`text-right font-bold tabular-nums ${t1Win ? "text-green-700" : ""}`}>{s.team1Score}</span>
                       <span className="text-muted-foreground">–</span>
-                      <span className={`text-left font-bold ${t2Win ? "text-green-700" : ""}`}>{s.team2Score}</span>
-                      <span></span>
+                      <span className={`text-left font-bold tabular-nums ${t2Win ? "text-green-700" : ""}`}>{s.team2Score}</span>
                     </div>
                   );
                 })}

@@ -62,14 +62,15 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2" data-testid="link-home">
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+      <div className="container mx-auto px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-6 min-w-0">
+          <Link href="/" className="flex items-center gap-2 min-w-0" data-testid="link-home">
+            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center shrink-0">
               <Trophy className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold tracking-tight hidden sm:inline-block text-primary">
-              Pickleball Club Ladder
+            <span className="text-base sm:text-lg font-bold tracking-tight text-primary truncate">
+              <span className="hidden xs:inline sm:inline">Pickleball Club Ladder</span>
+              <span className="inline xs:hidden sm:hidden">Ladder</span>
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6">
@@ -81,15 +82,17 @@ export function Navbar() {
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           ) : player ? (
-            <div className="flex items-center gap-4">
-              <Link href="/notifications" className="relative text-muted-foreground hover:text-primary transition-colors" data-testid="link-notifications">
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-2 -right-2 w-5 h-5 flex items-center justify-center p-0 text-[10px]">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Link>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" size="icon" asChild className="relative h-10 w-10">
+                <Link href="/notifications" className="text-muted-foreground hover:text-primary transition-colors" data-testid="link-notifications">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <Badge variant="destructive" className="absolute top-1 right-1 w-4 h-4 flex items-center justify-center p-0 text-[10px]">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

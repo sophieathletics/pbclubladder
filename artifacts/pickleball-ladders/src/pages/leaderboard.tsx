@@ -145,45 +145,50 @@ export default function Leaderboard() {
               </div>
             ) : (
               <div className="divide-y">
-                {standings.map((standing) => (
-                  <div key={standing.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${positionColor(standing.position ?? 0)}`}>
-                      {standing.position === 1 ? (
-                        <span className="flex items-center gap-0.5">
-                          <Medal className="w-4 h-4" aria-hidden="true" />
-                          <span className="sr-only">1</span>
-                        </span>
-                      ) : standing.position}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">
-                        {(standing as any).team?.teamName ?? "Unknown Team"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                        <Users className="w-3 h-3 flex-shrink-0" />
-                        {(standing as any).team?.player1?.fullName ?? "?"} &amp; {(standing as any).team?.player2?.fullName ?? "?"}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0 flex items-center gap-3">
-                      <div className="font-bold text-sm">
-                        <span className="text-green-600">{standing.wins}W</span>
-                        <span className="text-muted-foreground mx-1">-</span>
-                        <span className="text-red-500">{standing.losses}L</span>
+                {standings.map((standing) => {
+                  const showChallenge = canChallenge(standing.position ?? 0);
+                  return (
+                    <div key={standing.id} className="p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${positionColor(standing.position ?? 0)}`}>
+                          {standing.position === 1 ? (
+                            <span className="flex items-center gap-0.5">
+                              <Medal className="w-4 h-4" aria-hidden="true" />
+                              <span className="sr-only">1</span>
+                            </span>
+                          ) : standing.position}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground truncate">
+                            {(standing as any).team?.teamName ?? "Unknown Team"}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 truncate">
+                            <Users className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{(standing as any).team?.player1?.fullName ?? "?"} &amp; {(standing as any).team?.player2?.fullName ?? "?"}</span>
+                          </p>
+                        </div>
+                        <div className="font-bold text-xs sm:text-sm shrink-0 tabular-nums">
+                          <span className="text-green-600">{standing.wins}W</span>
+                          <span className="text-muted-foreground mx-0.5 sm:mx-1">-</span>
+                          <span className="text-red-500">{standing.losses}L</span>
+                        </div>
                       </div>
-                      {canChallenge(standing.position ?? 0) && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleChallenge((standing as any).team?.id, (standing as any).team?.teamName)}
-                          disabled={createChallenge.isPending}
-                          data-testid={`btn-challenge-${(standing as any).team?.id}`}
-                        >
-                          <Swords className="w-3.5 h-3.5 mr-1" />
-                          Challenge
-                        </Button>
+                      {showChallenge && (
+                        <div className="mt-2 pl-12">
+                          <Button
+                            size="sm"
+                            onClick={() => handleChallenge((standing as any).team?.id, (standing as any).team?.teamName)}
+                            disabled={createChallenge.isPending}
+                            data-testid={`btn-challenge-${(standing as any).team?.id}`}
+                          >
+                            <Swords className="w-3.5 h-3.5 mr-1" />
+                            Challenge
+                          </Button>
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

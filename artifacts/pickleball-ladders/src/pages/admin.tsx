@@ -445,9 +445,9 @@ function DisputeCard({
   return (
     <Card className="border-orange-200">
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1">
-            <p className="font-semibold mb-1">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold mb-1 break-words">
               {challengerTeam?.teamName ?? "Team A"} vs {challengedTeam?.teamName ?? "Team B"}
             </p>
             <p className="text-sm text-orange-600 mb-2">
@@ -464,7 +464,7 @@ function DisputeCard({
               </div>
             )}
           </div>
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild className="self-start shrink-0">
             <Link href={`/matches/${matchId}`}>View Match</Link>
           </Button>
         </div>

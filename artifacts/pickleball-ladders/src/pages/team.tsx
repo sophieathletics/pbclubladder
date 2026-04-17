@@ -290,9 +290,9 @@ function TeamContent() {
             </CardHeader>
             <CardContent className="space-y-3">
               {pendingReceived.map((inv: any) => (
-                <div key={inv.id} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                  <div>
-                    <p className="font-semibold">{inv.teamName}</p>
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-white rounded-lg border">
+                  <div className="min-w-0">
+                    <p className="font-semibold break-words">{inv.teamName}</p>
                     <p className="text-sm text-muted-foreground">From: {inv.inviter?.fullName}</p>
                     <p className="text-xs text-muted-foreground">
                       Season: {inv.season?.name}
@@ -302,7 +302,7 @@ function TeamContent() {
                       })()}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 shrink-0">
                     <Button size="sm" onClick={() => handleAccept(inv.id)} data-testid={`btn-accept-${inv.id}`}>
                       <CheckCircle className="w-4 h-4 mr-1" /> Accept
                     </Button>
@@ -324,9 +324,9 @@ function TeamContent() {
             </CardHeader>
             <CardContent className="space-y-2">
               {sentInvitations.map((inv: any) => (
-                <div key={inv.id} className="flex items-center justify-between gap-3 p-3 border rounded-lg">
+                <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold">{inv.teamName}</p>
+                    <p className="font-semibold break-words">{inv.teamName}</p>
                     <p className="text-sm text-muted-foreground truncate">
                       To: {inv.invitee?.fullName ?? inv.inviteeEmail ?? "—"}
                     </p>
@@ -382,29 +382,29 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
   return (
     <Card className="border-primary/20">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{team.teamName}</span>
-          <div className="flex items-center gap-2">
+        <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <span className="break-words">{team.teamName}</span>
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="outline">{ladderName}</Badge>
             {myStanding && <Badge className="text-base font-bold px-3 py-1">#{myStanding.position}</Badge>}
           </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 1</p>
-            <p className="font-semibold">{team.player1?.fullName ?? "—"}</p>
-            <p className="text-sm text-muted-foreground">{team.player1?.email ?? ""}</p>
+            <p className="font-semibold break-words">{team.player1?.fullName ?? "—"}</p>
+            <p className="text-sm text-muted-foreground break-all">{team.player1?.email ?? ""}</p>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 2</p>
-            <p className="font-semibold">{team.player2?.fullName ?? "—"}</p>
-            <p className="text-sm text-muted-foreground">{team.player2?.email ?? ""}</p>
+            <p className="font-semibold break-words">{team.player2?.fullName ?? "—"}</p>
+            <p className="text-sm text-muted-foreground break-all">{team.player2?.email ?? ""}</p>
           </div>
         </div>
         {myStanding && (
-          <div className="mt-4 pt-4 border-t flex gap-6">
+          <div className="mt-4 pt-4 border-t flex flex-wrap items-end gap-4 sm:gap-6">
             <div>
               <p className="text-xs text-muted-foreground">Wins</p>
               <p className="text-2xl font-black text-green-600">{myStanding.wins}</p>
@@ -413,7 +413,7 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
               <p className="text-xs text-muted-foreground">Losses</p>
               <p className="text-2xl font-black text-red-500">{myStanding.losses}</p>
             </div>
-            <div className="ml-auto flex items-end">
+            <div className="ml-auto">
               <Button variant="outline" size="sm" asChild>
                 <Link href="/leaderboard">
                   <Trophy className="w-4 h-4 mr-1" />

@@ -133,26 +133,26 @@ function ChallengeDetailContent() {
 
         {/* Teams */}
         <Card className="border-primary/10 mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenger</p>
-                <p className="font-bold text-lg">{c.challengerTeam?.teamName}</p>
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex-1 min-w-0 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenger</p>
+                <p className="font-bold text-base sm:text-lg break-words">{c.challengerTeam?.teamName}</p>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-bold text-primary">#{c.challengerTeam?.standing?.position}</span>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 break-words">
                   {c.challengerTeam?.player1?.fullName} &amp; {c.challengerTeam?.player2?.fullName}
                 </p>
               </div>
-              <div className="text-2xl font-black text-muted-foreground">VS</div>
-              <div className="flex-1 text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenged</p>
-                <p className="font-bold text-lg">{c.challengedTeam?.teamName}</p>
+              <div className="text-lg sm:text-2xl font-black text-muted-foreground shrink-0">VS</div>
+              <div className="flex-1 min-w-0 text-center">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide mb-1">Challenged</p>
+                <p className="font-bold text-base sm:text-lg break-words">{c.challengedTeam?.teamName}</p>
                 <p className="text-sm text-muted-foreground">
                   <span className="font-bold text-primary">#{c.challengedTeam?.standing?.position}</span>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 break-words">
                   {c.challengedTeam?.player1?.fullName} &amp; {c.challengedTeam?.player2?.fullName}
                 </p>
               </div>
@@ -180,18 +180,18 @@ function ChallengeDetailContent() {
           <Card className="border-primary/10 mb-6">
             <CardHeader><CardTitle>Availability</CardTitle></CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 mb-4">
+                <div className="flex items-center gap-2 min-w-0">
                   {c.challengerAvailabilitySubmitted
-                    ? <CheckCircle className="w-4 h-4 text-green-500" />
-                    : <XCircle className="w-4 h-4 text-muted-foreground" />}
-                  <span className="text-sm">{c.challengerTeam?.teamName}</span>
+                    ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    : <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm break-words">{c.challengerTeam?.teamName}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   {c.challengedAvailabilitySubmitted
-                    ? <CheckCircle className="w-4 h-4 text-green-500" />
-                    : <XCircle className="w-4 h-4 text-muted-foreground" />}
-                  <span className="text-sm">{c.challengedTeam?.teamName}</span>
+                    ? <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                    : <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm break-words">{c.challengedTeam?.teamName}</span>
                 </div>
               </div>
 
