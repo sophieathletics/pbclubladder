@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Users, BarChart3, CheckCircle, AlertTriangle, Activity, Loader2, Layers } from "lucide-react";
+import { Shield, Users, BarChart3, CheckCircle, AlertTriangle, Activity, Loader2, Layers, Edit3, Plus, Minus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Admin() {
@@ -154,32 +154,21 @@ function AdminContent() {
             ) : (
               <div className="space-y-4">
                 {disputeList.map((d: any) => (
-                  <Card key={d.matchResult?.id} className="border-orange-200">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="font-semibold mb-1">
-                            {d.match?.challenge?.challengerTeam?.teamName ?? "Team A"} vs {d.match?.challenge?.challengedTeam?.teamName ?? "Team B"}
-                          </p>
-                          <p className="text-sm text-orange-600 mb-2">
-                            <AlertTriangle className="w-4 h-4 inline mr-1" />
-                            {d.matchResult?.disputeReason}
-                          </p>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleResolve(d.matchResult?.matchId, "confirm")} disabled={resolveDispute.isPending}>
-                              <CheckCircle className="w-4 h-4 mr-1" /> Confirm Original
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleResolve(d.matchResult?.matchId, "cancel")} disabled={resolveDispute.isPending}>
-                              Cancel Result
-                            </Button>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/matches/${d.matchResult?.matchId}`}>View Match</Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <DisputeCard
+                    key={d.matchResult?.id}
+                    dispute={d}
+                    onResolve={handleResolve}
+                    onOverride={(matchId, correctedGames, winnerTeamId) => {
+                      resolveDispute.mutate(
+                        { id: matchId, data: { action: "correct", correctedGames, winnerTeamId } },
+                        {
+                          onSuccess: () => { toast({ title: "Result overridden!" }); qc.invalidateQueries(); },
+                          onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
+                        }
+                      );
+                    }}
+                    isPending={resolveDispute.isPending}
+                  />
                 ))}
               </div>
             )}
@@ -395,5 +384,175 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
       </div>
       <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
     </div>
+  );
+}
+
+function DisputeCard({
+  dispute,
+  onResolve,
+  onOverride,
+  isPending,
+}: {
+  dispute: any;
+  onResolve: (matchId: string, action: "confirm" | "cancel") => void;
+  onOverride: (matchId: string, correctedGames: any[], winnerTeamId: string) => void;
+  isPending: boolean;
+}) {
+  const d = dispute;
+  const matchId = d.matchResult?.matchId;
+  const challengerTeam = d.match?.challenge?.challengerTeam;
+  const challengedTeam = d.match?.challenge?.challengedTeam;
+  const originalScores = (d.match?.scores ?? []) as any[];
+
+  const [overriding, setOverriding] = useState(false);
+  const [games, setGames] = useState<{ gameNumber: number; team1Score: number; team2Score: number }[]>(
+    originalScores.length > 0
+      ? originalScores.map(s => ({ gameNumber: s.gameNumber, team1Score: s.team1Score, team2Score: s.team2Score }))
+      : [{ gameNumber: 1, team1Score: 0, team2Score: 0 }]
+  );
+  const [tieBreakerWinnerId, setTieBreakerWinnerId] = useState("");
+
+  const updateScore = (i: number, field: "team1Score" | "team2Score", val: number) =>
+    setGames(prev => prev.map((g, gi) => (gi === i ? { ...g, [field]: val } : g)));
+  const addGame = () => setGames(prev => [...prev, { gameNumber: prev.length + 1, team1Score: 0, team2Score: 0 }]);
+  const removeGame = () => setGames(prev => prev.slice(0, -1));
+
+  let team1Wins = 0;
+  let team2Wins = 0;
+  for (const g of games) {
+    const a = Number(g.team1Score) || 0;
+    const b = Number(g.team2Score) || 0;
+    if (a === b) continue;
+    if (a > b) team1Wins++;
+    else team2Wins++;
+  }
+  const isTie = team1Wins > 0 && team1Wins === team2Wins;
+  const computedWinnerId =
+    !challengerTeam?.id || !challengedTeam?.id || (team1Wins === 0 && team2Wins === 0)
+      ? ""
+      : team1Wins > team2Wins
+        ? challengerTeam.id
+        : team2Wins > team1Wins
+          ? challengedTeam.id
+          : "";
+  const effectiveWinnerId = computedWinnerId || (isTie ? tieBreakerWinnerId : "");
+
+  const submitOverride = () => {
+    if (!effectiveWinnerId) return;
+    onOverride(matchId, games, effectiveWinnerId);
+  };
+
+  return (
+    <Card className="border-orange-200">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="flex-1">
+            <p className="font-semibold mb-1">
+              {challengerTeam?.teamName ?? "Team A"} vs {challengedTeam?.teamName ?? "Team B"}
+            </p>
+            <p className="text-sm text-orange-600 mb-2">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              {d.matchResult?.disputeReason}
+            </p>
+            {originalScores.length > 0 && (
+              <div className="text-xs text-muted-foreground mb-2">
+                <span className="font-semibold">Original score: </span>
+                {originalScores.map((s: any) => `${s.team1Score}–${s.team2Score}`).join(", ")}
+                {d.matchResult?.winnerTeamId && (
+                  <> · Winner: <span className="font-semibold">{[challengerTeam, challengedTeam].find((t: any) => t?.id === d.matchResult.winnerTeamId)?.teamName ?? "?"}</span></>
+                )}
+              </div>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href={`/matches/${matchId}`}>View Match</Link>
+          </Button>
+        </div>
+
+        {!overriding ? (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onResolve(matchId, "confirm")} disabled={isPending}>
+              <CheckCircle className="w-4 h-4 mr-1" /> Confirm Original
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setOverriding(true)} disabled={isPending} data-testid="btn-override">
+              <Edit3 className="w-4 h-4 mr-1" /> Override Score
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onResolve(matchId, "cancel")} disabled={isPending}>
+              Cancel Result
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3 p-3 bg-muted/40 rounded-lg border">
+            <p className="text-sm font-semibold">Override match result</p>
+            <div className="grid grid-cols-2 gap-2 text-xs font-medium text-muted-foreground">
+              <span>{challengerTeam?.teamName ?? "Team 1"}</span>
+              <span>{challengedTeam?.teamName ?? "Team 2"}</span>
+            </div>
+            {games.map((game, i) => (
+              <div key={i} className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  value={game.team1Score}
+                  onChange={e => updateScore(i, "team1Score", parseInt(e.target.value) || 0)}
+                  data-testid={`override-team1-${i}`}
+                />
+                <span className="text-muted-foreground text-xs">Game {game.gameNumber}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={game.team2Score}
+                  onChange={e => updateScore(i, "team2Score", parseInt(e.target.value) || 0)}
+                  data-testid={`override-team2-${i}`}
+                />
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={addGame} type="button">
+                <Plus className="w-4 h-4 mr-1" /> Add Game
+              </Button>
+              {games.length > 1 && (
+                <Button variant="ghost" size="sm" onClick={removeGame} type="button">
+                  <Minus className="w-4 h-4 mr-1" /> Remove
+                </Button>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs">Winner</Label>
+              {effectiveWinnerId && !isTie ? (
+                <p className="mt-1 p-2 rounded border border-primary bg-primary/10 text-primary text-sm font-semibold">
+                  {[challengerTeam, challengedTeam].find((t: any) => t?.id === effectiveWinnerId)?.teamName} ({Math.max(team1Wins, team2Wins)}–{Math.min(team1Wins, team2Wins)} games)
+                </p>
+              ) : isTie ? (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Games tied {team1Wins}–{team2Wins} — pick winner:</p>
+                  <div className="flex gap-2">
+                    {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setTieBreakerWinnerId(t.id)}
+                        className={`flex-1 py-2 px-3 rounded border text-sm font-medium ${tieBreakerWinnerId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border"}`}
+                      >
+                        {t.teamName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">Enter scores to determine winner.</p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={submitOverride} disabled={isPending || !effectiveWinnerId} data-testid="btn-save-override">
+                {isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Save Override
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setOverriding(false)}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
