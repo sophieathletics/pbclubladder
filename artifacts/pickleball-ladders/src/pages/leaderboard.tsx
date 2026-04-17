@@ -15,12 +15,24 @@ import { useLocation, Link } from "wouter";
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
   const { data: ladders } = useListLadders();
-  const ladderList = (ladders as any[]) ?? [];
+  const { data: player } = useGetCurrentPlayer();
+  const { data: myTeams } = useGetMyTeams();
+  const allLadderList = (ladders as any[]) ?? [];
+  const myLadderIds = useMemo(
+    () => new Set(((myTeams as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
+    [myTeams]
+  );
+  const ladderList = useMemo(() => {
+    if (!player) return allLadderList;
+    if (myLadderIds.size === 0) return allLadderList;
+    return allLadderList.filter(l => myLadderIds.has(l.id));
+  }, [allLadderList, player, myLadderIds]);
 
   const [ladderId, setLadderId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!ladderId && ladderList.length > 0) {
+    if (ladderList.length === 0) return;
+    if (!ladderId || !ladderList.some(l => l.id === ladderId)) {
       const withSeason = ladderList.find(l => l.activeSeason) ?? ladderList[0];
       setLadderId(withSeason.id);
     }
@@ -35,8 +47,6 @@ export default function Leaderboard() {
   const season = data?.season;
   const currentLadder = useMemo(() => ladderList.find(l => l.id === ladderId), [ladderList, ladderId]);
 
-  const { data: player } = useGetCurrentPlayer();
-  const { data: myTeams } = useGetMyTeams();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
