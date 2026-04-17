@@ -56,7 +56,9 @@ function MatchDetailContent() {
 
   const m = match as any;
   const c = m.challenge;
-  const isTeamInMatch = myTeam && (myTeam.id === c?.challengerTeam?.id || myTeam.id === c?.challengedTeam?.id);
+  const challengerTeam = c?.challengerTeam;
+  const challengedTeam = c?.challengedTeam;
+  const isTeamInMatch = myTeam && (myTeam.id === challengerTeam?.id || myTeam.id === challengedTeam?.id);
 
   const addGame = () => setGames(prev => [...prev, { gameNumber: prev.length + 1, team1Score: 0, team2Score: 0 }]);
   const removeGame = () => setGames(prev => prev.slice(0, -1));
@@ -115,9 +117,6 @@ function MatchDetailContent() {
       }
     );
   };
-
-  const challengerTeam = c?.challengerTeam;
-  const challengedTeam = c?.challengedTeam;
 
   return (
     <MainLayout>
