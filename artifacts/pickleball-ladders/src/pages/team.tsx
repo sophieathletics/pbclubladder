@@ -381,13 +381,14 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
 
   return (
     <Card className="border-primary/20">
-      <CardHeader>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Trophy className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold uppercase tracking-wide text-primary">{ladderName}</span>
+        </div>
         <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="break-words">{team.teamName}</span>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline">{ladderName}</Badge>
-            {myStanding && <Badge className="text-base font-bold px-3 py-1">#{myStanding.position}</Badge>}
-          </div>
+          {myStanding && <Badge className="text-base font-bold px-3 py-1 self-start sm:self-auto">#{myStanding.position}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent>

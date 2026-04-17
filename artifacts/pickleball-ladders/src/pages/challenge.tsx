@@ -1,10 +1,12 @@
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { useGetCurrentPlayer, useGetMyLadderPosition, useGetMyActiveChallenge, useGetMyTeam, useCreateChallenge } from "@workspace/api-client-react";
+import { useGetMyLadderPosition, useGetMyActiveChallenge, useGetMyTeams, useCreateChallenge } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Trophy, Users, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,9 +21,25 @@ export default function Challenge() {
 }
 
 function ChallengeContent() {
-  const { data: ladderPos, isLoading } = useGetMyLadderPosition();
-  const { data: activeChallenge } = useGetMyActiveChallenge();
-  const { data: team } = useGetMyTeam();
+  const { data: teamsData } = useGetMyTeams();
+  const teams = (teamsData as any[] | undefined) ?? [];
+
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const team = useMemo(() => {
+    if (teams.length === 0) return null;
+    return teams.find((t: any) => t.id === selectedTeamId) ?? teams[0];
+  }, [teams, selectedTeamId]);
+
+  const ladderId = (team as any)?.season?.ladderId as string | undefined;
+
+  const { data: ladderPos, isLoading } = useGetMyLadderPosition(
+    ladderId ? { ladder_id: ladderId } : undefined,
+    { query: { enabled: !!ladderId } }
+  );
+  const { data: activeChallengeRaw } = useGetMyActiveChallenge();
+  const activeChallenge = (activeChallengeRaw as any)?.seasonId === (team as any)?.seasonId
+    ? activeChallengeRaw
+    : undefined;
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
@@ -29,7 +47,7 @@ function ChallengeContent() {
 
   const myStanding = ladderPos?.myStanding;
   const challengeableTeams = ladderPos?.challengeableTeams ?? [];
-  const hasActiveChallenge = ladderPos?.hasActiveChallenge ?? false;
+  const hasActiveChallenge = !!activeChallenge;
 
   const handleChallenge = (challengedTeamId: string, teamName: string) => {
     createChallenge.mutate(
@@ -59,12 +77,44 @@ function ChallengeContent() {
 
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-black mb-2 flex items-center gap-2">
-          <Swords className="w-8 h-8 text-primary" />
+      <div className="max-w-3xl mx-auto py-5 px-3 sm:py-8 sm:px-4">
+        <h1 className="text-2xl sm:text-3xl font-black mb-2 flex items-center gap-2">
+          <Swords className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           Challenge
         </h1>
-        <p className="text-muted-foreground mb-8">Challenge a team 1 to 3 positions above you on the ladder.</p>
+        <p className="text-muted-foreground mb-4 text-sm sm:text-base">Challenge a team 1 to 3 positions above you on the ladder.</p>
+
+        {teams.length > 1 && (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            <Trophy className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">Viewing as:</span>
+            <Select
+              value={(team as any)?.id ?? ""}
+              onValueChange={(v) => setSelectedTeamId(v)}
+            >
+              <SelectTrigger className="w-auto min-w-[220px] h-9 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent font-semibold">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {teams.map((t: any) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.season?.ladder?.name ?? "Ladder"} — {t.teamName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {teams.length === 1 && team && (
+          <div className="mb-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Trophy className="w-4 h-4 text-primary" />
+            <span>Ladder:</span>
+            <span className="font-semibold text-foreground">{(team as any).season?.ladder?.name ?? "—"}</span>
+            <span>· Team:</span>
+            <span className="font-semibold text-foreground">{(team as any).teamName}</span>
+          </div>
+        )}
 
         {!team && (
           <Card className="border-yellow-400/30 bg-yellow-50/40">
