@@ -102,16 +102,13 @@ export default function Leaderboard() {
         </div>
 
         {ladderList.length > 0 && (
-          <div className="mb-3 sm:mb-4">
+          <div className="my-5 sm:my-6">
             <Select value={ladderId} onValueChange={setLadderId}>
               <SelectTrigger
-                className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm"
+                className="w-full h-auto min-h-[64px] py-3 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm"
                 data-testid="select-ladder"
               >
-                <span className="flex items-center gap-2 min-w-0">
-                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
-                  <SelectValue placeholder="Pick your ladder" />
-                </span>
+                <SelectValue placeholder="Pick your ladder" />
               </SelectTrigger>
               <SelectContent>
                 {ladderList.map((l: any) => {
