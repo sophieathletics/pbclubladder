@@ -105,11 +105,11 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
 
   // Resolve invitee — look up by ID or email
   let resolvedInviteeId: string | null = inviteeId ?? null;
-  let resolvedEmail: string | null = inviteeEmail ?? null;
+  let resolvedEmail: string | null = inviteeEmail ? inviteeEmail.toLowerCase().trim() : null;
 
   if (!resolvedInviteeId && resolvedEmail) {
     // Try to find existing player by email
-    const [found] = await db.select().from(playersTable).where(eq(playersTable.email, resolvedEmail.toLowerCase().trim())).limit(1);
+    const [found] = await db.select().from(playersTable).where(eq(playersTable.email, resolvedEmail)).limit(1);
     if (found) {
       resolvedInviteeId = found.id;
       resolvedEmail = null;

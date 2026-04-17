@@ -36,7 +36,10 @@ function PayContent() {
 
   const amIPlayer1 = me && team && me.id === team.player1Id;
   const amIPlayer2 = me && team && me.id === team.player2Id;
-  const iPaid = amIPlayer1 ? !!team?.player1PaidAt : amIPlayer2 ? !!team?.player2PaidAt : false;
+  const fullyPaid = team?.paymentStatus === "paid";
+  const player1Paid = fullyPaid || !!team?.player1PaidAt;
+  const player2Paid = fullyPaid || !!team?.player2PaidAt;
+  const iPaid = amIPlayer1 ? player1Paid : amIPlayer2 ? player2Paid : false;
 
   const createIntent = useCreatePaymentIntent();
   const [clientSecret, setClientSecret] = useState<string | null>(null);

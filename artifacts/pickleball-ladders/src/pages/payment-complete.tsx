@@ -23,7 +23,7 @@ function Body() {
   const stripeStatus = params.get("redirect_status"); // succeeded | processing | failed
   const sync = useSyncPayment();
   const qc = useQueryClient();
-  const [status, setStatus] = useState<"loading" | "paid" | "pending" | "failed">("loading");
+  const [status, setStatus] = useState<"loading" | "paid" | "partial" | "pending" | "failed">("loading");
   const [message, setMessage] = useState<string>("");
 
   useEffect(() => {
@@ -44,6 +44,9 @@ function Body() {
           qc.invalidateQueries();
           if (resp.paymentStatus === "paid") {
             setStatus("paid");
+          } else if (resp.myPaid) {
+            setStatus("partial");
+            setMessage("Your payment went through. Your partner still needs to pay their share before the team can challenge.");
           } else {
             setStatus("pending");
             setMessage("Your payment is processing. Refresh in a moment, or check back from the My Teams page.");
@@ -73,6 +76,14 @@ function Body() {
                 <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
                 <h1 className="text-2xl font-bold mb-1">Payment received!</h1>
                 <p className="text-muted-foreground mb-5">Your team is paid and ready to play.</p>
+                <Link href="/team"><Button>Back to My Teams</Button></Link>
+              </>
+            )}
+            {status === "partial" && (
+              <>
+                <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
+                <h1 className="text-2xl font-bold mb-1">Thanks — you're paid up!</h1>
+                <p className="text-muted-foreground mb-5">{message}</p>
                 <Link href="/team"><Button>Back to My Teams</Button></Link>
               </>
             )}

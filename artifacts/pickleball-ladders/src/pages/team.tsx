@@ -456,11 +456,14 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
 
   const amIPlayer1 = me?.id === team.player1Id;
   const amIPlayer2 = me?.id === team.player2Id;
-  const iPaid = amIPlayer1 ? !!team.player1PaidAt : amIPlayer2 ? !!team.player2PaidAt : false;
-  const partnerPaid = amIPlayer1 ? !!team.player2PaidAt : amIPlayer2 ? !!team.player1PaidAt : false;
+  const fullyPaid = team.paymentStatus === "paid";
+  // Legacy teams may have paymentStatus="paid" without per-player timestamps — treat as both paid.
+  const player1Paid = fullyPaid || !!team.player1PaidAt;
+  const player2Paid = fullyPaid || !!team.player2PaidAt;
+  const iPaid = amIPlayer1 ? player1Paid : amIPlayer2 ? player2Paid : false;
+  const partnerPaid = amIPlayer1 ? player2Paid : amIPlayer2 ? player1Paid : false;
   const partnerName = amIPlayer1 ? team.player2?.fullName : amIPlayer2 ? team.player1?.fullName : null;
 
-  const fullyPaid = team.paymentStatus === "paid";
   const showPayCta = feeRequired && !iPaid;
 
   return (
@@ -518,7 +521,7 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
             <div className="flex items-center gap-2 mb-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Player 1</p>
               {feeRequired && (
-                team.player1PaidAt
+                player1Paid
                   ? <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
                   : <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Unpaid</Badge>
               )}
@@ -530,7 +533,7 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
             <div className="flex items-center gap-2 mb-1">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Player 2</p>
               {feeRequired && (
-                team.player2PaidAt
+                player2Paid
                   ? <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
                   : <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Unpaid</Badge>
               )}
