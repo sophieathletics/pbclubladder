@@ -232,6 +232,22 @@ export default function Leaderboard() {
         <p className="text-center text-xs text-muted-foreground mt-6">
           Challenge teams 1 to 3 spots above you to climb the ladder. Win to take their place.
         </p>
+
+        <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardContent className="py-6 px-5 flex flex-col sm:flex-row sm:items-center gap-4 text-center sm:text-left">
+            <div className="flex-1">
+              <h3 className="font-bold text-base mb-1">Want in on the action?</h3>
+              <p className="text-sm text-muted-foreground">
+                Browse all ladders and join the one that matches your level.
+              </p>
+            </div>
+            <Button asChild size="lg" className="w-full sm:w-auto shrink-0" data-testid="btn-join-ladder-cta">
+              <Link href={player ? "/ladders" : "/register"}>
+                Join a Ladder
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

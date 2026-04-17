@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Trophy, ArrowRight, Activity, Users } from "lucide-react";
-import { useGetTopLadder } from "@workspace/api-client-react";
+import { useGetTopLadder, useGetCurrentPlayer } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
   const { data: ladderResponse, isLoading } = useGetTopLadder();
+  const { data: currentPlayer } = useGetCurrentPlayer();
+  const joinHref = currentPlayer ? "/ladders" : "/register";
 
   return (
     <MainLayout>
@@ -26,7 +28,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button size="lg" asChild className="font-semibold px-8" data-testid="hero-btn-join">
-              <Link href="/register">Join a Ladder</Link>
+              <Link href={joinHref}>Join a Ladder</Link>
             </Button>
             <Button size="lg" variant="outline" asChild className="font-semibold px-8" data-testid="hero-btn-leaderboard">
               <Link href="/leaderboard">View Leaderboard</Link>
