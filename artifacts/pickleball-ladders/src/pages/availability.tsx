@@ -27,9 +27,6 @@ const TIME_SLOTS = [
   { label: "2pm", value: "14:00" },
   { label: "3pm", value: "15:00" },
   { label: "4pm", value: "16:00" },
-  { label: "5pm", value: "17:00" },
-  { label: "6pm", value: "18:00" },
-  { label: "7pm", value: "19:00" },
 ];
 
 function formatDate(d: Date): string {
@@ -48,13 +45,15 @@ function AvailabilityContent() {
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Generate the next 14 days
+  // Generate the next 4 weekends (Saturdays and Sundays only) within the next 28 days
   const dates = useMemo(() => {
     const out: { value: string; weekday: string; day: string; month: string }[] = [];
     const today = new Date();
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 28 && out.length < 8; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) continue;
       out.push({
         value: formatDate(d),
         weekday: d.toLocaleDateString(undefined, { weekday: "short" }),
@@ -140,7 +139,7 @@ function AvailabilityContent() {
           Submit Availability
         </h1>
         <p className="text-muted-foreground mb-6">
-          Tap the times when you and your teammate are both available to play over the next two weeks.
+          Tap the times when you and your teammate are both available to play. Matches run Saturdays and Sundays, 9 AM – 4 PM.
           {c && <span> Challenge: <strong>{c.challengerTeam?.teamName}</strong> vs <strong>{c.challengedTeam?.teamName}</strong></span>}
         </p>
 
