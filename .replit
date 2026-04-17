@@ -47,3 +47,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 FROM_EMAIL = "Pb Club Ladder <info@pbclubladder.com>"
+APP_URL = "https://fd3254a7-a1af-426d-8596-146c30e1f111-00-3clz6ky8l2rj2.kirk.replit.dev"
