@@ -1416,6 +1416,15 @@ components:
         category:
           type: string
           enum: [men, women, mixed, coed]
+        location:
+          type: string
+          nullable: true
+        level:
+          type: string
+          nullable: true
+        entryFeeCents:
+          type: integer
+          nullable: true
         isActive:
           type: boolean
         sortOrder:
@@ -1450,6 +1459,13 @@ components:
         category:
           type: string
           enum: [men, women, mixed, coed]
+        location:
+          type: string
+        level:
+          type: string
+        entryFeeCents:
+          type: integer
+          nullable: true
         sortOrder:
           type: string
       required:
@@ -1466,6 +1482,13 @@ components:
         category:
           type: string
           enum: [men, women, mixed, coed]
+        location:
+          type: string
+        level:
+          type: string
+        entryFeeCents:
+          type: integer
+          nullable: true
         isActive:
           type: boolean
         sortOrder:

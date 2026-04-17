@@ -51,7 +51,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed" }>({ name: "", description: "", category: "coed" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; level: string; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", level: "", entryFeeDollars: "" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -74,9 +74,18 @@ function AdminContent() {
       return;
     }
     createLadder.mutate(
-      { data: newLadder },
       {
-        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed" }); },
+        data: {
+          name: newLadder.name,
+          description: newLadder.description,
+          category: newLadder.category,
+          location: newLadder.location || undefined,
+          level: newLadder.level || undefined,
+          entryFeeCents: newLadder.entryFeeDollars ? Math.round(parseFloat(newLadder.entryFeeDollars) * 100) : null,
+        },
+      },
+      {
+        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", level: "", entryFeeDollars: "" }); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
       }
     );
@@ -200,6 +209,30 @@ function AdminContent() {
                 <div>
                   <Label className="text-xs">Description (optional)</Label>
                   <Input value={newLadder.description} onChange={e => setNewLadder(p => ({ ...p, description: e.target.value }))} placeholder="Short description of this ladder" className="mt-1" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Location (optional)</Label>
+                    <Input value={newLadder.location} onChange={e => setNewLadder(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Westside Courts" className="mt-1" data-testid="input-new-ladder-location" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Level (optional)</Label>
+                    <Input value={newLadder.level} onChange={e => setNewLadder(p => ({ ...p, level: e.target.value }))} placeholder="e.g. 3.5, 4.0, Beginner" className="mt-1" data-testid="input-new-ladder-level" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Entry Fee in USD (optional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newLadder.entryFeeDollars}
+                    onChange={e => setNewLadder(p => ({ ...p, entryFeeDollars: e.target.value }))}
+                    placeholder="e.g. 25.00"
+                    className="mt-1"
+                    data-testid="input-new-ladder-fee"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Leave blank for a free ladder. Payment collection requires Stripe to be set up.</p>
                 </div>
                 <div>
                   <Label className="text-xs">Category</Label>
@@ -398,13 +431,24 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [name, setName] = useState(ladder.name);
   const [description, setDescription] = useState(ladder.description ?? "");
   const [category, setCategory] = useState<"men" | "women" | "mixed" | "coed">(ladder.category ?? "coed");
+  const [location, setLocation] = useState(ladder.location ?? "");
+  const [level, setLevel] = useState(ladder.level ?? "");
+  const [feeDollars, setFeeDollars] = useState(ladder.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : "");
   const [isActive, setIsActive] = useState(ladder.isActive);
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const handleSave = () => {
     onUpdate.mutate(
-      { id: ladder.id, data: { name, description, isActive, category } },
+      {
+        id: ladder.id,
+        data: {
+          name, description, isActive, category,
+          location: location || undefined,
+          level: level || undefined,
+          entryFeeCents: feeDollars === "" ? null : Math.round(parseFloat(feeDollars) * 100),
+        },
+      },
       {
         onSuccess: () => { toast({ title: "Ladder updated" }); qc.invalidateQueries(); setEditing(false); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
@@ -417,6 +461,11 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
       <div className="p-3 space-y-2">
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name" />
         <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
+        <div className="grid grid-cols-2 gap-2">
+          <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+          <Input value={level} onChange={e => setLevel(e.target.value)} placeholder="Level" />
+        </div>
+        <Input type="number" min="0" step="0.01" value={feeDollars} onChange={e => setFeeDollars(e.target.value)} placeholder="Entry fee USD (blank = free)" />
         <Select value={category} onValueChange={(v) => setCategory(v as any)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -447,9 +496,12 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-sm">{ladder.name}</p>
           <Badge variant="outline" className="text-xs">{categoryLabel[cat]}</Badge>
+          {ladder.level && <Badge variant="outline" className="text-xs">Level {ladder.level}</Badge>}
+          {ladder.entryFeeCents != null && <Badge variant="outline" className="text-xs">${(ladder.entryFeeCents / 100).toFixed(2)}</Badge>}
           {!ladder.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
           {ladder.activeSeason && <Badge variant="outline" className="text-xs">{ladder.activeSeason.name}</Badge>}
         </div>
+        {ladder.location && <p className="text-xs text-muted-foreground">📍 {ladder.location}</p>}
         {ladder.description && <p className="text-xs text-muted-foreground truncate">{ladder.description}</p>}
       </div>
       <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>

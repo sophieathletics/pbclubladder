@@ -41,8 +41,17 @@ router.get("/ladders/:id", async (req, res): Promise<void> => {
 
 const ALLOWED_CATEGORIES = ["men", "women", "mixed", "coed"] as const;
 
+function validateFee(v: any): { ok: boolean; value?: number | null; error?: string } {
+  if (v === undefined || v === null || v === "") return { ok: true, value: null };
+  const n = typeof v === "number" ? v : parseInt(String(v), 10);
+  if (!Number.isFinite(n) || n < 0 || n > 100000000) {
+    return { ok: false, error: "entryFeeCents must be a non-negative integer (cents)" };
+  }
+  return { ok: true, value: n };
+}
+
 router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
-  const { name, description, sortOrder, category } = req.body;
+  const { name, description, sortOrder, category, location, level, entryFeeCents } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
@@ -52,10 +61,15 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
     res.status(400).json({ error: "category must be one of: men, women, mixed, coed" });
     return;
   }
+  const fee = validateFee(entryFeeCents);
+  if (!fee.ok) { res.status(400).json({ error: fee.error }); return; }
   const [ladder] = await db.insert(laddersTable).values({
     name,
     description: description ?? null,
     category: cat,
+    location: location?.trim() || null,
+    level: level?.trim() || null,
+    entryFeeCents: fee.value ?? null,
     isActive: true,
     sortOrder: sortOrder ?? "0",
   }).returning();
@@ -64,12 +78,19 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
 
 router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { name, description, isActive, sortOrder, category } = req.body;
+  const { name, description, isActive, sortOrder, category, location, level, entryFeeCents } = req.body;
   const updates: any = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
   if (isActive !== undefined) updates.isActive = isActive;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
+  if (location !== undefined) updates.location = (typeof location === "string" && location.trim()) ? location.trim() : null;
+  if (level !== undefined) updates.level = (typeof level === "string" && level.trim()) ? level.trim() : null;
+  if (entryFeeCents !== undefined) {
+    const fee = validateFee(entryFeeCents);
+    if (!fee.ok) { res.status(400).json({ error: fee.error }); return; }
+    updates.entryFeeCents = fee.value;
+  }
   if (category !== undefined) {
     if (!ALLOWED_CATEGORIES.includes(category)) {
       res.status(400).json({ error: "category must be one of: men, women, mixed, coed" });

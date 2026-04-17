@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Users, ArrowRight, Calendar } from "lucide-react";
+import { Trophy, Users, ArrowRight, Calendar, MapPin, Tag, DollarSign } from "lucide-react";
 
 export default function Ladders() {
   const { data: ladders, isLoading } = useListLadders();
@@ -48,7 +48,25 @@ export default function Ladders() {
                         {ladder.description}
                       </p>
                     ) : null}
-                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+                      {ladder.location && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {ladder.location}
+                        </span>
+                      )}
+                      {ladder.level && (
+                        <span className="inline-flex items-center gap-1">
+                          <Tag className="w-3.5 h-3.5" />
+                          Level {ladder.level}
+                        </span>
+                      )}
+                      {ladder.entryFeeCents != null && (
+                        <span className="inline-flex items-center gap-1 text-foreground font-medium">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          {(ladder.entryFeeCents / 100).toFixed(2)} entry
+                        </span>
+                      )}
                       <span className="inline-flex items-center gap-1">
                         <Users className="w-3.5 h-3.5" />
                         {ladder.teamCount ?? 0} teams

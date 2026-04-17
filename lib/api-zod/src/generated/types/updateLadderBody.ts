@@ -11,6 +11,9 @@ export interface UpdateLadderBody {
   name?: string;
   description?: string;
   category?: UpdateLadderBodyCategory;
+  location?: string;
+  level?: string;
+  entryFeeCents?: number | null;
   isActive?: boolean;
   sortOrder?: string;
 }
