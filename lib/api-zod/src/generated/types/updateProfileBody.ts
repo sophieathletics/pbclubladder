@@ -5,8 +5,10 @@
  * Pickleball Club Ladder API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateProfileBodySex } from "./updateProfileBodySex";
 
 export interface UpdateProfileBody {
   fullName?: string;
   phone?: string;
+  sex?: UpdateProfileBodySex;
 }

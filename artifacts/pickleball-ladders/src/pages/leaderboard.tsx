@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Medal, Search, Swords } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -93,51 +94,70 @@ export default function Leaderboard() {
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto py-8 px-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-black flex items-center gap-2">
-              <Trophy className="w-8 h-8 text-primary" />
-              Leaderboard
-            </h1>
-            {currentLadder && (
-              <div className="text-muted-foreground mt-1 space-y-0.5 text-sm">
-                <p>
-                  Ladder: <span className="font-semibold text-foreground">{currentLadder.name}</span>
-                </p>
-                {season && (
-                  <p>
-                    Dates:{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatDateRange((season as any).startDate, (season as any).endDate)}
-                    </span>
-                  </p>
-                )}
-              </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-black flex items-center gap-2">
+            <Trophy className="w-8 h-8 text-primary" />
+            Leaderboard
+          </h1>
+        </div>
+
+        {ladderList.length > 0 && (
+          <div className="mb-4">
+            <Select value={ladderId} onValueChange={setLadderId}>
+              <SelectTrigger
+                className="w-full h-14 text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 hover:from-primary/10 hover:to-primary/15 transition-all shadow-sm"
+                data-testid="select-ladder"
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <Trophy className="w-5 h-5 text-primary shrink-0" />
+                  <SelectValue placeholder="Pick your ladder" />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {ladderList.map((l: any) => {
+                  const cat = l.category ?? "coed";
+                  const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+                  const catEmoji: Record<string, string> = { men: "♂️", women: "♀️", mixed: "⚥", coed: "🎾" };
+                  return (
+                    <SelectItem key={l.id} value={l.id} className="py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium flex items-center gap-1.5">
+                          <span>{catEmoji[cat]}</span>
+                          <span>{l.name}</span>
+                          <Badge variant="outline" className="text-[10px] ml-1">{catLabel[cat]}</Badge>
+                        </span>
+                        {l.activeSeason && (
+                          <span className="text-xs text-muted-foreground">
+                            {formatDateRange(l.activeSeason.startDate, l.activeSeason.endDate)}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {currentLadder && season && (
+              <p className="text-xs text-muted-foreground mt-2 ml-1">
+                Season dates:{" "}
+                <span className="font-semibold text-foreground">
+                  {formatDateRange((season as any).startDate, (season as any).endDate)}
+                </span>
+              </p>
             )}
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            {ladderList.length > 0 && (
-              <Select value={ladderId} onValueChange={setLadderId}>
-                <SelectTrigger className="w-full sm:w-48" data-testid="select-ladder">
-                  <SelectValue placeholder="Select ladder" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ladderList.map((l: any) => (
-                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-9 w-full sm:w-64"
-                placeholder="Search teams or players..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                data-testid="input-search"
-              />
-            </div>
+        )}
+
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 w-full"
+              placeholder="Search teams or players..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              data-testid="input-search"
+            />
           </div>
         </div>
 

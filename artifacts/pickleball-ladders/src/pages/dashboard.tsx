@@ -22,7 +22,10 @@ function DashboardContent() {
   const { data: ladderPos } = useGetMyLadderPosition();
   const { data: activeChallenge } = useGetMyActiveChallenge();
   const { data: notifData } = useListNotifications({ unread_only: true });
-  const { data: completedMatches } = useListMatches({ status: "completed" });
+  const { data: completedMatches } = useListMatches(
+    { status: "completed", team_id: (team as any)?.id },
+    { query: { enabled: !!(team as any)?.id } }
+  );
 
   const isLoading = !player;
   const myStanding = ladderPos?.myStanding;

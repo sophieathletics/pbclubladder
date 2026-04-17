@@ -43,6 +43,14 @@ export interface LoginBody {
   password: string;
 }
 
+export type PlayerSex = (typeof PlayerSex)[keyof typeof PlayerSex];
+
+export const PlayerSex = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
+
 export type PlayerRole = (typeof PlayerRole)[keyof typeof PlayerRole];
 
 export const PlayerRole = {
@@ -53,8 +61,13 @@ export const PlayerRole = {
 export interface Player {
   id: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone?: string;
+  sex?: PlayerSex;
+  selfRating?: string;
+  shareContact?: boolean;
   role: PlayerRole;
   isActive: boolean;
   createdAt: string;
@@ -65,9 +78,19 @@ export interface AuthResponse {
   token?: string;
 }
 
+export type UpdateProfileBodySex =
+  (typeof UpdateProfileBodySex)[keyof typeof UpdateProfileBodySex];
+
+export const UpdateProfileBodySex = {
+  male: "male",
+  female: "female",
+  other: "other",
+} as const;
+
 export interface UpdateProfileBody {
   fullName?: string;
   phone?: string;
+  sex?: UpdateProfileBodySex;
 }
 
 export interface ChangePasswordBody {

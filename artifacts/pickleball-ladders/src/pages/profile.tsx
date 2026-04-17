@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Save, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,12 +29,13 @@ function ProfileContent() {
 
   const [fullName, setFullName] = useState(player?.fullName ?? "");
   const [phone, setPhone] = useState((player as any)?.phone ?? "");
+  const [sex, setSex] = useState<string>((player as any)?.sex ?? "");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
   const handleUpdateProfile = () => {
     updateProfile.mutate(
-      { data: { fullName: fullName || undefined, phone: phone || undefined } },
+      { data: { fullName: fullName || undefined, phone: phone || undefined, sex: (sex || undefined) as any } },
       {
         onSuccess: () => { toast({ title: "Profile updated!" }); qc.invalidateQueries(); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
@@ -88,11 +90,27 @@ function ProfileContent() {
               />
             </div>
             <div>
+              <Label>Sex</Label>
+              <Select value={sex} onValueChange={setSex}>
+                <SelectTrigger className="mt-1" data-testid="select-sex">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="other">Other / Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Used to determine which ladders you can join (Men's, Women's, Mixed).
+              </p>
+            </div>
+            <div>
               <Label>Phone (optional)</Label>
               <Input
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                placeholder="555-1234"
+                placeholder="123-456-7891"
                 className="mt-1"
                 data-testid="input-phone"
               />

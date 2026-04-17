@@ -6,12 +6,18 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PlayerRole } from "./playerRole";
+import type { PlayerSex } from "./playerSex";
 
 export interface Player {
   id: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone?: string;
+  sex?: PlayerSex;
+  selfRating?: string;
+  shareContact?: boolean;
   role: PlayerRole;
   isActive: boolean;
   createdAt: string;

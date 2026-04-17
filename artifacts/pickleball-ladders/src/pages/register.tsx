@@ -136,7 +136,7 @@ export default function Register() {
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="555-1234"
+                  placeholder="123-456-7891"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
                   data-testid="input-phone"

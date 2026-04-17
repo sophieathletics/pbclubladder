@@ -80,6 +80,23 @@ router.get("/admin/players", requireAdmin, async (req, res): Promise<void> => {
 
 router.post("/admin/players/:id/deactivate", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const me = (req as any).player;
+
+  if (id === me.id) {
+    res.status(400).json({ error: "You cannot deactivate your own account." });
+    return;
+  }
+
+  const [target] = await db.select().from(playersTable).where(eq(playersTable.id, id)).limit(1);
+  if (!target) {
+    res.status(404).json({ error: "Player not found" });
+    return;
+  }
+  if (target.role === "admin") {
+    res.status(403).json({ error: "Admin accounts cannot be deactivated." });
+    return;
+  }
+
   await db.update(playersTable).set({ isActive: false }).where(eq(playersTable.id, id));
   res.json({ success: true, message: "Player deactivated" });
 });

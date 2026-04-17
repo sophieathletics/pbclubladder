@@ -129,7 +129,8 @@ export function Navbar() {
             </div>
           )}
 
-          {/* Mobile menu */}
+          {/* Mobile menu - only when signed in */}
+          {player && (
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" data-testid="button-mobile-menu">
@@ -138,7 +139,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="w-64 flex flex-col gap-6 pt-10">
               <NavLinks />
-              {player && (
+              {(
                 <>
                   <div className="border-t pt-4 flex flex-col gap-4">
                     <Link
@@ -180,6 +181,7 @@ export function Navbar() {
               )}
             </SheetContent>
           </Sheet>
+          )}
         </div>
       </div>
     </header>

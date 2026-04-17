@@ -94,10 +94,20 @@ router.get("/auth/me", requireAuth, async (req, res): Promise<void> => {
 
 router.patch("/auth/me/update", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
-  const { fullName, phone } = req.body;
+  const { fullName, phone, sex } = req.body;
+
+  const allowedSex = ["male", "female", "other"];
+  if (sex !== undefined && !allowedSex.includes(sex)) {
+    res.status(400).json({ error: "Sex must be one of: male, female, other" });
+    return;
+  }
 
   const [updated] = await db.update(playersTable)
-    .set({ fullName: fullName ?? player.fullName, phone: phone !== undefined ? phone : player.phone })
+    .set({
+      fullName: fullName ?? player.fullName,
+      phone: phone !== undefined ? phone : player.phone,
+      sex: sex !== undefined ? sex : player.sex,
+    })
     .where(eq(playersTable.id, player.id))
     .returning();
 

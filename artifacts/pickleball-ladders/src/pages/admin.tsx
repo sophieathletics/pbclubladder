@@ -4,6 +4,7 @@ import {
   useGetAdminStats, useListAdminPlayers, useListDisputes, useResolveDispute,
   useCreateSeason, useActivateSeason, useDeactivateSeason, useGetInactivityLog,
   useListLadders, useCreateLadder, useUpdateLadder, useListSeasons,
+  useDeactivatePlayer,
 } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -230,18 +231,9 @@ function AdminContent() {
           <TabsContent value="players">
             <Card className="border-primary/10">
               <CardContent className="p-0">
-                <div className="divide-y max-h-96 overflow-y-auto">
+                <div className="divide-y max-h-[500px] overflow-y-auto">
                   {playerList.map((p: any) => (
-                    <div key={p.id} className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{p.fullName}</p>
-                        <p className="text-xs text-muted-foreground">{p.email}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={p.role === "admin" ? "default" : "outline"}>{p.role}</Badge>
-                        {!p.isActive && <Badge variant="destructive">Inactive</Badge>}
-                      </div>
-                    </div>
+                    <PlayerRow key={p.id} player={p} />
                   ))}
                 </div>
               </CardContent>
@@ -352,6 +344,52 @@ function AdminContent() {
         </Tabs>
       </div>
     </MainLayout>
+  );
+}
+
+function PlayerRow({ player }: { player: any }) {
+  const deactivate = useDeactivatePlayer();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const handleRemove = () => {
+    if (!confirm(`Remove ${player.fullName}? They will no longer be able to log in.`)) return;
+    deactivate.mutate(
+      { id: player.id },
+      {
+        onSuccess: () => { toast({ title: `${player.fullName} removed` }); qc.invalidateQueries(); },
+        onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
+      }
+    );
+  };
+
+  const sexLabel: Record<string, string> = { male: "M", female: "F", other: "—" };
+
+  return (
+    <div className="p-3 flex items-center justify-between gap-2">
+      <div className="min-w-0">
+        <p className="font-medium text-sm truncate">{player.fullName}</p>
+        <p className="text-xs text-muted-foreground truncate">{player.email}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {player.sex && <Badge variant="outline" className="text-[10px]">{sexLabel[player.sex] ?? player.sex}</Badge>}
+        <Badge variant={player.role === "admin" ? "default" : "outline"} className="text-[10px]">{player.role}</Badge>
+        {!player.isActive ? (
+          <Badge variant="destructive" className="text-[10px]">Inactive</Badge>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs text-destructive hover:bg-destructive/10"
+            onClick={handleRemove}
+            disabled={deactivate.isPending || player.role === "admin"}
+            data-testid={`btn-remove-player-${player.id}`}
+          >
+            Remove
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }
 

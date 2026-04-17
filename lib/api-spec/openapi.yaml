@@ -1341,6 +1341,9 @@ components:
           type: string
         phone:
           type: string
+        sex:
+          type: string
+          enum: [male, female, other]
 
     ChangePasswordBody:
       type: object
@@ -1361,10 +1364,21 @@ components:
           type: string
         fullName:
           type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
         email:
           type: string
         phone:
           type: string
+        sex:
+          type: string
+          enum: [male, female, other]
+        selfRating:
+          type: string
+        shareContact:
+          type: boolean
         role:
           type: string
           enum: [player, admin]
