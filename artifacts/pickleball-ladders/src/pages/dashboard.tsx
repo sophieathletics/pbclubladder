@@ -1,11 +1,13 @@
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { useGetCurrentPlayer, useGetMyTeam, useGetMyLadderPosition, useGetMyActiveChallenge, useListNotifications, useListMatches } from "@workspace/api-client-react";
+import { useGetCurrentPlayer, useGetMyTeams, useGetMyLadderPosition, useGetMyActiveChallenge, useListNotifications, useListMatches } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History } from "lucide-react";
 
 export default function Dashboard() {
@@ -18,9 +20,25 @@ export default function Dashboard() {
 
 function DashboardContent() {
   const { data: player } = useGetCurrentPlayer();
-  const { data: team } = useGetMyTeam();
-  const { data: ladderPos } = useGetMyLadderPosition();
-  const { data: activeChallenge } = useGetMyActiveChallenge();
+  const { data: teamsData } = useGetMyTeams();
+  const teams = (teamsData as any[] | undefined) ?? [];
+
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const team = useMemo(() => {
+    if (teams.length === 0) return null;
+    return teams.find((t: any) => t.id === selectedTeamId) ?? teams[0];
+  }, [teams, selectedTeamId]);
+
+  const ladderId = (team as any)?.season?.ladderId as string | undefined;
+
+  const { data: ladderPos } = useGetMyLadderPosition(
+    ladderId ? { ladder_id: ladderId } : undefined,
+    { query: { enabled: !!ladderId } }
+  );
+  const { data: activeChallengeRaw } = useGetMyActiveChallenge();
+  const activeChallenge = (activeChallengeRaw as any)?.seasonId === (team as any)?.seasonId
+    ? activeChallengeRaw
+    : undefined;
   const { data: notifData } = useListNotifications({ unread_only: true });
   const { data: completedMatches } = useListMatches(
     { status: "completed", team_id: (team as any)?.id },
@@ -48,6 +66,28 @@ function DashboardContent() {
             Welcome back, {isLoading ? "..." : player?.fullName?.split(" ")[0]}!
           </h1>
           <p className="text-muted-foreground mt-1">Here's your current season overview.</p>
+
+          {teams.length > 1 && (
+            <div className="mt-4 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-muted-foreground">Viewing ladder:</span>
+              <Select
+                value={(team as any)?.id ?? ""}
+                onValueChange={(v) => setSelectedTeamId(v)}
+              >
+                <SelectTrigger className="w-auto min-w-[220px] h-9 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.season?.ladder?.name ?? "Ladder"} — {t.teamName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

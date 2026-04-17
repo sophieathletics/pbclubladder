@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, teamsTable, playersTable, ladderStandingsTable, seasonsTable, matchesTable, matchScoresTable, matchResultsTable, challengesTable } from "@workspace/db";
+import { db, teamsTable, playersTable, ladderStandingsTable, seasonsTable, laddersTable, matchesTable, matchScoresTable, matchResultsTable, challengesTable } from "@workspace/db";
 import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
@@ -13,12 +13,16 @@ async function enrichTeam(team: any) {
   ]);
   const [standing] = await db.select().from(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, team.id)).limit(1);
   const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, team.seasonId)).limit(1);
+  let ladder: any = null;
+  if (season?.ladderId) {
+    [ladder] = await db.select().from(laddersTable).where(eq(laddersTable.id, season.ladderId)).limit(1);
+  }
   return {
     ...team,
     player1: p1[0] ? sanitizePlayer(p1[0]) : null,
     player2: p2[0] ? sanitizePlayer(p2[0]) : null,
     standing: standing ?? null,
-    season: season ?? null,
+    season: season ? { ...season, ladder: ladder ?? null } : null,
   };
 }
 
