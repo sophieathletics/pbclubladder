@@ -81,7 +81,7 @@ export default function Ladders() {
           </p>
         </div>
 
-        {!isLoading && openLadders.length > 0 && (
+        {!isLoading && openLadders.length > 0 && availableStates.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-4" data-testid="ladder-filter-bar">
             <div className="flex-1 min-w-[140px]">
               <Select value={filterState} onValueChange={(v) => { setFilterState(v); setFilterCity("all"); }}>

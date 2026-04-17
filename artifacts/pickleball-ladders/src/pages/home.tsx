@@ -125,7 +125,7 @@ export default function Home() {
               </Button>
             </div>
 
-            {!isLoading && !hasStandings && (
+            {!isLoading && !hasStandings && availableStates.length > 0 && (
               <LadderFilterBar
                 filterState={filterState}
                 filterCity={filterCity}
@@ -274,14 +274,16 @@ export default function Home() {
                 </Link>
               </Button>
             </div>
-            <LadderFilterBar
-              filterState={filterState}
-              filterCity={filterCity}
-              availableStates={availableStates}
-              availableCities={availableCities}
-              setFilterState={(v) => { setFilterState(v); setFilterCity("all"); }}
-              setFilterCity={setFilterCity}
-            />
+            {availableStates.length > 0 && (
+              <LadderFilterBar
+                filterState={filterState}
+                filterCity={filterCity}
+                availableStates={availableStates}
+                availableCities={availableCities}
+                setFilterState={(v) => { setFilterState(v); setFilterCity("all"); }}
+                setFilterCity={setFilterCity}
+              />
+            )}
             <Card className="border-primary/10 shadow-lg shadow-primary/5">
               <CardContent className="p-0">
                 <div className="divide-y">
