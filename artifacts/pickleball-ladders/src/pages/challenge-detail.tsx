@@ -34,7 +34,7 @@ const statusColors: Record<string, string> = {
 
 function ChallengeDetailContent() {
   const { id } = useParams<{ id: string }>();
-  const { data: challenge, isLoading } = useGetChallenge({ id: id! });
+  const { data: challenge, isLoading } = useGetChallenge(id!);
   const acceptChallenge = useAcceptChallenge();
   const declineChallenge = useDeclineChallenge();
   const cancelChallenge = useCancelChallenge();
