@@ -144,6 +144,7 @@ export default function Register() {
                   placeholder="123-456-7891"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
+                  required
                   data-testid="input-phone"
                 />
               </div>
