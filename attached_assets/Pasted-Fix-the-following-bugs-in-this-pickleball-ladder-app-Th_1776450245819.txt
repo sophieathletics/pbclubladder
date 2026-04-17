@@ -1,0 +1,237 @@
+Fix the following bugs in this pickleball ladder app. The project structure is:
+- Frontend: artifacts/pickleball-ladders/src/
+- Backend: artifacts/api-server/src/
+- Database schema: lib/db/src/schema/
+
+Work through these one at a time.
+
+---
+
+## 1. Profile page fields initialize empty
+
+File: artifacts/pickleball-ladders/src/pages/profile.tsx
+
+The three useState calls at the top of ProfileContent() run before useGetCurrentPlayer() resolves, so all fields initialize as "". The user sees blank inputs until they start typing.
+
+Fix: add a useEffect that syncs form state once player data arrives. Add this import if not already present:
+  import { useState, useEffect } from "react";
+
+Then add this after the existing useState declarations:
+  useEffect(() => {
+    if (player) {
+      setFullName((player as any).fullName ?? "");
+      setPhone((player as any).phone ?? "");
+      setSex((player as any).sex ?? "");
+    }
+  }, [player]);
+
+---
+
+## 2. Availability grid doesn't pre-populate prior submissions
+
+File: artifacts/pickleball-ladders/src/pages/availability.tsx
+
+The selected state always starts as an empty Set even when the player already submitted availability. If they return to this page, their prior picks are gone.
+
+Fix: after the existing useState for selected, add a useEffect that initializes it from the player's own team's existing availability once availData loads. The availData object has the structure { myAvailability: { slots: [{date, times[]}] }, ... }. Build the Set by iterating those slots and creating "date|time" keys, then call setSelected with the populated Set.
+
+---
+
+## 3. No confirmation dialogs before irreversible actions
+
+File: artifacts/pickleball-ladders/src/pages/challenge-detail.tsx
+
+handleDecline() and handleCancel() fire immediately on click with no confirmation. These are irreversible.
+
+The project already has AlertDialog in artifacts/pickleball-ladders/src/components/ui/alert-dialog.tsx.
+
+For both handleDecline and handleCancel:
+- Add a boolean state: const [showDeclineConfirm, setShowDeclineConfirm] = useState(false) and const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+- Change the Decline and Cancel buttons to open the dialog instead of firing the mutation directly
+- Add an AlertDialog for each that shows a warning message and has a "Confirm" button that fires the actual mutation and a "Go Back" button that closes the dialog
+
+---
+
+## 4. Challenge buttons show on leaderboard even when user has an active challenge
+
+File: artifacts/pickleball-ladders/src/pages/leaderboard.tsx
+
+The canChallenge() function only checks position range. If the user already has an active challenge, buttons are still shown. Clicking them results in an API error.
+
+Fix:
+- Import useGetMyActiveChallenge from @workspace/api-client-react
+- Call it: const { data: activeChallenge } = useGetMyActiveChallenge()
+- Update canChallenge() to also return false if activeChallenge exists (treat any non-error response as an active challenge)
+- When a challenge button is disabled due to an active challenge, show a Tooltip (the component exists at artifacts/pickleball-ladders/src/components/ui/tooltip.tsx) explaining "You already have an active challenge"
+
+---
+
+## 5. Add polling to time-sensitive queries so the app updates without manual refresh
+
+File: artifacts/pickleball-ladders/src/pages/challenge-detail.tsx
+File: artifacts/pickleball-ladders/src/pages/match-detail.tsx
+File: artifacts/pickleball-ladders/src/components/layout/navbar.tsx (or wherever the notification badge query lives)
+
+The app currently relies only on window-focus refetching. Add refetchInterval to these specific queries:
+
+In challenge-detail.tsx — on the useGetChallenge call, add a query option:
+  refetchInterval: (query) => {
+    const status = (query.state.data as any)?.status;
+    return status === "completed" || status === "cancelled" ? false : 15000;
+  }
+
+In match-detail.tsx — on the useGetMatch call:
+  refetchInterval: (query) => {
+    const status = (query.state.data as any)?.status;
+    return status === "completed" ? false : 15000;
+  }
+
+For the notification unread count (wherever useListNotifications or similar is called in the navbar):
+  refetchInterval: 20000
+
+---
+
+## 6. invalidateQueries() called with no arguments causes a refetch storm
+
+Files: artifacts/pickleball-ladders/src/pages/challenge-detail.tsx, challenge.tsx, availability.tsx, match-detail.tsx, team.tsx, notifications.tsx
+
+Every mutation onSuccess calls qc.invalidateQueries() with no arguments, which refetches every cached query simultaneously.
+
+Replace each one with scoped invalidations. Look at the query keys used by the relevant hooks from @workspace/api-client-react and invalidate only what changed. For example:
+- After accepting/declining/cancelling a challenge → invalidate queries with keys matching "challenge" and "ladder"
+- After submitting availability → invalidate "availability" and "challenge"  
+- After submitting/confirming a score → invalidate "match" and "ladder"
+- After accepting a team invitation → invalidate "team", "invitation", and "ladder"
+- After marking a notification read → invalidate only "notification"
+
+Look at how the query keys are structured in the generated client (lib/api-client-react/src/) to get the exact key strings to use.
+
+---
+
+## 7. Position swap in ladder.ts is not wrapped in a transaction
+
+File: artifacts/api-server/src/lib/ladder.ts — swapLadderPositions function
+
+The three-step position swap (set -999, update loser, update winner) is not atomic. If the server crashes between steps the ladder data is corrupted with a team stuck at position -999.
+
+Wrap all three db.update calls inside a db.transaction():
+  await db.transaction(async (tx) => {
+    await tx.update(ladderStandingsTable).set({ position: -999 }).where(...)
+    await tx.update(ladderStandingsTable).set({ position: winnerPos, wins: loserStanding.wins + 1, lastMatchDate: now }).where(...)
+    await tx.update(ladderStandingsTable).set({ position: loserPos, losses: winnerStanding.losses + 1, lastMatchDate: now }).where(...)
+  });
+
+Also apply the same transaction wrapping to the inactivity drop swap in artifacts/api-server/src/routes/cron.ts (the three db.update calls inside the for loop starting around "Swap positions using temp").
+
+---
+
+## 8. Inactivity cron drops teams that have an active challenge
+
+File: artifacts/api-server/src/routes/cron.ts — POST /cron/inactivity-drop
+
+Teams with an accepted or in-progress challenge should not be penalized for inactivity. Currently there is no check for this.
+
+Inside the for loop, after calculating daysSince and before finding teamBelow, add a check:
+  const activeChallenge = await db.select().from(challengesTable).where(
+    and(
+      eq(challengesTable.seasonId, activeSeason.id),
+      or(
+        eq(challengesTable.challengerTeamId, standing.teamId),
+        eq(challengesTable.challengedTeamId, standing.teamId)
+      ),
+      sql`${challengesTable.status} IN ('accepted', 'scheduling', 'scheduled')`
+    )
+  ).limit(1);
+  if (activeChallenge.length > 0) continue;
+
+---
+
+## 9. Accepted/scheduling challenges never expire
+
+File: artifacts/api-server/src/routes/cron.ts — POST /cron/expire-challenges
+
+Currently only challenges with status = "pending" are expired after 48 hours. A challenge that was accepted but where one or both teams never submitted availability will stay open forever.
+
+Add a second expiry pass after the existing one:
+- Select challenges with status IN ('accepted', 'scheduling') where createdAt is older than 7 days
+- Set their status to "cancelled"
+- Send notifications to both teams explaining the challenge expired because availability was never completed
+- You can reuse the existing sendChallengeExpiredEmail function or create a new sendChallengeStaleEmail variant
+
+---
+
+## 10. CORS is open to all origins
+
+File: artifacts/api-server/src/app.ts line with cors({ origin: true, credentials: true })
+
+This reflects back any Origin header with credentials=true, which allows cross-origin requests from any website.
+
+Change to:
+  app.use(cors({
+    origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
+    credentials: true,
+  }));
+
+Add FRONTEND_URL to the project's .env file and Replit Secrets, set to the actual deployed frontend URL.
+
+---
+
+## 11. Minimum password length not enforced on backend
+
+File: artifacts/api-server/src/routes/auth.ts
+
+The register and change-password routes have no server-side password length check. Only the frontend minLength={8} attribute guards this, which is bypassed by direct API calls.
+
+In POST /auth/register, add after the existing field checks:
+  if (password.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+Add the same check in the change-password route for the newPassword field.
+
+---
+
+## 12. Forgot password flow is missing
+
+There is currently no way to recover an account if a player forgets their password.
+
+Backend — add two new routes to artifacts/api-server/src/routes/auth.ts:
+
+POST /auth/forgot-password
+- Accept { email } in request body
+- Look up the player by email; if not found, still return 200 (don't reveal whether email exists)
+- Generate a secure random token: randomBytes(32).toString("hex")
+- Store it in a new DB table called password_reset_tokens with columns: token (text, primary key), playerId (uuid), expiresAt (timestamp, set to 1 hour from now)
+- Send an email via the existing Resend setup with subject "Reset your Pickleball Ladder password" and a link to [FRONTEND_URL]/reset-password?token=TOKEN
+- Return { success: true }
+
+POST /auth/reset-password
+- Accept { token, newPassword }
+- Look up token in password_reset_tokens; if not found or expiresAt is in the past, return 400 "Invalid or expired reset link"
+- Enforce minimum 8 character password
+- Hash the new password with the existing hashPassword() function
+- Update the player's passwordHash
+- Delete the used token from password_reset_tokens
+- Return { success: true }
+
+Create the DB migration for the password_reset_tokens table in lib/db/.
+
+Frontend — add two new pages:
+
+artifacts/pickleball-ladders/src/pages/forgot-password.tsx
+- Route: /forgot-password
+- Simple card with email input and "Send Reset Link" button
+- On submit calls POST /api/auth/forgot-password
+- On success shows: "If that email is registered, you'll receive a reset link shortly"
+- Add a "Forgot password?" link on the login page pointing to /forgot-password
+
+artifacts/pickleball-ladders/src/pages/reset-password.tsx
+- Route: /reset-password
+- Reads ?token= from URL query params using useLocation or URLSearchParams
+- Shows new password + confirm password fields
+- On submit calls POST /api/auth/reset-password with the token and new password
+- On success shows a success message and a link to /login
+- On error shows the error from the API
+
+Register both new routes in artifacts/pickleball-ladders/src/App.tsx.
