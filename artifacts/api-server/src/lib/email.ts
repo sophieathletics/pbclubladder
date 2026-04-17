@@ -1,9 +1,9 @@
+import { Resend } from "resend";
 import { logger } from "./logger";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// Resend integration via Replit connector (connector_names=resend)
 const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@example.com";
-const FROM_EMAIL = process.env.FROM_EMAIL ?? "Pickleball Club Ladder <noreply@pickleballclubladder.com>";
 const CLUB_NAME = "Pickleball Club Ladder";
 
 interface EmailPayload {
@@ -12,28 +12,45 @@ interface EmailPayload {
   html: string;
 }
 
+async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: string } | null> {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+    ? "depl " + process.env.WEB_REPL_RENEWAL
+    : null;
+  if (!hostname || !xReplitToken) return null;
+  try {
+    const data = await fetch(
+      "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
+      { headers: { Accept: "application/json", "X-Replit-Token": xReplitToken } },
+    ).then((res) => res.json());
+    const item = data?.items?.[0];
+    if (!item?.settings?.api_key) return null;
+    return { apiKey: item.settings.api_key, fromEmail: item.settings.from_email };
+  } catch (err) {
+    logger.error({ err }, "Failed to fetch Resend connection settings");
+    return null;
+  }
+}
+
 async function sendEmail(payload: EmailPayload): Promise<void> {
-  if (!RESEND_API_KEY) {
-    logger.warn({ to: payload.to, subject: payload.subject }, "RESEND_API_KEY not set, email not sent");
+  const creds = await getResendCredentials();
+  if (!creds) {
+    logger.warn({ to: payload.to, subject: payload.subject }, "Resend not connected, email not sent");
     return;
   }
+  const fromEmail = process.env.FROM_EMAIL ?? creds.fromEmail ?? `${CLUB_NAME} <onboarding@resend.dev>`;
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: Array.isArray(payload.to) ? payload.to : [payload.to],
-        subject: payload.subject,
-        html: payload.html,
-      }),
+    const resend = new Resend(creds.apiKey);
+    const { error } = await resend.emails.send({
+      from: fromEmail,
+      to: Array.isArray(payload.to) ? payload.to : [payload.to],
+      subject: payload.subject,
+      html: payload.html,
     });
-    if (!res.ok) {
-      const err = await res.text();
-      logger.error({ err, subject: payload.subject }, "Failed to send email");
+    if (error) {
+      logger.error({ err: error, subject: payload.subject }, "Failed to send email");
     }
   } catch (err) {
     logger.error({ err }, "Error sending email");
