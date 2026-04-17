@@ -2,14 +2,18 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MainLayout } from "@/components/layout/main-layout";
-import { Trophy, ArrowRight, Activity, Users } from "lucide-react";
-import { useGetTopLadder, useGetCurrentPlayer } from "@workspace/api-client-react";
+import { Trophy, ArrowRight, Activity, Users, MapPin, Tag, DollarSign } from "lucide-react";
+import { useGetTopLadder, useGetCurrentPlayer, useListLadders } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Home() {
-  const { data: ladderResponse, isLoading } = useGetTopLadder();
+  const { data: ladderResponse, isLoading: isLoadingStandings } = useGetTopLadder();
   const { data: currentPlayer } = useGetCurrentPlayer();
+  const { data: laddersData, isLoading: isLoadingLadders } = useListLadders();
+  const ladders = ((laddersData as any[]) ?? []).filter(l => l.isActive);
   const joinHref = currentPlayer ? "/ladders" : "/register";
+  const hasStandings = !!ladderResponse?.standings?.length;
+  const isLoading = isLoadingStandings || (!hasStandings && isLoadingLadders);
 
   return (
     <MainLayout>
@@ -36,16 +40,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Top 10 Preview */}
+        {/* Standings or Ladders to Join */}
         <section className="max-w-4xl mx-auto w-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold flex items-center gap-2">
               <Trophy className="w-6 h-6 text-primary" />
-              Top 10 Standings
+              {isLoading ? "Top 10 Standings" : hasStandings ? "Top 10 Standings" : "Open Ladders"}
             </h2>
             <Button variant="ghost" className="group" asChild data-testid="btn-view-all-ladder">
-              <Link href="/leaderboard" className="flex items-center gap-2">
-                Full Ladder
+              <Link href={hasStandings ? "/leaderboard" : "/ladders"} className="flex items-center gap-2">
+                {hasStandings ? "Full Ladder" : "Browse all"}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
@@ -64,13 +68,55 @@ export default function Home() {
                       </div>
                     </div>
                   ))
-                ) : !ladderResponse?.standings?.length ? (
-                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center">
-                    <Trophy className="w-12 h-12 mb-4 text-muted" />
-                    <p>No standings available for the current season.</p>
-                  </div>
+                ) : !hasStandings ? (
+                  ladders.length === 0 ? (
+                    <div className="p-10 text-center flex flex-col items-center">
+                      <Trophy className="w-12 h-12 mb-4 text-muted-foreground/50" />
+                      <p className="font-semibold">No ladders open yet</p>
+                      <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+                        Once an admin creates a ladder and starts a season, teams and standings will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-5 sm:p-6 bg-gradient-to-br from-primary/5 to-transparent">
+                        <p className="text-sm text-muted-foreground">
+                          The first season hasn't kicked off yet. Pick a ladder, grab a partner, and you'll be on the board day one.
+                        </p>
+                      </div>
+                      {ladders.slice(0, 5).map((l: any) => {
+                        const cat = l.category ?? "coed";
+                        const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+                        return (
+                          <div key={l.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <Trophy className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground truncate flex items-center gap-2 flex-wrap">
+                                {l.name}
+                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground">{catLabel[cat]}</span>
+                                {l.activeSeason && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700">Season open</span>}
+                              </h3>
+                              <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                                {l.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>}
+                                {l.level && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />Level {l.level}</span>}
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="w-3 h-3" />
+                                  {l.entryFeeCents != null ? `$${(l.entryFeeCents / 100).toFixed(2)}` : "Free"}
+                                </span>
+                              </p>
+                            </div>
+                            <Button size="sm" asChild className="shrink-0" data-testid={`btn-join-${l.id}`}>
+                              <Link href={joinHref}>Join</Link>
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )
                 ) : (
-                  ladderResponse.standings.map((standing) => (
+                  ladderResponse!.standings!.map((standing) => (
                     <div key={standing.id} className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
                         standing.position === 1 ? 'bg-yellow-400/20 text-yellow-600' :

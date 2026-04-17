@@ -94,11 +94,16 @@ export default function Leaderboard() {
   return (
     <MainLayout>
       <div className="max-w-3xl mx-auto py-5 px-3 sm:py-8 sm:px-4">
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
           <h1 className="text-2xl sm:text-3xl font-black flex items-center gap-2">
             <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             Leaderboard
           </h1>
+          {!myTeamInLadder && (
+            <Button asChild size="sm" className="shrink-0" data-testid="btn-join-ladder-top">
+              <Link href={player ? "/ladders" : "/register"}>Join a Ladder</Link>
+            </Button>
+          )}
         </div>
 
         {ladderList.length > 0 && (
@@ -164,10 +169,21 @@ export default function Leaderboard() {
                 ))}
               </div>
             ) : standings.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
-                <Trophy className="w-12 h-12 mb-4 text-muted" />
-                <p className="font-medium">No standings yet</p>
-                <p className="text-sm">Teams will appear here once the season begins.</p>
+              <div className="p-10 sm:p-12 text-center flex flex-col items-center">
+                <Trophy className="w-12 h-12 mb-4 text-muted-foreground/50" />
+                <p className="font-semibold text-foreground">
+                  {currentLadder?.activeSeason ? "Be the first team on the board" : "No active season yet"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+                  {currentLadder?.activeSeason
+                    ? "Grab a partner, join this ladder, and you'll show up here as soon as you're in."
+                    : "An admin needs to start a season for this ladder before teams can compete."}
+                </p>
+                {currentLadder?.activeSeason && !myTeamInLadder && (
+                  <Button asChild className="mt-5" data-testid="btn-join-ladder-empty">
+                    <Link href={player ? "/ladders" : "/register"}>Join this Ladder</Link>
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="divide-y">
@@ -232,22 +248,6 @@ export default function Leaderboard() {
         <p className="text-center text-xs text-muted-foreground mt-6">
           Challenge teams 1 to 3 spots above you to climb the ladder. Win to take their place.
         </p>
-
-        <Card className="mt-6 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardContent className="py-6 px-5 flex flex-col sm:flex-row sm:items-center gap-4 text-center sm:text-left">
-            <div className="flex-1">
-              <h3 className="font-bold text-base mb-1">Want in on the action?</h3>
-              <p className="text-sm text-muted-foreground">
-                Browse all ladders and join the one that matches your level.
-              </p>
-            </div>
-            <Button asChild size="lg" className="w-full sm:w-auto shrink-0" data-testid="btn-join-ladder-cta">
-              <Link href={player ? "/ladders" : "/register"}>
-                Join a Ladder
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </MainLayout>
   );
