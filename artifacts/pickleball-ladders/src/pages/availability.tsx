@@ -143,7 +143,7 @@ function AvailabilityContent() {
           Submit Availability
         </h1>
         <p className="text-muted-foreground mb-6">
-          Tap the times when you're available to play over the next two weeks.
+          Tap the times when you and your teammate are both available to play over the next two weeks.
           {c && <span> Challenge: <strong>{c.challengerTeam?.teamName}</strong> vs <strong>{c.challengedTeam?.teamName}</strong></span>}
         </p>
 
