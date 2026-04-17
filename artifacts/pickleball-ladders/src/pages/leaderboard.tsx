@@ -135,14 +135,6 @@ export default function Leaderboard() {
                 })}
               </SelectContent>
             </Select>
-            {currentLadder && season && (
-              <p className="text-xs text-muted-foreground mt-2 ml-1">
-                Season dates:{" "}
-                <span className="font-semibold text-foreground">
-                  {formatDateRange((season as any).startDate, (season as any).endDate)}
-                </span>
-              </p>
-            )}
           </div>
         )}
 
