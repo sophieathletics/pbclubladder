@@ -118,11 +118,6 @@ export default function Home() {
                     </div>
                   ) : (
                     <>
-                      <div className="p-5 sm:p-6 bg-gradient-to-br from-primary/5 to-transparent">
-                        <p className="text-sm text-muted-foreground">
-                          The first season hasn't kicked off yet. Pick a ladder, grab a partner, and you'll be on the board day one.
-                        </p>
-                      </div>
                       {ladders.slice(0, 5).map((l: any) => {
                         const cat = l.category ?? "coed";
                         const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
