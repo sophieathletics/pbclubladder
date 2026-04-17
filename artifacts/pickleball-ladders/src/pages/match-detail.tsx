@@ -207,7 +207,7 @@ function MatchDetailContent() {
                   Winner: {[challengerTeam, challengedTeam].find((t: any) => t?.id === m.result.winnerTeamId)?.teamName ?? "Unknown"}
                 </p>
               )}
-              {m.result.disputeReason && (
+              {m.result.disputeReason && !m.result.disputeResolved && (
                 <p className="mt-2 text-orange-600 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   Disputed: {m.result.disputeReason}
