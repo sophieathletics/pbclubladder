@@ -298,16 +298,22 @@ function MatchDetailContent() {
         {/* Confirm / Dispute */}
         {m.result && !m.result.confirmedAt && !m.result.disputeReason && isTeamInMatch && (
           <div className="space-y-4">
-            <div className="flex gap-3">
-              <Button onClick={handleConfirm} disabled={confirmScore.isPending} data-testid="btn-confirm-score">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                Confirm Score
-              </Button>
-              <Button variant="outline" onClick={() => setShowDisputeForm(true)} data-testid="btn-dispute">
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                Dispute
-              </Button>
-            </div>
+            {myTeam?.id === m.result.submittedByTeamId ? (
+              <p className="text-sm text-muted-foreground italic">
+                Waiting for {[challengerTeam, challengedTeam].find((t: any) => t?.id !== myTeam.id)?.teamName ?? "the other team"} to confirm or dispute this score.
+              </p>
+            ) : (
+              <div className="flex gap-3">
+                <Button onClick={handleConfirm} disabled={confirmScore.isPending} data-testid="btn-confirm-score">
+                  <CheckCircle className="w-4 h-4 mr-1" />
+                  Confirm Score
+                </Button>
+                <Button variant="outline" onClick={() => setShowDisputeForm(true)} data-testid="btn-dispute">
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  Dispute
+                </Button>
+              </div>
+            )}
             {showDisputeForm && (
               <Card className="border-orange-200">
                 <CardContent className="pt-4 space-y-3">
