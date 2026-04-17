@@ -19,8 +19,6 @@ export default function Availability() {
 }
 
 const TIME_SLOTS = [
-  { label: "7am", value: "07:00" },
-  { label: "8am", value: "08:00" },
   { label: "9am", value: "09:00" },
   { label: "10am", value: "10:00" },
   { label: "11am", value: "11:00" },
@@ -32,7 +30,6 @@ const TIME_SLOTS = [
   { label: "5pm", value: "17:00" },
   { label: "6pm", value: "18:00" },
   { label: "7pm", value: "19:00" },
-  { label: "8pm", value: "20:00" },
 ];
 
 function formatDate(d: Date): string {
