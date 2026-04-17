@@ -106,7 +106,7 @@ export default function Leaderboard() {
                 </p>
                 {season && (
                   <p>
-                    Dates ={" "}
+                    Dates:{" "}
                     <span className="font-semibold text-foreground">
                       {formatDateRange((season as any).startDate, (season as any).endDate)}
                     </span>
