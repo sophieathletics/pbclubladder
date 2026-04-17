@@ -11,6 +11,8 @@ export const teamsTable = pgTable("teams", {
   player2Id: uuid("player2_id").notNull().references(() => playersTable.id, { onDelete: "cascade" }),
   teamName: text("team_name").notNull(),
   status: text("status").notNull().default("pending"),
+  paymentStatus: text("payment_status").notNull().default("not_required"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("teams_season_player1_unique").on(t.seasonId, t.player1Id),

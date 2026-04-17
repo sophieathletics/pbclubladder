@@ -213,6 +213,9 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     }
   }
 
+  // Determine initial payment status from the ladder's entry fee
+  const requiresPayment = !!(invLadder?.entryFeeCents && invLadder.entryFeeCents > 0);
+
   // Create team
   const [team] = await db.insert(teamsTable).values({
     seasonId: inv.seasonId,
@@ -220,6 +223,7 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     player2Id: inv.inviteeId!,
     teamName: inv.teamName,
     status: "active",
+    paymentStatus: requiresPayment ? "unpaid" : "not_required",
   }).returning();
 
   // Determine next position (add to bottom of ladder)

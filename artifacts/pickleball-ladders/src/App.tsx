@@ -18,6 +18,8 @@ import MatchDetail from "@/pages/match-detail";
 import Notifications from "@/pages/notifications";
 import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
+import Pay from "@/pages/pay";
+import PaymentComplete from "@/pages/payment-complete";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +47,8 @@ function Router() {
       <Route path="/notifications" component={Notifications} />
       <Route path="/profile" component={Profile} />
       <Route path="/admin" component={Admin} />
+      <Route path="/pay/:teamId" component={Pay} />
+      <Route path="/payment-complete" component={PaymentComplete} />
       <Route component={NotFound} />
     </Switch>
   );

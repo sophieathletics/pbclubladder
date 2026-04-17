@@ -26,6 +26,7 @@ import type {
   CreateChallengeBody,
   CreateInvitationBody,
   CreateLadderBody,
+  CreatePaymentIntentBody,
   CreateSeasonBody,
   CronJobResult,
   DisputeScoreBody,
@@ -55,6 +56,8 @@ import type {
   MatchWithDetails,
   MyLadderPosition,
   NotificationsResponse,
+  PaymentIntentResponse,
+  PaymentSyncResponse,
   Player,
   PlayerWithTeam,
   RegisterBody,
@@ -5226,4 +5229,174 @@ export const useRunExpireChallenges = <
   TContext
 > => {
   return useMutation(getRunExpireChallengesMutationOptions(options));
+};
+
+/**
+ * @summary Create a Stripe PaymentIntent for a team's entry fee
+ */
+export const getCreatePaymentIntentUrl = () => {
+  return `/api/payments/create-intent`;
+};
+
+export const createPaymentIntent = async (
+  createPaymentIntentBody: CreatePaymentIntentBody,
+  options?: RequestInit,
+): Promise<PaymentIntentResponse> => {
+  return customFetch<PaymentIntentResponse>(getCreatePaymentIntentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPaymentIntentBody),
+  });
+};
+
+export const getCreatePaymentIntentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaymentIntent>>,
+    TError,
+    { data: BodyType<CreatePaymentIntentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPaymentIntent>>,
+  TError,
+  { data: BodyType<CreatePaymentIntentBody> },
+  TContext
+> => {
+  const mutationKey = ["createPaymentIntent"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPaymentIntent>>,
+    { data: BodyType<CreatePaymentIntentBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPaymentIntent(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePaymentIntentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPaymentIntent>>
+>;
+export type CreatePaymentIntentMutationBody = BodyType<CreatePaymentIntentBody>;
+export type CreatePaymentIntentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Create a Stripe PaymentIntent for a team's entry fee
+ */
+export const useCreatePaymentIntent = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPaymentIntent>>,
+    TError,
+    { data: BodyType<CreatePaymentIntentBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPaymentIntent>>,
+  TError,
+  { data: BodyType<CreatePaymentIntentBody> },
+  TContext
+> => {
+  return useMutation(getCreatePaymentIntentMutationOptions(options));
+};
+
+/**
+ * @summary Sync payment status for a team after Stripe redirect
+ */
+export const getSyncPaymentUrl = (teamId: string) => {
+  return `/api/payments/sync/${teamId}`;
+};
+
+export const syncPayment = async (
+  teamId: string,
+  options?: RequestInit,
+): Promise<PaymentSyncResponse> => {
+  return customFetch<PaymentSyncResponse>(getSyncPaymentUrl(teamId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncPaymentMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncPayment>>,
+    TError,
+    { teamId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncPayment>>,
+  TError,
+  { teamId: string },
+  TContext
+> => {
+  const mutationKey = ["syncPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncPayment>>,
+    { teamId: string }
+  > = (props) => {
+    const { teamId } = props ?? {};
+
+    return syncPayment(teamId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncPayment>>
+>;
+
+export type SyncPaymentMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Sync payment status for a team after Stripe redirect
+ */
+export const useSyncPayment = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncPayment>>,
+    TError,
+    { teamId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncPayment>>,
+  TError,
+  { teamId: string },
+  TContext
+> => {
+  return useMutation(getSyncPaymentMutationOptions(options));
 };

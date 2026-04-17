@@ -390,6 +390,8 @@ export const ListTeamsResponseItem = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -468,6 +470,8 @@ export const GetMyTeamResponse = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -541,6 +545,8 @@ export const GetMyTeamsResponseItem = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -616,6 +622,8 @@ export const GetTeamResponse = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -731,6 +739,8 @@ export const GetTeamMatchesResponseItem = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -801,6 +811,8 @@ export const GetTeamMatchesResponseItem = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -943,6 +955,8 @@ export const UpdateTeamStatusResponse = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -1142,6 +1156,8 @@ export const AcceptInvitationResponse = zod
     player2Id: zod.string(),
     teamName: zod.string(),
     status: zod.enum(["pending", "active", "inactive"]),
+    paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+    stripePaymentIntentId: zod.string().nullish(),
     createdAt: zod.string(),
   })
   .and(
@@ -1272,6 +1288,8 @@ export const GetLadderResponse = zod.object({
               player2Id: zod.string(),
               teamName: zod.string(),
               status: zod.enum(["pending", "active", "inactive"]),
+              paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+              stripePaymentIntentId: zod.string().nullish(),
               createdAt: zod.string(),
             })
             .and(
@@ -1364,6 +1382,8 @@ export const GetTopLadderResponseItem = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -1459,6 +1479,8 @@ export const GetMyLadderPositionResponse = zod.object({
             player2Id: zod.string(),
             teamName: zod.string(),
             status: zod.enum(["pending", "active", "inactive"]),
+            paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+            stripePaymentIntentId: zod.string().nullish(),
             createdAt: zod.string(),
           })
           .and(
@@ -1547,6 +1569,8 @@ export const GetMyLadderPositionResponse = zod.object({
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -1648,6 +1672,8 @@ export const UpdateLadderPositionResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -1731,6 +1757,8 @@ export const GetInactivityLogResponseItem = zod.object({
       player2Id: zod.string(),
       teamName: zod.string(),
       status: zod.enum(["pending", "active", "inactive"]),
+      paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+      stripePaymentIntentId: zod.string().nullish(),
       createdAt: zod.string(),
     })
     .and(
@@ -1832,6 +1860,8 @@ export const ListChallengesResponseItem = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -1902,6 +1932,8 @@ export const ListChallengesResponseItem = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2075,6 +2107,8 @@ export const GetMyActiveChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2145,6 +2179,8 @@ export const GetMyActiveChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2311,6 +2347,8 @@ export const GetChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2381,6 +2419,8 @@ export const GetChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2547,6 +2587,8 @@ export const AcceptChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2617,6 +2659,8 @@ export const AcceptChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2783,6 +2827,8 @@ export const DeclineChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -2853,6 +2899,8 @@ export const DeclineChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -3019,6 +3067,8 @@ export const CancelChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -3089,6 +3139,8 @@ export const CancelChallengeResponse = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -3277,6 +3329,8 @@ export const BookMatchResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -3347,6 +3401,8 @@ export const BookMatchResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -3621,6 +3677,8 @@ export const ListMatchesResponseItem = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -3691,6 +3749,8 @@ export const ListMatchesResponseItem = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -3858,6 +3918,8 @@ export const GetMatchResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -3928,6 +3990,8 @@ export const GetMatchResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4108,6 +4172,8 @@ export const SubmitScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4178,6 +4244,8 @@ export const SubmitScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4347,6 +4415,8 @@ export const ConfirmScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4417,6 +4487,8 @@ export const ConfirmScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4590,6 +4662,8 @@ export const DisputeScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4660,6 +4734,8 @@ export const DisputeScoreResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -4867,6 +4943,8 @@ export const ListAdminPlayersResponseItem = zod
           player2Id: zod.string(),
           teamName: zod.string(),
           status: zod.enum(["pending", "active", "inactive"]),
+          paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+          stripePaymentIntentId: zod.string().nullish(),
           createdAt: zod.string(),
         })
         .and(
@@ -5003,6 +5081,8 @@ export const ListDisputesResponseItem = zod.object({
                   player2Id: zod.string(),
                   teamName: zod.string(),
                   status: zod.enum(["pending", "active", "inactive"]),
+                  paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                  stripePaymentIntentId: zod.string().nullish(),
                   createdAt: zod.string(),
                 })
                 .and(
@@ -5073,6 +5153,8 @@ export const ListDisputesResponseItem = zod.object({
                   player2Id: zod.string(),
                   teamName: zod.string(),
                   status: zod.enum(["pending", "active", "inactive"]),
+                  paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                  stripePaymentIntentId: zod.string().nullish(),
                   createdAt: zod.string(),
                 })
                 .and(
@@ -5255,6 +5337,8 @@ export const ResolveDisputeResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -5325,6 +5409,8 @@ export const ResolveDisputeResponse = zod
                 player2Id: zod.string(),
                 teamName: zod.string(),
                 status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
                 createdAt: zod.string(),
               })
               .and(
@@ -5469,4 +5555,31 @@ export const RunAutoConfirmResponse = zod.object({
 export const RunExpireChallengesResponse = zod.object({
   processed: zod.number(),
   details: zod.array(zod.string()),
+});
+
+/**
+ * @summary Create a Stripe PaymentIntent for a team's entry fee
+ */
+export const CreatePaymentIntentBody = zod.object({
+  teamId: zod.string(),
+});
+
+export const CreatePaymentIntentResponse = zod.object({
+  clientSecret: zod.string(),
+  amount: zod.number(),
+  currency: zod.string(),
+  ladderName: zod.string().optional(),
+  teamName: zod.string().optional(),
+});
+
+/**
+ * @summary Sync payment status for a team after Stripe redirect
+ */
+export const SyncPaymentParams = zod.object({
+  teamId: zod.coerce.string(),
+});
+
+export const SyncPaymentResponse = zod.object({
+  paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+  stripeStatus: zod.string().optional(),
 });

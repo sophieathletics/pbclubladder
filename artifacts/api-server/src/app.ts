@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import router from "./routes";
+import paymentsRouter from "./routes/payments";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -27,6 +28,11 @@ app.use(
   }),
 );
 app.use(cors({ origin: true, credentials: true }));
+
+// Stripe webhook needs the raw body — mount it BEFORE express.json().
+// The route itself uses express.raw() and is exposed at /api/payments/webhook.
+app.use("/api", paymentsRouter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());

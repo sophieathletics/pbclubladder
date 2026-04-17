@@ -5,6 +5,7 @@
  * Pickleball Club Ladder API
  * OpenAPI spec version: 0.1.0
  */
+import type { TeamPaymentStatus } from "./teamPaymentStatus";
 import type { TeamStatus } from "./teamStatus";
 
 export interface Team {
@@ -14,5 +15,7 @@ export interface Team {
   player2Id: string;
   teamName: string;
   status: TeamStatus;
+  paymentStatus: TeamPaymentStatus;
+  stripePaymentIntentId?: string | null;
   createdAt: string;
 }

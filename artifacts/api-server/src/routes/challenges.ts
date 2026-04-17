@@ -165,6 +165,14 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "You are not on a team in that ladder" });
     return;
   }
+  if (myTeam.paymentStatus === "unpaid") {
+    res.status(400).json({ error: "Pay your team's entry fee before issuing challenges." });
+    return;
+  }
+  if (challengedTeamRow.paymentStatus === "unpaid") {
+    res.status(400).json({ error: "That team hasn't paid their entry fee yet." });
+    return;
+  }
 
   // Check for existing active challenge
   const existing = await db.select().from(challengesTable).where(

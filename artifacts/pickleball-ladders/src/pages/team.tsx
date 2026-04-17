@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Send, CheckCircle, XCircle, Trophy, Mail, Loader2 } from "lucide-react";
+import { Users, Send, CheckCircle, XCircle, Trophy, Mail, Loader2, CreditCard } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 function isValidEmail(val: string) {
@@ -441,13 +441,17 @@ function TeamContent() {
 }
 
 function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
-  const ladderName = useMemo(() => {
-    const l = ladders.find((x: any) => x.id === team.season?.ladderId);
-    return l?.name ?? "Ladder";
-  }, [ladders, team.season?.ladderId]);
+  const ladder = useMemo(
+    () => ladders.find((x: any) => x.id === team.season?.ladderId),
+    [ladders, team.season?.ladderId]
+  );
+  const ladderName = ladder?.name ?? "Ladder";
 
   const { data: pos } = useGetMyLadderPosition({ ladder_id: team.season?.ladderId });
   const myStanding = pos?.myStanding;
+
+  const isUnpaid = team.paymentStatus === "unpaid";
+  const feeDollars = ladder?.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : null;
 
   return (
     <Card className="border-primary/20">
@@ -455,6 +459,12 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
         <div className="flex items-center gap-2 mb-1">
           <Trophy className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-semibold uppercase tracking-wide text-primary">{ladderName}</span>
+          {team.paymentStatus === "paid" && (
+            <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
+          )}
+          {isUnpaid && (
+            <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Payment due</Badge>
+          )}
         </div>
         <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="break-words">{team.teamName}</span>
@@ -462,6 +472,22 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {isUnpaid && (
+          <div className="mb-4 p-3 rounded-lg border border-amber-300 bg-amber-50 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">
+                Pay the {feeDollars ? `$${feeDollars}` : ""} entry fee to start challenging.
+              </p>
+              <p className="text-xs text-amber-800 mt-0.5">Either teammate can pay for the team.</p>
+            </div>
+            <Button asChild size="sm" className="shrink-0" data-testid={`btn-pay-${team.id}`}>
+              <Link href={`/pay/${team.id}`}>
+                <CreditCard className="w-4 h-4 mr-1" />
+                Pay {feeDollars ? `$${feeDollars}` : "now"}
+              </Link>
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Player 1</p>

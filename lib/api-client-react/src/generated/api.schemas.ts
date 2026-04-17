@@ -9,6 +9,32 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface CreatePaymentIntentBody {
+  teamId: string;
+}
+
+export interface PaymentIntentResponse {
+  clientSecret: string;
+  amount: number;
+  currency: string;
+  ladderName?: string;
+  teamName?: string;
+}
+
+export type PaymentSyncResponsePaymentStatus =
+  (typeof PaymentSyncResponsePaymentStatus)[keyof typeof PaymentSyncResponsePaymentStatus];
+
+export const PaymentSyncResponsePaymentStatus = {
+  not_required: "not_required",
+  unpaid: "unpaid",
+  paid: "paid",
+} as const;
+
+export interface PaymentSyncResponse {
+  paymentStatus: PaymentSyncResponsePaymentStatus;
+  stripeStatus?: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
@@ -106,6 +132,15 @@ export const TeamStatus = {
   inactive: "inactive",
 } as const;
 
+export type TeamPaymentStatus =
+  (typeof TeamPaymentStatus)[keyof typeof TeamPaymentStatus];
+
+export const TeamPaymentStatus = {
+  not_required: "not_required",
+  unpaid: "unpaid",
+  paid: "paid",
+} as const;
+
 export interface Team {
   id: string;
   seasonId: string;
@@ -113,6 +148,8 @@ export interface Team {
   player2Id: string;
   teamName: string;
   status: TeamStatus;
+  paymentStatus: TeamPaymentStatus;
+  stripePaymentIntentId?: string | null;
   createdAt: string;
 }
 
