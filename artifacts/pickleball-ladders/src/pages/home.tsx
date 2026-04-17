@@ -27,7 +27,7 @@ export default function Home() {
     [myTeamsData]
   );
   const ladders = useMemo(() => {
-    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive);
+    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason);
     return [...list].sort((a, b) => {
       const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
       const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
