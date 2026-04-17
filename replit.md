@@ -61,7 +61,7 @@ pnpm monorepo with:
   - emma@test.com — Emma Rodriguez (Power Smash, #3)
   - carlos@test.com — Carlos Santos (Power Smash, #3)
   - tom@test.com — Tom Wilson (solo)
-  - admin@test.com — Test Admin (admin role)
+  - sophie@sophieathletics.com — Sophie (admin role)
 
 ## Environment Variables
 
