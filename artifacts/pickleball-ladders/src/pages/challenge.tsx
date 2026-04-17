@@ -64,7 +64,7 @@ function ChallengeContent() {
           <Swords className="w-8 h-8 text-primary" />
           Challenge
         </h1>
-        <p className="text-muted-foreground mb-8">Challenge a team 2-3 positions above you on the ladder.</p>
+        <p className="text-muted-foreground mb-8">Challenge a team 1 to 3 positions above you on the ladder.</p>
 
         {!team && (
           <Card className="border-yellow-400/30 bg-yellow-50/40">
@@ -130,7 +130,7 @@ function ChallengeContent() {
                       ? "Your team hasn't been placed on the ladder yet."
                       : myStanding.position <= 2
                       ? "You're at or near the top — keep defending!"
-                      : "Teams 1-3 spots above you may already have active challenges."}
+                      : "Teams 1 to 3 spots above you may already have active challenges."}
                   </p>
                 </CardContent>
               </Card>

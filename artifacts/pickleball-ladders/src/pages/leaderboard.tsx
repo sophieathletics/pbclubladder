@@ -1,11 +1,15 @@
 import { useState, useMemo, useEffect } from "react";
-import { useGetLadder, useListLadders } from "@workspace/api-client-react";
+import { useGetLadder, useListLadders, useGetMyTeams, useCreateChallenge, useGetCurrentPlayer } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Users, Medal, Search } from "lucide-react";
+import { Trophy, Users, Medal, Search, Swords } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
@@ -29,6 +33,45 @@ export default function Leaderboard() {
   const standings = data?.standings ?? [];
   const season = data?.season;
   const currentLadder = useMemo(() => ladderList.find(l => l.id === ladderId), [ladderList, ladderId]);
+
+  const { data: player } = useGetCurrentPlayer();
+  const { data: myTeams } = useGetMyTeams();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [, setLocation] = useLocation();
+  const createChallenge = useCreateChallenge();
+
+  const myTeamInLadder = useMemo(() => {
+    if (!season || !myTeams) return undefined;
+    return (myTeams as any[]).find(t => t.seasonId === season.id);
+  }, [myTeams, season]);
+
+  const myStanding = useMemo(() => {
+    if (!myTeamInLadder) return undefined;
+    return (standings as any[]).find(s => (s as any).team?.id === myTeamInLadder.id);
+  }, [standings, myTeamInLadder]);
+
+  const canChallenge = (pos: number) => {
+    if (!player || !myStanding) return false;
+    const myPos = myStanding.position ?? 0;
+    return pos < myPos && pos >= myPos - 3;
+  };
+
+  const handleChallenge = (challengedTeamId: string, teamName: string) => {
+    createChallenge.mutate(
+      { data: { challengedTeamId } },
+      {
+        onSuccess: (resp: any) => {
+          toast({ title: `Challenge sent to ${teamName}!`, description: "They have 48 hours to respond." });
+          qc.invalidateQueries();
+          setLocation(`/challenges/${resp.id}`);
+        },
+        onError: (err: any) => {
+          toast({ title: "Failed to send challenge", description: err?.data?.error, variant: "destructive" });
+        },
+      }
+    );
+  };
 
   function positionColor(pos: number) {
     if (pos === 1) return "bg-yellow-400/20 text-yellow-600 border border-yellow-400/40";
@@ -121,12 +164,23 @@ export default function Leaderboard() {
                         {(standing as any).team?.player1?.fullName ?? "?"} &amp; {(standing as any).team?.player2?.fullName ?? "?"}
                       </p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-right flex-shrink-0 flex items-center gap-3">
                       <div className="font-bold text-sm">
                         <span className="text-green-600">{standing.wins}W</span>
                         <span className="text-muted-foreground mx-1">-</span>
                         <span className="text-red-500">{standing.losses}L</span>
                       </div>
+                      {canChallenge(standing.position ?? 0) && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleChallenge((standing as any).team?.id, (standing as any).team?.teamName)}
+                          disabled={createChallenge.isPending}
+                          data-testid={`btn-challenge-${(standing as any).team?.id}`}
+                        >
+                          <Swords className="w-3.5 h-3.5 mr-1" />
+                          Challenge
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -136,7 +190,7 @@ export default function Leaderboard() {
         </Card>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
-          Challenge teams 1-3 spots above you to climb the ladder. Win to take their place.
+          Challenge teams 1 to 3 spots above you to climb the ladder. Win to take their place.
         </p>
       </div>
     </MainLayout>
