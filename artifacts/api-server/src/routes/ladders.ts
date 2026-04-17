@@ -51,7 +51,7 @@ function validateFee(v: any): { ok: boolean; value?: number | null; error?: stri
 }
 
 router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
-  const { name, description, sortOrder, category, location, level, entryFeeCents } = req.body;
+  const { name, description, sortOrder, category, location, address, level, entryFeeCents } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
@@ -68,6 +68,7 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
     description: description ?? null,
     category: cat,
     location: location?.trim() || null,
+    address: address?.trim() || null,
     level: level?.trim() || null,
     entryFeeCents: fee.value ?? null,
     isActive: true,
@@ -78,13 +79,14 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
 
 router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { name, description, isActive, sortOrder, category, location, level, entryFeeCents } = req.body;
+  const { name, description, isActive, sortOrder, category, location, address, level, entryFeeCents } = req.body;
   const updates: any = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
   if (isActive !== undefined) updates.isActive = isActive;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
   if (location !== undefined) updates.location = (typeof location === "string" && location.trim()) ? location.trim() : null;
+  if (address !== undefined) updates.address = (typeof address === "string" && address.trim()) ? address.trim() : null;
   if (level !== undefined) updates.level = (typeof level === "string" && level.trim()) ? level.trim() : null;
   if (entryFeeCents !== undefined) {
     const fee = validateFee(entryFeeCents);

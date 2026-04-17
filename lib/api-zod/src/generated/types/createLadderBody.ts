@@ -12,6 +12,7 @@ export interface CreateLadderBody {
   description?: string;
   category: CreateLadderBodyCategory;
   location?: string;
+  address?: string;
   level?: string;
   entryFeeCents?: number | null;
   sortOrder?: string;

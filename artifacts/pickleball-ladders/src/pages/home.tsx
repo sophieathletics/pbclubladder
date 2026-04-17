@@ -66,41 +66,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features + Standings/Ladders combined section */}
-        <section className="max-w-5xl mx-auto w-full grid md:grid-cols-2 gap-6 md:gap-8">
-          {/* Left column: feature cards stacked */}
-          <div className="flex flex-col gap-6">
-            <Card className="bg-card">
-              <CardContent className="pt-6">
-                <Trophy className="w-10 h-10 text-primary mb-4" />
-                <h3 className="font-bold text-lg mb-2">Dynamic Rankings</h3>
-                <p className="text-muted-foreground text-sm">
-                  Challenge teams up to 3 spots above you. Win to take their place, lose and drop down.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card">
-              <CardContent className="pt-6">
-                <Activity className="w-10 h-10 text-primary mb-4" />
-                <h3 className="font-bold text-lg mb-2">Automated Scheduling</h3>
-                <p className="text-muted-foreground text-sm">
-                  Submit availability, find overlapping times, and book matches without the back-and-forth text messages.
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="bg-card">
-              <CardContent className="pt-6">
-                <Users className="w-10 h-10 text-primary mb-4" />
-                <h3 className="font-bold text-lg mb-2">Player Profiles</h3>
-                <p className="text-muted-foreground text-sm">
-                  Track your personal and team stats across multiple seasons. Build your reputation on the courts.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right column: Standings or Ladders */}
-          <div className="md:pl-4">
+        {/* Standings or Open Ladders panel — on top */}
+        <section className="max-w-3xl mx-auto w-full">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
@@ -160,7 +127,22 @@ export default function Home() {
                                 {l.activeSeason && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700">Season open</span>}
                               </h3>
                               <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
-                                {l.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>}
+                                {l.location && (
+                                  l.address ? (
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(l.address)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex items-center gap-1 hover:text-primary hover:underline"
+                                      data-testid={`link-map-${l.id}`}
+                                    >
+                                      <MapPin className="w-3 h-3" />{l.location}
+                                    </a>
+                                  ) : (
+                                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{l.location}</span>
+                                  )
+                                )}
                                 {l.level && <span className="flex items-center gap-1"><Tag className="w-3 h-3" />Level {l.level}</span>}
                                 <span className="flex items-center gap-1">
                                   <DollarSign className="w-3 h-3" />
@@ -215,7 +197,37 @@ export default function Home() {
               </div>
             </CardContent>
           </Card>
-          </div>
+        </section>
+
+        {/* Feature cards — below */}
+        <section className="max-w-5xl mx-auto w-full grid sm:grid-cols-3 gap-6">
+          <Card className="bg-card">
+            <CardContent className="pt-6">
+              <Trophy className="w-10 h-10 text-primary mb-4" />
+              <h3 className="font-bold text-lg mb-2">Dynamic Rankings</h3>
+              <p className="text-muted-foreground text-sm">
+                Challenge teams up to 3 spots above you. Win to take their place, lose and drop down.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardContent className="pt-6">
+              <Activity className="w-10 h-10 text-primary mb-4" />
+              <h3 className="font-bold text-lg mb-2">Automated Scheduling</h3>
+              <p className="text-muted-foreground text-sm">
+                Submit availability, find overlapping times, and book matches without the back-and-forth text messages.
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card">
+            <CardContent className="pt-6">
+              <Users className="w-10 h-10 text-primary mb-4" />
+              <h3 className="font-bold text-lg mb-2">Player Profiles</h3>
+              <p className="text-muted-foreground text-sm">
+                Track your personal and team stats across multiple seasons. Build your reputation on the courts.
+              </p>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </MainLayout>

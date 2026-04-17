@@ -13,6 +13,7 @@ export interface Ladder {
   description?: string | null;
   category: LadderCategory;
   location?: string | null;
+  address?: string | null;
   level?: string | null;
   entryFeeCents?: number | null;
   isActive: boolean;

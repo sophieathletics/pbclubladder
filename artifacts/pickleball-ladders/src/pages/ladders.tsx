@@ -81,10 +81,23 @@ export default function Ladders() {
                     ) : null}
                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
                       {ladder.location && (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5" />
-                          {ladder.location}
-                        </span>
+                        ladder.address ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ladder.address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 hover:text-primary hover:underline"
+                            data-testid={`link-map-${ladder.id}`}
+                          >
+                            <MapPin className="w-3.5 h-3.5" />
+                            {ladder.location}
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {ladder.location}
+                          </span>
+                        )
                       )}
                       {ladder.level && (
                         <span className="inline-flex items-center gap-1">

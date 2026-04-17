@@ -1419,6 +1419,9 @@ components:
         location:
           type: string
           nullable: true
+        address:
+          type: string
+          nullable: true
         level:
           type: string
           nullable: true
@@ -1461,6 +1464,8 @@ components:
           enum: [men, women, mixed, coed]
         location:
           type: string
+        address:
+          type: string
         level:
           type: string
         entryFeeCents:
@@ -1483,6 +1488,8 @@ components:
           type: string
           enum: [men, women, mixed, coed]
         location:
+          type: string
+        address:
           type: string
         level:
           type: string

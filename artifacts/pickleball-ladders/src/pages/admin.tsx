@@ -51,7 +51,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", level: "", isPaid: false, entryFeeDollars: "" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; address: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", address: "", level: "", isPaid: false, entryFeeDollars: "" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -89,6 +89,7 @@ function AdminContent() {
           description: newLadder.description,
           category: newLadder.category,
           location: newLadder.location || undefined,
+          address: newLadder.address || undefined,
           level: newLadder.level || undefined,
           entryFeeCents,
         },
@@ -221,13 +222,17 @@ function AdminContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs">Location (optional)</Label>
+                    <Label className="text-xs">Location name (optional)</Label>
                     <Input value={newLadder.location} onChange={e => setNewLadder(p => ({ ...p, location: e.target.value }))} placeholder="e.g. Westside Courts" className="mt-1" data-testid="input-new-ladder-location" />
                   </div>
                   <div>
                     <Label className="text-xs">Level (optional)</Label>
                     <Input value={newLadder.level} onChange={e => setNewLadder(p => ({ ...p, level: e.target.value }))} placeholder="e.g. 3.5, 4.0, Beginner" className="mt-1" data-testid="input-new-ladder-level" />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Address (optional, opens in Google Maps)</Label>
+                  <Input value={newLadder.address} onChange={e => setNewLadder(p => ({ ...p, address: e.target.value }))} placeholder="123 Court St, City, State ZIP" className="mt-1" data-testid="input-new-ladder-address" />
                 </div>
                 <div>
                   <Label className="text-xs">Pricing</Label>
@@ -466,6 +471,7 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [description, setDescription] = useState(ladder.description ?? "");
   const [category, setCategory] = useState<"men" | "women" | "mixed" | "coed">(ladder.category ?? "coed");
   const [location, setLocation] = useState(ladder.location ?? "");
+  const [address, setAddress] = useState(ladder.address ?? "");
   const [level, setLevel] = useState(ladder.level ?? "");
   const [feeDollars, setFeeDollars] = useState(ladder.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : "");
   const [isActive, setIsActive] = useState(ladder.isActive);
@@ -479,6 +485,7 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
         data: {
           name, description, isActive, category,
           location: location || undefined,
+          address: address || undefined,
           level: level || undefined,
           entryFeeCents: feeDollars === "" ? null : Math.round(parseFloat(feeDollars) * 100),
         },
@@ -496,9 +503,10 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name" />
         <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
         <div className="grid grid-cols-2 gap-2">
-          <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+          <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location name" />
           <Input value={level} onChange={e => setLevel(e.target.value)} placeholder="Level" />
         </div>
+        <Input value={address} onChange={e => setAddress(e.target.value)} placeholder="Address (opens in Google Maps)" />
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -553,6 +561,7 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           {ladder.activeSeason && <Badge variant="outline" className="text-xs">{ladder.activeSeason.name}</Badge>}
         </div>
         {ladder.location && <p className="text-xs text-muted-foreground">📍 {ladder.location}</p>}
+        {ladder.address && <p className="text-xs text-muted-foreground truncate">🗺️ {ladder.address}</p>}
         {ladder.description && <p className="text-xs text-muted-foreground truncate">{ladder.description}</p>}
       </div>
       <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>

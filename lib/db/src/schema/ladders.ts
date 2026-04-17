@@ -8,6 +8,7 @@ export const laddersTable = pgTable("ladders", {
   description: text("description"),
   category: text("category").notNull().default("coed"),
   location: text("location"),
+  address: text("address"),
   level: text("level"),
   entryFeeCents: integer("entry_fee_cents"),
   isActive: boolean("is_active").notNull().default(true),
