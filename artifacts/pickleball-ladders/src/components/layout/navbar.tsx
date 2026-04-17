@@ -35,6 +35,9 @@ export function Navbar() {
 
   const NavLinks = () => (
     <>
+      <Link href="/ladders" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-ladders">
+        Join a Ladder
+      </Link>
       <Link href="/leaderboard" className="text-sm font-medium hover:text-primary transition-colors" data-testid="link-leaderboard">
         Leaderboard
       </Link>
