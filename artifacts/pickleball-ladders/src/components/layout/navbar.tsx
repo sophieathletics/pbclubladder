@@ -138,6 +138,46 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="w-64 flex flex-col gap-6 pt-10">
               <NavLinks />
+              {player && (
+                <>
+                  <div className="border-t pt-4 flex flex-col gap-4">
+                    <Link
+                      href="/notifications"
+                      className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-2"
+                      data-testid="link-notifications-mobile"
+                    >
+                      <Bell className="w-4 h-4" />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1.5 text-[10px]">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </Link>
+                    <Link
+                      href="/profile"
+                      className="text-sm font-medium hover:text-primary transition-colors flex items-center gap-2"
+                      data-testid="link-profile-mobile"
+                    >
+                      <User className="w-4 h-4" />
+                      Profile Settings
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="text-sm font-medium text-destructive hover:text-destructive/80 transition-colors flex items-center gap-2 text-left"
+                      data-testid="btn-logout-mobile"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Log out
+                    </button>
+                  </div>
+                  <div className="mt-auto pt-4 border-t text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground truncate">{player.fullName}</p>
+                    <p className="truncate">{player.email}</p>
+                  </div>
+                </>
+              )}
             </SheetContent>
           </Sheet>
         </div>
