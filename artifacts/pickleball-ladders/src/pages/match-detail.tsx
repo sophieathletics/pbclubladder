@@ -34,6 +34,7 @@ function MatchDetailContent() {
 
   const [games, setGames] = useState([{ gameNumber: 1, team1Score: 0, team2Score: 0 }]);
   const [winnerTeamId, setWinnerTeamId] = useState("");
+  const [winnerManuallySet, setWinnerManuallySet] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [showScoreForm, setShowScoreForm] = useState(false);
   const [showDisputeForm, setShowDisputeForm] = useState(false);
@@ -62,10 +63,31 @@ function MatchDetailContent() {
   const updateScore = (i: number, field: "team1Score" | "team2Score", val: number) =>
     setGames(prev => prev.map((g, gi) => gi === i ? { ...g, [field]: val } : g));
 
+  // Auto-pick winner based on games won (unless user manually overrode)
+  const computedWinnerTeamId = (() => {
+    if (!challengerTeam?.id || !challengedTeam?.id) return "";
+    let team1Wins = 0;
+    let team2Wins = 0;
+    for (const g of games) {
+      const a = Number.isFinite(g.team1Score) ? g.team1Score : 0;
+      const b = Number.isFinite(g.team2Score) ? g.team2Score : 0;
+      if (a === 0 && b === 0) continue;
+      if (a > b) team1Wins++;
+      else if (b > a) team2Wins++;
+    }
+    if (team1Wins === 0 && team2Wins === 0) return "";
+    if (team1Wins > team2Wins) return challengerTeam.id;
+    if (team2Wins > team1Wins) return challengedTeam.id;
+    return "";
+  })();
+
+  const effectiveWinnerTeamId = winnerManuallySet ? winnerTeamId : computedWinnerTeamId;
+
   const handleSubmitScore = () => {
-    if (!winnerTeamId) { toast({ title: "Select the winner", variant: "destructive" }); return; }
+    const finalWinner = effectiveWinnerTeamId;
+    if (!finalWinner) { toast({ title: "Select the winner", variant: "destructive" }); return; }
     submitScore.mutate(
-      { id: id!, data: { games, winnerTeamId } },
+      { id: id!, data: { games, winnerTeamId: finalWinner } },
       {
         onSuccess: () => { toast({ title: "Score submitted!" }); qc.invalidateQueries(); setShowScoreForm(false); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
@@ -187,15 +209,43 @@ function MatchDetailContent() {
                 <Button onClick={() => setShowScoreForm(true)}>Enter Score</Button>
               ) : (
                 <div className="space-y-4">
+                  <div>
+                    <Label>Winner</Label>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Auto-selected from the scores below — tap to override.
+                    </p>
+                    <div className="flex gap-3 mt-2">
+                      {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
+                        <button
+                          key={t.id}
+                          onClick={() => { setWinnerTeamId(t.id); setWinnerManuallySet(true); }}
+                          data-testid={`btn-winner-${t.id}`}
+                          className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${effectiveWinnerTeamId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
+                        >
+                          {t.teamName}
+                        </button>
+                      ))}
+                    </div>
+                    {winnerManuallySet && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline mt-2"
+                        onClick={() => { setWinnerManuallySet(false); setWinnerTeamId(""); }}
+                      >
+                        Reset to auto
+                      </button>
+                    )}
+                  </div>
+
                   {games.map((game, i) => (
                     <div key={i} className="grid grid-cols-2 gap-4 p-3 border rounded-lg">
                       <div>
                         <Label className="text-xs">{challengerTeam?.teamName ?? "Team 1"}</Label>
-                        <Input type="number" min={0} value={game.team1Score} onChange={e => updateScore(i, "team1Score", parseInt(e.target.value))} className="mt-1" />
+                        <Input type="number" min={0} value={game.team1Score} onChange={e => updateScore(i, "team1Score", parseInt(e.target.value) || 0)} className="mt-1" />
                       </div>
                       <div>
                         <Label className="text-xs">{challengedTeam?.teamName ?? "Team 2"}</Label>
-                        <Input type="number" min={0} value={game.team2Score} onChange={e => updateScore(i, "team2Score", parseInt(e.target.value))} className="mt-1" />
+                        <Input type="number" min={0} value={game.team2Score} onChange={e => updateScore(i, "team2Score", parseInt(e.target.value) || 0)} className="mt-1" />
                       </div>
                     </div>
                   ))}
@@ -209,22 +259,8 @@ function MatchDetailContent() {
                       </Button>
                     )}
                   </div>
-                  <div>
-                    <Label>Winner</Label>
-                    <div className="flex gap-3 mt-2">
-                      {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setWinnerTeamId(t.id)}
-                          className={`flex-1 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${winnerTeamId === t.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:bg-muted"}`}
-                        >
-                          {t.teamName}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleSubmitScore} disabled={submitScore.isPending}>
+                    <Button onClick={handleSubmitScore} disabled={submitScore.isPending || !effectiveWinnerTeamId}>
                       {submitScore.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                       Submit Score
                     </Button>
