@@ -93,23 +93,23 @@ export default function Leaderboard() {
 
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto py-8 px-4">
-        <div className="mb-6">
-          <h1 className="text-3xl font-black flex items-center gap-2">
-            <Trophy className="w-8 h-8 text-primary" />
+      <div className="max-w-3xl mx-auto py-5 px-3 sm:py-8 sm:px-4">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-black flex items-center gap-2">
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
             Leaderboard
           </h1>
         </div>
 
         {ladderList.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-3 sm:mb-4">
             <Select value={ladderId} onValueChange={setLadderId}>
               <SelectTrigger
-                className="w-full h-14 text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 hover:from-primary/10 hover:to-primary/15 transition-all shadow-sm"
+                className="w-full h-12 sm:h-14 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm"
                 data-testid="select-ladder"
               >
-                <span className="flex items-center gap-2 truncate">
-                  <Trophy className="w-5 h-5 text-primary shrink-0" />
+                <span className="flex items-center gap-2 min-w-0">
+                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
                   <SelectValue placeholder="Pick your ladder" />
                 </span>
               </SelectTrigger>
