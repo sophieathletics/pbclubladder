@@ -125,39 +125,56 @@ export default function Leaderboard() {
           )}
         </div>
 
-        {ladderList.length > 0 && (
-          <div className="my-5 sm:my-6">
-            <Select value={ladderId} onValueChange={setLadderId}>
-              <SelectTrigger
-                className="w-full h-auto min-h-[64px] py-3 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm"
-                data-testid="select-ladder"
-              >
-                <SelectValue placeholder="Pick your ladder" />
-              </SelectTrigger>
-              <SelectContent>
-                {ladderList.map((l: any) => {
-                  const cat = l.category ?? "coed";
-                  const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
-                  return (
-                    <SelectItem key={l.id} value={l.id} className="py-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-medium flex items-center gap-1.5">
-                          <span>{l.name}</span>
-                          <Badge variant="outline" className="text-[10px] ml-1">{catLabel[cat]}</Badge>
+        {ladderList.length > 0 && (() => {
+          const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+          const selectedCat = currentLadder?.category ?? "coed";
+          return (
+            <div className="my-5 sm:my-6">
+              <Select value={ladderId} onValueChange={setLadderId}>
+                <SelectTrigger
+                  className="w-full h-auto min-h-[64px] py-3 px-4 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm [&>span]:line-clamp-none [&>span]:block [&>span]:text-left [&>span]:flex-1 [&>span]:min-w-0"
+                  data-testid="select-ladder"
+                >
+                  {currentLadder ? (
+                    <div className="flex flex-col gap-1 min-w-0 w-full">
+                      <span className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold break-words">{currentLadder.name}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">{catLabel[selectedCat]}</Badge>
+                      </span>
+                      {currentLadder.activeSeason && (
+                        <span className="text-xs font-normal text-muted-foreground break-words">
+                          {formatDateRange(currentLadder.activeSeason.startDate, currentLadder.activeSeason.endDate)}
                         </span>
-                        {l.activeSeason && (
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateRange(l.activeSeason.startDate, l.activeSeason.endDate)}
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Pick your ladder</span>
+                  )}
+                </SelectTrigger>
+                <SelectContent>
+                  {ladderList.map((l: any) => {
+                    const cat = l.category ?? "coed";
+                    return (
+                      <SelectItem key={l.id} value={l.id} className="py-3">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-medium flex items-center gap-1.5">
+                            <span>{l.name}</span>
+                            <Badge variant="outline" className="text-[10px] ml-1">{catLabel[cat]}</Badge>
                           </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+                          {l.activeSeason && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateRange(l.activeSeason.startDate, l.activeSeason.endDate)}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          );
+        })()}
 
         <div className="mb-6">
           <div className="relative">
