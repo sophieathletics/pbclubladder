@@ -376,6 +376,15 @@ function AdminContent() {
                     <Input type="date" value={newSeason.endDate} onChange={e => setNewSeason(p => ({ ...p, endDate: e.target.value }))} className="mt-1" />
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Player signups close 1 month before the end date.
+                  {newSeason.endDate && (() => {
+                    const c = new Date(newSeason.endDate);
+                    if (isNaN(c.getTime())) return null;
+                    c.setUTCDate(c.getUTCDate() - 30);
+                    return <> New teams can join until <strong>{c.toLocaleDateString()}</strong>.</>;
+                  })()}
+                </p>
                 <Button onClick={handleCreateSeason} disabled={createSeason.isPending || ladderList.length === 0} data-testid="btn-create-season">
                   {createSeason.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Create Season

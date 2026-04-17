@@ -16,6 +16,19 @@ function isLadderEligible(sex: string | null | undefined, category: string | nul
   return true;
 }
 
+function signupCutoff(endDate: string | null | undefined): Date | null {
+  if (!endDate) return null;
+  const d = new Date(endDate);
+  if (isNaN(d.getTime())) return null;
+  d.setUTCDate(d.getUTCDate() - 30);
+  return d;
+}
+
+function isSignupOpen(endDate: string | null | undefined): boolean {
+  const c = signupCutoff(endDate);
+  return !!c && Date.now() <= c.getTime();
+}
+
 export default function Home() {
   const { data: ladderResponse, isLoading: isLoadingStandings } = useGetTopLadder();
   const { data: currentPlayer } = useGetCurrentPlayer();
@@ -27,7 +40,7 @@ export default function Home() {
     [myTeamsData]
   );
   const ladders = useMemo(() => {
-    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason);
+    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason && isSignupOpen(l.activeSeason?.endDate));
     return [...list].sort((a, b) => {
       const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
       const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
@@ -124,7 +137,14 @@ export default function Home() {
                               <h3 className="font-semibold text-foreground truncate flex items-center gap-2 flex-wrap">
                                 {l.name}
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground">{catLabel[cat]}</span>
-                                {l.activeSeason && <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700">Season open</span>}
+                                {l.activeSeason && (() => {
+                                  const c = signupCutoff(l.activeSeason.endDate);
+                                  return c ? (
+                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700" title={`Signup closes ${c.toLocaleDateString()}`}>
+                                      Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                                    </span>
+                                  ) : null;
+                                })()}
                               </h3>
                               <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                                 {l.location && (

@@ -26,7 +26,12 @@ export default function Ladders() {
     [myTeamsData]
   );
   const ladders = useMemo(() => {
-    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason);
+    const list = ((laddersData as any[]) ?? []).filter(l => {
+      if (!l.isActive || !l.activeSeason?.endDate) return false;
+      const cutoff = new Date(l.activeSeason.endDate);
+      cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+      return Date.now() <= cutoff.getTime();
+    });
     return [...list].sort((a, b) => {
       const aElig = isLadderEligible(playerSex, a.category) ? 0 : 1;
       const bElig = isLadderEligible(playerSex, b.category) ? 0 : 1;
@@ -116,10 +121,21 @@ export default function Ladders() {
                         {ladder.teamCount ?? 0} teams
                       </span>
                       {ladder.activeSeason ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          {ladder.activeSeason.name}
-                        </span>
+                        <>
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {ladder.activeSeason.name}
+                          </span>
+                          {(() => {
+                            const c = new Date(ladder.activeSeason.endDate);
+                            c.setUTCDate(c.getUTCDate() - 30);
+                            return (
+                              <span className="inline-flex items-center gap-1 text-green-700 font-medium" title={`Signup closes ${c.toLocaleDateString()}`}>
+                                Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                              </span>
+                            );
+                          })()}
+                        </>
                       ) : (
                         <span className="text-amber-600">No active season</span>
                       )}

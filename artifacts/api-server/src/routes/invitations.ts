@@ -86,6 +86,14 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   // Look up the ladder for this season — needed for gender-rule validation
   const [activeLadder] = await db.select().from(laddersTable).where(eq(laddersTable.id, activeSeason.ladderId)).limit(1);
 
+  // Signup window: closes 30 days before the season end date
+  const cutoff = new Date(activeSeason.endDate);
+  cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  if (Date.now() > cutoff.getTime()) {
+    res.status(400).json({ error: "Signup for this ladder has closed (less than 1 month remaining in the season)" });
+    return;
+  }
+
   // Check inviter not already on a team
   const inviterTeam = await db.select().from(teamsTable).where(
     and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
