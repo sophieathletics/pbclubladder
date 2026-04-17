@@ -51,7 +51,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; level: string; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", level: "", entryFeeDollars: "" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", level: "", isPaid: false, entryFeeDollars: "" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -73,6 +73,15 @@ function AdminContent() {
       toast({ title: "Ladder name is required", variant: "destructive" });
       return;
     }
+    let entryFeeCents: number | null = null;
+    if (newLadder.isPaid) {
+      const parsed = parseFloat(newLadder.entryFeeDollars);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        toast({ title: "Enter an entry fee greater than $0, or choose Free.", variant: "destructive" });
+        return;
+      }
+      entryFeeCents = Math.round(parsed * 100);
+    }
     createLadder.mutate(
       {
         data: {
@@ -81,11 +90,11 @@ function AdminContent() {
           category: newLadder.category,
           location: newLadder.location || undefined,
           level: newLadder.level || undefined,
-          entryFeeCents: newLadder.entryFeeDollars ? Math.round(parseFloat(newLadder.entryFeeDollars) * 100) : null,
+          entryFeeCents,
         },
       },
       {
-        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", level: "", entryFeeDollars: "" }); },
+        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", level: "", isPaid: false, entryFeeDollars: "" }); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
       }
     );
@@ -221,18 +230,43 @@ function AdminContent() {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Entry Fee in USD (optional)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={newLadder.entryFeeDollars}
-                    onChange={e => setNewLadder(p => ({ ...p, entryFeeDollars: e.target.value }))}
-                    placeholder="e.g. 25.00"
-                    className="mt-1"
-                    data-testid="input-new-ladder-fee"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Leave blank for a free ladder. Payment collection requires Stripe to be set up.</p>
+                  <Label className="text-xs">Pricing</Label>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setNewLadder(p => ({ ...p, isPaid: false, entryFeeDollars: "" }))}
+                      className={`px-3 py-2 rounded-md border text-sm font-medium transition-colors ${!newLadder.isPaid ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:bg-muted/50"}`}
+                      data-testid="btn-ladder-free"
+                    >
+                      Free
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewLadder(p => ({ ...p, isPaid: true }))}
+                      className={`px-3 py-2 rounded-md border text-sm font-medium transition-colors ${newLadder.isPaid ? "border-primary bg-primary/10 text-primary" : "border-input bg-background hover:bg-muted/50"}`}
+                      data-testid="btn-ladder-paid"
+                    >
+                      Paid Entry
+                    </button>
+                  </div>
+                  {newLadder.isPaid && (
+                    <div className="mt-2">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newLadder.entryFeeDollars}
+                          onChange={e => setNewLadder(p => ({ ...p, entryFeeDollars: e.target.value }))}
+                          placeholder="25.00"
+                          className="pl-7"
+                          data-testid="input-new-ladder-fee"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Players will be charged this amount via Stripe to join.</p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Category</Label>
@@ -465,7 +499,24 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
           <Input value={level} onChange={e => setLevel(e.target.value)} placeholder="Level" />
         </div>
-        <Input type="number" min="0" step="0.01" value={feeDollars} onChange={e => setFeeDollars(e.target.value)} placeholder="Entry fee USD (blank = free)" />
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setFeeDollars("")}
+            className={`px-3 py-2 rounded-md border text-sm font-medium ${feeDollars === "" ? "border-primary bg-primary/10 text-primary" : "border-input bg-background"}`}
+          >Free</button>
+          <button
+            type="button"
+            onClick={() => setFeeDollars(feeDollars === "" ? "25.00" : feeDollars)}
+            className={`px-3 py-2 rounded-md border text-sm font-medium ${feeDollars !== "" ? "border-primary bg-primary/10 text-primary" : "border-input bg-background"}`}
+          >Paid</button>
+        </div>
+        {feeDollars !== "" && (
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+            <Input type="number" min="0" step="0.01" value={feeDollars} onChange={e => setFeeDollars(e.target.value)} placeholder="25.00" className="pl-7" />
+          </div>
+        )}
         <Select value={category} onValueChange={(v) => setCategory(v as any)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
