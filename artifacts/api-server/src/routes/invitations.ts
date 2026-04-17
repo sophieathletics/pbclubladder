@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, teamInvitationsTable, teamsTable, playersTable, ladderStandingsTable, seasonsTable } from "@workspace/db";
+import { db, teamInvitationsTable, teamsTable, playersTable, ladderStandingsTable, seasonsTable, laddersTable } from "@workspace/db";
 import { eq, and, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
@@ -7,6 +7,18 @@ import { sendTeamInvitationEmail, sendInvitationAcceptedEmail, sendInvitationDec
 import { notifyPlayers } from "../lib/notifications";
 
 const router: IRouter = Router();
+
+function validateLadderGenderRule(category: string, sex1: string | null | undefined, sex2: string | null | undefined): string | null {
+  if (category === "men") {
+    if (sex1 !== "male" || sex2 !== "male") return "This is a men's ladder — both players must be male.";
+  } else if (category === "women") {
+    if (sex1 !== "female" || sex2 !== "female") return "This is a women's ladder — both players must be female.";
+  } else if (category === "mixed") {
+    const set = new Set([sex1, sex2]);
+    if (!(set.has("male") && set.has("female"))) return "This is a mixed ladder — each team must have one man and one woman.";
+  }
+  return null;
+}
 
 async function enrichInvitation(inv: any) {
   const [inviter] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviterId)).limit(1);
@@ -71,6 +83,9 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Look up the ladder for this season — needed for gender-rule validation
+  const [activeLadder] = await db.select().from(laddersTable).where(eq(laddersTable.id, activeSeason.ladderId)).limit(1);
+
   // Check inviter not already on a team
   const inviterTeam = await db.select().from(teamsTable).where(
     and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
@@ -107,6 +122,28 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     if (existingTeam.length > 0) {
       res.status(400).json({ error: "That player is already on a team this season" });
       return;
+    }
+  }
+
+  // Enforce ladder gender rules. For known invitees we can fully validate now;
+  // for email-only invitations the inviter must satisfy the rule unilaterally
+  // (men's/women's ladders), and the final check happens on accept.
+  if (activeLadder) {
+    if (activeLadder.category === "men" && player.sex !== "male") {
+      res.status(400).json({ error: "This is a men's ladder — only male players can join." });
+      return;
+    }
+    if (activeLadder.category === "women" && player.sex !== "female") {
+      res.status(400).json({ error: "This is a women's ladder — only female players can join." });
+      return;
+    }
+    if (resolvedInviteeId) {
+      const [invitee] = await db.select().from(playersTable).where(eq(playersTable.id, resolvedInviteeId)).limit(1);
+      const violation = validateLadderGenderRule(activeLadder.category, player.sex, invitee?.sex);
+      if (violation) {
+        res.status(400).json({ error: violation });
+        return;
+      }
     }
   }
 
@@ -155,6 +192,17 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
   if (!invitationSeason || !invitationSeason.isActive) {
     res.status(400).json({ error: "Invitation's season is no longer active" });
     return;
+  }
+
+  // Enforce ladder gender rules at acceptance time using both players' sex
+  const [invLadder] = await db.select().from(laddersTable).where(eq(laddersTable.id, invitationSeason.ladderId)).limit(1);
+  const [inviterRow] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviterId)).limit(1);
+  if (invLadder) {
+    const violation = validateLadderGenderRule(invLadder.category, inviterRow?.sex, player.sex);
+    if (violation) {
+      res.status(400).json({ error: violation });
+      return;
+    }
   }
 
   // Create team

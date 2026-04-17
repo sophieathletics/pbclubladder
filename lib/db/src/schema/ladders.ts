@@ -6,6 +6,7 @@ export const laddersTable = pgTable("ladders", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
+  category: text("category").notNull().default("coed"),
   isActive: boolean("is_active").notNull().default(true),
   sortOrder: text("sort_order").notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

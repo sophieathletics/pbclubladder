@@ -1399,6 +1399,9 @@ components:
         description:
           type: string
           nullable: true
+        category:
+          type: string
+          enum: [men, women, mixed, coed]
         isActive:
           type: boolean
         sortOrder:
@@ -1408,6 +1411,7 @@ components:
       required:
         - id
         - name
+        - category
         - isActive
         - createdAt
 
@@ -1429,10 +1433,14 @@ components:
           type: string
         description:
           type: string
+        category:
+          type: string
+          enum: [men, women, mixed, coed]
         sortOrder:
           type: string
       required:
         - name
+        - category
 
     UpdateLadderBody:
       type: object
@@ -1441,6 +1449,9 @@ components:
           type: string
         description:
           type: string
+        category:
+          type: string
+          enum: [men, women, mixed, coed]
         isActive:
           type: boolean
         sortOrder:

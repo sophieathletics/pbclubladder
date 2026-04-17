@@ -39,15 +39,23 @@ router.get("/ladders/:id", async (req, res): Promise<void> => {
   res.json(await enrichLadder(ladder));
 });
 
+const ALLOWED_CATEGORIES = ["men", "women", "mixed", "coed"] as const;
+
 router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
-  const { name, description, sortOrder } = req.body;
+  const { name, description, sortOrder, category } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
+    return;
+  }
+  const cat = category ?? "coed";
+  if (!ALLOWED_CATEGORIES.includes(cat)) {
+    res.status(400).json({ error: "category must be one of: men, women, mixed, coed" });
     return;
   }
   const [ladder] = await db.insert(laddersTable).values({
     name,
     description: description ?? null,
+    category: cat,
     isActive: true,
     sortOrder: sortOrder ?? "0",
   }).returning();
@@ -56,12 +64,19 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
 
 router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { name, description, isActive, sortOrder } = req.body;
+  const { name, description, isActive, sortOrder, category } = req.body;
   const updates: any = {};
   if (name !== undefined) updates.name = name;
   if (description !== undefined) updates.description = description;
   if (isActive !== undefined) updates.isActive = isActive;
   if (sortOrder !== undefined) updates.sortOrder = sortOrder;
+  if (category !== undefined) {
+    if (!ALLOWED_CATEGORIES.includes(category)) {
+      res.status(400).json({ error: "category must be one of: men, women, mixed, coed" });
+      return;
+    }
+    updates.category = category;
+  }
   const [ladder] = await db.update(laddersTable).set(updates).where(eq(laddersTable.id, id)).returning();
   if (!ladder) {
     res.status(404).json({ error: "Ladder not found" });

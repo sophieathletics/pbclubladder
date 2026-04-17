@@ -5,10 +5,12 @@
  * Pickleball Club Ladder API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateLadderBodyCategory } from "./updateLadderBodyCategory";
 
 export interface UpdateLadderBody {
   name?: string;
   description?: string;
+  category?: UpdateLadderBodyCategory;
   isActive?: boolean;
   sortOrder?: string;
 }

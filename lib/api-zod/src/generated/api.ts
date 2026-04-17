@@ -149,6 +149,7 @@ export const ListLaddersResponseItem = zod
     id: zod.string(),
     name: zod.string(),
     description: zod.string().nullish(),
+    category: zod.enum(["men", "women", "mixed", "coed"]),
     isActive: zod.boolean(),
     sortOrder: zod.string().optional(),
     createdAt: zod.string(),
@@ -177,6 +178,7 @@ export const ListLaddersResponse = zod.array(ListLaddersResponseItem);
 export const CreateLadderBody = zod.object({
   name: zod.string(),
   description: zod.string().optional(),
+  category: zod.enum(["men", "women", "mixed", "coed"]),
   sortOrder: zod.string().optional(),
 });
 
@@ -189,6 +191,7 @@ export const GetLadderInfoResponse = zod
     id: zod.string(),
     name: zod.string(),
     description: zod.string().nullish(),
+    category: zod.enum(["men", "women", "mixed", "coed"]),
     isActive: zod.boolean(),
     sortOrder: zod.string().optional(),
     createdAt: zod.string(),
@@ -220,6 +223,7 @@ export const UpdateLadderParams = zod.object({
 export const UpdateLadderBody = zod.object({
   name: zod.string().optional(),
   description: zod.string().optional(),
+  category: zod.enum(["men", "women", "mixed", "coed"]).optional(),
   isActive: zod.boolean().optional(),
   sortOrder: zod.string().optional(),
 });
@@ -228,6 +232,7 @@ export const UpdateLadderResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
   description: zod.string().nullish(),
+  category: zod.enum(["men", "women", "mixed", "coed"]),
   isActive: zod.boolean(),
   sortOrder: zod.string().optional(),
   createdAt: zod.string(),

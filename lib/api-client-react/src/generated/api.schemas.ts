@@ -125,10 +125,21 @@ export type PlayerWithTeam = Player & {
   currentTeam?: TeamWithPlayers;
 };
 
+export type LadderCategory =
+  (typeof LadderCategory)[keyof typeof LadderCategory];
+
+export const LadderCategory = {
+  men: "men",
+  women: "women",
+  mixed: "mixed",
+  coed: "coed",
+} as const;
+
 export interface Ladder {
   id: string;
   name: string;
   description?: string | null;
+  category: LadderCategory;
   isActive: boolean;
   sortOrder?: string;
   createdAt: string;
@@ -139,15 +150,37 @@ export type LadderWithSeason = Ladder & {
   teamCount?: number;
 };
 
+export type CreateLadderBodyCategory =
+  (typeof CreateLadderBodyCategory)[keyof typeof CreateLadderBodyCategory];
+
+export const CreateLadderBodyCategory = {
+  men: "men",
+  women: "women",
+  mixed: "mixed",
+  coed: "coed",
+} as const;
+
 export interface CreateLadderBody {
   name: string;
   description?: string;
+  category: CreateLadderBodyCategory;
   sortOrder?: string;
 }
+
+export type UpdateLadderBodyCategory =
+  (typeof UpdateLadderBodyCategory)[keyof typeof UpdateLadderBodyCategory];
+
+export const UpdateLadderBodyCategory = {
+  men: "men",
+  women: "women",
+  mixed: "mixed",
+  coed: "coed",
+} as const;
 
 export interface UpdateLadderBody {
   name?: string;
   description?: string;
+  category?: UpdateLadderBodyCategory;
   isActive?: boolean;
   sortOrder?: string;
 }

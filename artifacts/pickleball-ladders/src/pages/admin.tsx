@@ -50,7 +50,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState({ name: "", description: "" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed" }>({ name: "", description: "", category: "coed" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -75,7 +75,7 @@ function AdminContent() {
     createLadder.mutate(
       { data: newLadder },
       {
-        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "" }); },
+        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed" }); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
       }
     );
@@ -199,6 +199,24 @@ function AdminContent() {
                 <div>
                   <Label className="text-xs">Description (optional)</Label>
                   <Input value={newLadder.description} onChange={e => setNewLadder(p => ({ ...p, description: e.target.value }))} placeholder="Short description of this ladder" className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs">Category</Label>
+                  <Select value={newLadder.category} onValueChange={(v) => setNewLadder(p => ({ ...p, category: v as any }))}>
+                    <SelectTrigger className="mt-1" data-testid="select-new-ladder-category"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="men">Men's</SelectItem>
+                      <SelectItem value="women">Women's</SelectItem>
+                      <SelectItem value="mixed">Mixed (1 man + 1 woman per team)</SelectItem>
+                      <SelectItem value="coed">Co-ed (any combination)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {newLadder.category === "men" && "Only male players can join."}
+                    {newLadder.category === "women" && "Only female players can join."}
+                    {newLadder.category === "mixed" && "Each team must have one man and one woman."}
+                    {newLadder.category === "coed" && "Open to any combination of players."}
+                  </p>
                 </div>
                 <Button onClick={handleCreateLadder} disabled={createLadder.isPending} data-testid="btn-create-ladder">
                   {createLadder.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
@@ -341,13 +359,14 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(ladder.name);
   const [description, setDescription] = useState(ladder.description ?? "");
+  const [category, setCategory] = useState<"men" | "women" | "mixed" | "coed">(ladder.category ?? "coed");
   const [isActive, setIsActive] = useState(ladder.isActive);
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const handleSave = () => {
     onUpdate.mutate(
-      { id: ladder.id, data: { name, description, isActive } },
+      { id: ladder.id, data: { name, description, isActive, category } },
       {
         onSuccess: () => { toast({ title: "Ladder updated" }); qc.invalidateQueries(); setEditing(false); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
@@ -360,6 +379,15 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
       <div className="p-3 space-y-2">
         <Input value={name} onChange={e => setName(e.target.value)} placeholder="Name" />
         <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
+        <Select value={category} onValueChange={(v) => setCategory(v as any)}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="men">Men's</SelectItem>
+            <SelectItem value="women">Women's</SelectItem>
+            <SelectItem value="mixed">Mixed (1 man + 1 woman)</SelectItem>
+            <SelectItem value="coed">Co-ed</SelectItem>
+          </SelectContent>
+        </Select>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
           Active
@@ -372,11 +400,15 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
     );
   }
 
+  const categoryLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+  const cat = ladder.category ?? "coed";
+
   return (
     <div className="p-3 flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-sm">{ladder.name}</p>
+          <Badge variant="outline" className="text-xs">{categoryLabel[cat]}</Badge>
           {!ladder.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
           {ladder.activeSeason && <Badge variant="outline" className="text-xs">{ladder.activeSeason.name}</Badge>}
         </div>
