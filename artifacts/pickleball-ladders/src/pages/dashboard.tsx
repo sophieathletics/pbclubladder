@@ -1,12 +1,12 @@
 import { Link } from "wouter";
-import { useGetCurrentPlayer, useGetMyTeam, useGetMyLadderPosition, useGetMyActiveChallenge, useListNotifications } from "@workspace/api-client-react";
+import { useGetCurrentPlayer, useGetMyTeam, useGetMyLadderPosition, useGetMyActiveChallenge, useListNotifications, useListMatches } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield } from "lucide-react";
+import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -22,6 +22,7 @@ function DashboardContent() {
   const { data: ladderPos } = useGetMyLadderPosition();
   const { data: activeChallenge } = useGetMyActiveChallenge();
   const { data: notifData } = useListNotifications({ unread_only: true });
+  const { data: completedMatches } = useListMatches({ status: "completed" });
 
   const isLoading = !player;
   const myStanding = ladderPos?.myStanding;
@@ -235,6 +236,67 @@ function DashboardContent() {
                       Admin Panel
                     </Link>
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Match History */}
+          <Card className="border-primary/10 md:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                Match History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!completedMatches || (completedMatches as any[]).length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No matches played yet.</p>
+              ) : (
+                <div className="divide-y">
+                  {(completedMatches as any[]).map((m: any) => {
+                    const t1 = m.challenge?.challengerTeam;
+                    const t2 = m.challenge?.challengedTeam;
+                    const winnerId = m.result?.winnerTeamId;
+                    const confirmed = !!m.result?.confirmedAt;
+                    const renderTeam = (t: any, isWinner: boolean) => (
+                      <div className={`flex-1 ${isWinner ? "font-semibold text-primary" : ""}`}>
+                        <p className="text-sm">
+                          {t?.teamName ?? "Unknown"}
+                          {isWinner && <Trophy className="w-3 h-3 inline ml-1 text-yellow-500" />}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t?.player1?.fullName ?? "?"} & {t?.player2?.fullName ?? "?"}
+                        </p>
+                      </div>
+                    );
+                    return (
+                      <Link key={m.id} href={`/matches/${m.id}`}>
+                        <div className="py-3 hover:bg-muted/30 -mx-2 px-2 rounded cursor-pointer">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-muted-foreground">
+                              {m.scheduledDate}
+                              {!confirmed && m.result && (
+                                <span className="ml-2 px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700 text-[10px]">
+                                  {m.result.disputeReason ? "Disputed" : "Pending Confirmation"}
+                                </span>
+                              )}
+                            </p>
+                            {m.scores?.length > 0 && (
+                              <p className="text-xs font-semibold">
+                                {m.scores.map((s: any) => `${s.team1Score}–${s.team2Score}`).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {renderTeam(t1, winnerId === t1?.id)}
+                            <span className="text-xs font-bold text-muted-foreground">vs</span>
+                            {renderTeam(t2, winnerId === t2?.id)}
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
