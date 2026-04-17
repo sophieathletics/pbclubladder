@@ -73,6 +73,16 @@ export default function Leaderboard() {
     );
   };
 
+  function formatDateRange(start?: string, end?: string) {
+    if (!start || !end) return "—";
+    const fmt = (d: string) => {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return d;
+      return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    };
+    return `${fmt(start)} – ${fmt(end)}`;
+  }
+
   function positionColor(pos: number) {
     if (pos === 1) return "bg-yellow-400/20 text-yellow-600 border border-yellow-400/40";
     if (pos === 2) return "bg-slate-300/30 text-slate-600 border border-slate-300/50";
@@ -90,10 +100,19 @@ export default function Leaderboard() {
               Leaderboard
             </h1>
             {currentLadder && (
-              <p className="text-muted-foreground mt-1">
-                Ladder: <span className="font-semibold text-foreground">{currentLadder.name}</span>
-                {season && <> · Season: <span className="font-semibold text-foreground">{season.name}</span></>}
-              </p>
+              <div className="text-muted-foreground mt-1 space-y-0.5 text-sm">
+                <p>
+                  Ladder: <span className="font-semibold text-foreground">{currentLadder.name}</span>
+                </p>
+                {season && (
+                  <p>
+                    Dates ={" "}
+                    <span className="font-semibold text-foreground">
+                      {formatDateRange((season as any).startDate, (season as any).endDate)}
+                    </span>
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -147,8 +166,17 @@ export default function Leaderboard() {
               <div className="divide-y">
                 {standings.map((standing) => {
                   const showChallenge = canChallenge(standing.position ?? 0);
+                  const isMine = !!myTeamInLadder && (standing as any).team?.id === myTeamInLadder.id;
                   return (
-                    <div key={standing.id} className="p-3 sm:p-4 hover:bg-muted/50 transition-colors">
+                    <div
+                      key={standing.id}
+                      className={`p-3 sm:p-4 transition-colors ${
+                        isMine
+                          ? "bg-primary/10 border-l-4 border-primary"
+                          : "hover:bg-muted/50"
+                      }`}
+                      data-testid={isMine ? "row-my-team" : undefined}
+                    >
                       <div className="flex items-center gap-3">
                         <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${positionColor(standing.position ?? 0)}`}>
                           {standing.position === 1 ? (
