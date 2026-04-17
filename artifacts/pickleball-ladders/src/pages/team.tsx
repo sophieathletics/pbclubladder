@@ -218,24 +218,7 @@ function TeamContent() {
           </Card>
         )}
 
-        {/* Current Teams */}
-        {teams.length > 0 ? (
-          <div className="space-y-4 mb-6">
-            {teams.map((team: any) => (
-              <TeamCard key={team.id} team={team} ladders={ladderList} />
-            ))}
-          </div>
-        ) : laddersWithoutTeam.length === 0 && !showInviteForm ? (
-          <Card className="border-primary/10 mb-6">
-            <CardContent className="py-10 text-center">
-              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-lg font-semibold mb-2">You're not on any team yet</p>
-              <p className="text-xs text-muted-foreground mt-3">No ladders with active seasons available.</p>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {/* Invite Form: Available if any ladder still has no team */}
+        {/* Invite Form: Available if any ladder still has no team — shown at top so it stays prominent */}
         {laddersWithoutTeam.length > 0 && showInviteForm && (
           <Card className="border-primary/10 mb-6">
             <CardHeader>
@@ -352,6 +335,23 @@ function TeamContent() {
           </Card>
         )}
 
+        {/* Current Teams */}
+        {teams.length > 0 ? (
+          <div className="space-y-4 mb-6">
+            {teams.map((team: any) => (
+              <TeamCard key={team.id} team={team} ladders={ladderList} />
+            ))}
+          </div>
+        ) : laddersWithoutTeam.length === 0 && !showInviteForm ? (
+          <Card className="border-primary/10 mb-6">
+            <CardContent className="py-10 text-center">
+              <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg font-semibold mb-2">You're not on any team yet</p>
+              <p className="text-xs text-muted-foreground mt-3">No ladders with active seasons available.</p>
+            </CardContent>
+          </Card>
+        ) : null}
+
         {/* Received Invitations */}
         {pendingReceived.length > 0 && (
           <Card className="border-yellow-400/30 bg-yellow-50/40 mb-6">
@@ -456,9 +456,16 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Trophy className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-primary">{ladderName}</span>
+        <CardTitle className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+          <span className="flex items-center gap-2 min-w-0 break-words text-2xl font-black text-primary">
+            <Trophy className="w-6 h-6 shrink-0" />
+            {ladderName}
+          </span>
+          {myStanding && <Badge className="text-base font-bold px-3 py-1 self-start sm:self-auto">#{myStanding.position}</Badge>}
+        </CardTitle>
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          <span className="text-sm text-muted-foreground">Team:</span>
+          <span className="text-sm font-semibold break-words">{team.teamName}</span>
           {team.paymentStatus === "paid" && (
             <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
           )}
@@ -466,10 +473,6 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
             <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Payment due</Badge>
           )}
         </div>
-        <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <span className="break-words">{team.teamName}</span>
-          {myStanding && <Badge className="text-base font-bold px-3 py-1 self-start sm:self-auto">#{myStanding.position}</Badge>}
-        </CardTitle>
       </CardHeader>
       <CardContent>
         {isUnpaid && (
