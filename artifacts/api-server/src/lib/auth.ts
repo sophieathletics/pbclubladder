@@ -4,7 +4,12 @@ import { eq } from "drizzle-orm";
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { logger } from "./logger";
 
-const SESSION_SECRET = process.env.SESSION_SECRET ?? "default-secret-change-me";
+if (!process.env.SESSION_SECRET) {
+  throw new Error(
+    "SESSION_SECRET environment variable is required. Refusing to start with a default secret because that would let anyone forge auth tokens."
+  );
+}
+const SESSION_SECRET = process.env.SESSION_SECRET;
 const TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function hashPassword(password: string): string {

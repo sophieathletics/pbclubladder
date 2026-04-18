@@ -292,6 +292,18 @@ export async function sendWithdrawalConfirmationEmail(to: string, teamName: stri
   });
 }
 
+export async function sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+  await sendEmail({
+    to,
+    subject: `Reset your Pickleball Club Ladder password`,
+    html: baseTemplate(
+      `<p>We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.</p><p style="color:#6b7280;font-size:13px">If you didn't request this, you can safely ignore this email — your password won't change.</p>`,
+      "Reset Password",
+      resetUrl
+    ),
+  });
+}
+
 export async function sendAdminRemovedTeamEmail(to: string | string[], teamName: string, refundAmountCents: number | null): Promise<void> {
   const refundLine = refundAmountCents != null && refundAmountCents > 0
     ? `<p>Your entry fee of $${(refundAmountCents / 100).toFixed(2)} has been refunded to your card and should appear in 5–10 business days.</p>`

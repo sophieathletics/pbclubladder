@@ -20,6 +20,10 @@ import Profile from "@/pages/profile";
 import Admin from "@/pages/admin";
 import Pay from "@/pages/pay";
 import PaymentComplete from "@/pages/payment-complete";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
+import Terms from "@/pages/terms";
+import Privacy from "@/pages/privacy";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +53,10 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/pay/:teamId" component={Pay} />
       <Route path="/payment-complete" component={PaymentComplete} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
       <Route component={NotFound} />
     </Switch>
   );

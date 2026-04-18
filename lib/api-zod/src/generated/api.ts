@@ -118,6 +118,31 @@ export const ChangePasswordResponse = zod.object({
 });
 
 /**
+ * @summary Request a password reset link
+ */
+export const ForgotPasswordBody = zod.object({
+  email: zod.string(),
+});
+
+export const ForgotPasswordResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Reset password using a token
+ */
+export const ResetPasswordBody = zod.object({
+  token: zod.string(),
+  newPassword: zod.string(),
+});
+
+export const ResetPasswordResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
  * @summary List all players (search)
  */
 export const listPlayersQueryLimitDefault = 20;

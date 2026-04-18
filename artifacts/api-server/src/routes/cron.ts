@@ -34,6 +34,18 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
 
     if (daysSince < INACTIVITY_DAYS) continue;
 
+    // Skip teams that are mid-challenge — penalising them while a match is in flight is unfair.
+    const openChallenges = await db.select().from(challengesTable).where(
+      and(
+        or(eq(challengesTable.challengerTeamId, standing.teamId), eq(challengesTable.challengedTeamId, standing.teamId)),
+        sql`${challengesTable.status} IN ('pending','accepted','scheduling','scheduled')`
+      )
+    ).limit(1);
+    if (openChallenges.length > 0) {
+      details.push(`Team ${standing.teamId} skipped (open challenge in flight)`);
+      continue;
+    }
+
     // Find the team below them
     const teamBelow = standings.find(s => s.position === standing.position + 1);
     if (!teamBelow) continue;
@@ -63,8 +75,8 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
       ]);
       const emails = [p1[0]?.email, p2[0]?.email].filter(Boolean) as string[];
       const playerIds = [p1[0]?.id, p2[0]?.id].filter(Boolean) as string[];
-      sendInactivityDropEmail(emails, oldPos, newPos);
-      notifyPlayers(playerIds, "inactivity_drop", `Your team dropped from position #${oldPos} to #${newPos} due to inactivity.`, "/challenge");
+      await sendInactivityDropEmail(emails, oldPos, newPos);
+      await notifyPlayers(playerIds, "inactivity_drop", `Your team dropped from position #${oldPos} to #${newPos} due to inactivity.`, "/challenge");
     }
 
     details.push(`Team ${standing.teamId} dropped from ${oldPos} to ${newPos}`);

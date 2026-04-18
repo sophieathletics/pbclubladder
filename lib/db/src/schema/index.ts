@@ -11,3 +11,4 @@ export * from "./matchScores";
 export * from "./matchResults";
 export * from "./inactivityDrops";
 export * from "./notifications";
+export * from "./passwordResetTokens";

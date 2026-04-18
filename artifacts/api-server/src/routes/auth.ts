@@ -1,10 +1,18 @@
 import { Router, type IRouter } from "express";
-import { db, playersTable, teamInvitationsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, playersTable, teamInvitationsTable, passwordResetTokensTable } from "@workspace/db";
+import { eq, and, isNull, gt } from "drizzle-orm";
+import { createHash, randomBytes } from "crypto";
 import { hashPassword, verifyPassword, createToken, requireAuth } from "../lib/auth";
+import { sendPasswordResetEmail } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+const MIN_PASSWORD_LENGTH = 8;
+
+function hashResetToken(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
+}
 
 router.post("/auth/register", async (req, res): Promise<void> => {
   const { firstName, lastName, email, phone, password, selfRating, sex, shareContact } = req.body;
@@ -14,6 +22,10 @@ router.post("/auth/register", async (req, res): Promise<void> => {
 
   if (!finalFirst || !finalLast || !email || !password) {
     res.status(400).json({ error: "First name, last name, email and password are required" });
+    return;
+  }
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+    res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     return;
   }
   if (!selfRating) {
@@ -127,11 +139,88 @@ router.post("/auth/change-password", requireAuth, async (req, res): Promise<void
     res.status(400).json({ error: "Current password is incorrect" });
     return;
   }
+  if (typeof newPassword !== "string" || newPassword.length < MIN_PASSWORD_LENGTH) {
+    res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    return;
+  }
 
   const passwordHash = hashPassword(newPassword);
   await db.update(playersTable).set({ passwordHash }).where(eq(playersTable.id, player.id));
 
   res.json({ success: true, message: "Password changed" });
+});
+
+// Request a password reset link. Always returns 200 to avoid leaking which emails are registered.
+router.post("/auth/forgot-password", async (req, res): Promise<void> => {
+  const { email } = req.body ?? {};
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "Email is required" });
+    return;
+  }
+
+  const normalized = email.toLowerCase().trim();
+  const [player] = await db.select().from(playersTable).where(eq(playersTable.email, normalized)).limit(1);
+
+  if (player && player.isActive) {
+    const rawToken = randomBytes(32).toString("base64url");
+    const tokenHash = hashResetToken(rawToken);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    try {
+      await db.insert(passwordResetTokensTable).values({
+        playerId: player.id,
+        tokenHash,
+        expiresAt,
+      });
+      const baseUrl = process.env.APP_URL ?? "https://pbclubladder.com";
+      const resetUrl = `${baseUrl}/reset-password?token=${rawToken}`;
+      await sendPasswordResetEmail(normalized, resetUrl);
+      logger.info({ playerId: player.id }, "Password reset email sent");
+    } catch (err: any) {
+      logger.error({ err: err?.message, playerId: player.id }, "Failed to issue password reset");
+    }
+  } else {
+    logger.info({ email: normalized }, "Password reset requested for unknown email");
+  }
+
+  res.json({ success: true, message: "If that email is registered, a reset link has been sent." });
+});
+
+router.post("/auth/reset-password", async (req, res): Promise<void> => {
+  const { token, newPassword } = req.body ?? {};
+  if (!token || typeof token !== "string" || !newPassword || typeof newPassword !== "string") {
+    res.status(400).json({ error: "token and newPassword are required" });
+    return;
+  }
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    return;
+  }
+
+  const tokenHash = hashResetToken(token);
+  const now = new Date();
+
+  // Atomically claim the token: only one reset can succeed.
+  const claimed = await db.update(passwordResetTokensTable)
+    .set({ usedAt: now })
+    .where(and(
+      eq(passwordResetTokensTable.tokenHash, tokenHash),
+      isNull(passwordResetTokensTable.usedAt),
+      gt(passwordResetTokensTable.expiresAt, now),
+    ))
+    .returning();
+
+  if (claimed.length === 0) {
+    res.status(400).json({ error: "Reset link is invalid or has expired. Please request a new one." });
+    return;
+  }
+
+  const tokenRow = claimed[0];
+  const passwordHash = hashPassword(newPassword);
+  await db.update(playersTable).set({ passwordHash }).where(eq(playersTable.id, tokenRow.playerId));
+  logger.info({ playerId: tokenRow.playerId }, "Password reset completed");
+
+  res.json({ success: true, message: "Password updated. You can now sign in." });
 });
 
 export function sanitizePlayer(player: any) {

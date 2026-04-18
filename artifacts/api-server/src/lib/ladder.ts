@@ -6,39 +6,47 @@ export async function swapLadderPositions(
   winnerTeamId: string,
   loserTeamId: string
 ): Promise<void> {
-  // Get both standings
-  const standings = await db.select().from(ladderStandingsTable).where(
-    and(
-      eq(ladderStandingsTable.seasonId, seasonId),
-      sql`${ladderStandingsTable.teamId} IN (${winnerTeamId}, ${loserTeamId})`
-    )
-  );
+  // Wrap the whole swap in a transaction with row-level locks so two concurrent
+  // confirmations on the same standings can't corrupt position numbers.
+  await db.transaction(async (tx) => {
+    const standings = await tx.execute(sql`
+      SELECT * FROM ladder_standings
+      WHERE season_id = ${seasonId}
+        AND team_id IN (${winnerTeamId}, ${loserTeamId})
+      ORDER BY position
+      FOR UPDATE
+    `);
+    const rows: any[] = (standings as any).rows ?? [];
+    const winnerStanding = rows.find((s: any) => s.team_id === winnerTeamId);
+    const loserStanding = rows.find((s: any) => s.team_id === loserTeamId);
+    if (!winnerStanding || !loserStanding) return;
 
-  const winnerStanding = standings.find(s => s.teamId === winnerTeamId);
-  const loserStanding = standings.find(s => s.teamId === loserTeamId);
+    // Only swap if winner is below loser (challenger wins = move up)
+    if (winnerStanding.position <= loserStanding.position) return;
 
-  if (!winnerStanding || !loserStanding) return;
+    const winnerPos = winnerStanding.position;
+    const loserPos = loserStanding.position;
+    const now = new Date();
 
-  // Only swap if winner is below loser (challenger wins = move up)
-  if (winnerStanding.position <= loserStanding.position) return;
+    // Use a temp position derived from the winner's CURRENT position so two
+    // concurrent disjoint swaps within the same season cannot both park at the
+    // same negative sentinel and trip the (season_id, position) unique index.
+    // Each team has a unique position, so this temp value is unique per row.
+    const tempPos = -1_000_000 - winnerPos;
+    await tx.update(ladderStandingsTable)
+      .set({ position: tempPos })
+      .where(eq(ladderStandingsTable.id, winnerStanding.id));
 
-  const winnerPos = winnerStanding.position;
-  const loserPos = loserStanding.position;
-  const now = new Date();
+    // Loser falls to the winner's old (lower) position, gains a loss
+    await tx.update(ladderStandingsTable)
+      .set({ position: winnerPos, losses: loserStanding.losses + 1, lastMatchDate: now })
+      .where(eq(ladderStandingsTable.id, loserStanding.id));
 
-  // Use temp position to avoid unique constraint violation
-  const tempPos = -999;
-  await db.update(ladderStandingsTable)
-    .set({ position: tempPos })
-    .where(eq(ladderStandingsTable.id, winnerStanding.id));
-
-  await db.update(ladderStandingsTable)
-    .set({ position: winnerPos, wins: loserStanding.wins + 1, lastMatchDate: now })
-    .where(eq(ladderStandingsTable.id, loserStanding.id));
-
-  await db.update(ladderStandingsTable)
-    .set({ position: loserPos, losses: winnerStanding.losses + 1, lastMatchDate: now })
-    .where(eq(ladderStandingsTable.id, winnerStanding.id));
+    // Winner climbs to the loser's old (higher) position, gains a win
+    await tx.update(ladderStandingsTable)
+      .set({ position: loserPos, wins: winnerStanding.wins + 1, lastMatchDate: now })
+      .where(eq(ladderStandingsTable.id, winnerStanding.id));
+  });
 }
 
 export async function applyMatchResult(

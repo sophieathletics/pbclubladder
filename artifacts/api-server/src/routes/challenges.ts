@@ -324,6 +324,14 @@ router.post("/challenges/:id/cancel", requireAuth, async (req, res): Promise<voi
     return;
   }
 
+  // Only allow cancelling challenges that are still in flight. Cancelling a
+  // completed/disputed/cancelled challenge would silently overwrite a real outcome.
+  const cancellableStatuses = ["pending", "accepted", "scheduling", "scheduled"];
+  if (!cancellableStatuses.includes(challenge.status)) {
+    res.status(400).json({ error: `Cannot cancel a challenge that is ${challenge.status}` });
+    return;
+  }
+
   const [myTeam] = await db.select().from(teamsTable).where(
     and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);

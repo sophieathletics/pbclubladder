@@ -122,6 +122,14 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
+  // Validate: at least one game must have a non-zero score on either side.
+  // All-zeros doesn't represent a real match and can't have a meaningful winner.
+  const anyRealGame = games.some((g: any) => (Number(g.team1Score) || 0) > 0 || (Number(g.team2Score) || 0) > 0);
+  if (!anyRealGame) {
+    res.status(400).json({ error: "All games are 0–0. Please enter the actual game scores." });
+    return;
+  }
+
   // Validate: winner must match the games-won majority (team1 = challenger, team2 = challenged).
   // Ties are allowed and the caller decides the overall winner.
   let team1Wins = 0;

@@ -122,14 +122,22 @@ router.post(
     const sig = req.headers["stripe-signature"];
     const secret = getWebhookSecret();
 
+    // Hard-fail if the signing secret isn't configured — silently accepting unsigned
+    // webhooks would let anyone forge a payment confirmation.
+    if (!secret) {
+      logger.error("STRIPE_WEBHOOK_SECRET is not set; refusing to process webhook");
+      res.status(500).json({ error: "Webhook signing secret not configured" });
+      return;
+    }
+    if (!sig) {
+      logger.warn("Stripe webhook called without a signature header");
+      res.status(400).json({ error: "Missing stripe-signature header" });
+      return;
+    }
+
     let event;
     try {
-      if (secret && sig) {
-        event = stripe.webhooks.constructEvent(req.body as Buffer, sig as string, secret);
-      } else {
-        event = JSON.parse((req.body as Buffer).toString("utf8"));
-        logger.warn("Stripe webhook signature not verified (no secret or signature)");
-      }
+      event = stripe.webhooks.constructEvent(req.body as Buffer, sig as string, secret);
     } catch (err: any) {
       logger.error({ err: err?.message }, "Stripe webhook signature verification failed");
       res.status(400).send(`Webhook Error: ${err?.message}`);

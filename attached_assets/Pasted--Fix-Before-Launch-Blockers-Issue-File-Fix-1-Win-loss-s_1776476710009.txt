@@ -1,0 +1,22 @@
+🚨 Fix Before Launch (Blockers)
+#	Issue	File	Fix
+1	Win/loss stats are SWAPPED — losers get wins, winners get losses	artifacts/api-server/src/lib/ladder.ts lines 35–41	The update statements have wins on the loser's row and losses on the winner's row. Swap them.
+2	SESSION_SECRET falls back to a hardcoded string — anyone can forge auth tokens	artifacts/api-server/src/lib/auth.ts line 7	Add a startup check: if !process.env.SESSION_SECRET throw an error and refuse to start
+3	CORS still wide open — any website can make authenticated API calls	artifacts/api-server/src/app.ts line 30	Change origin: true to origin: "https://pbclubladder.com"
+4	Stripe webhook skips signature check if secret isn't set — anyone can forge a payment confirmation	artifacts/api-server/src/routes/payments.ts lines 52–56	Make it fail hard if STRIPE_WEBHOOK_SECRET is not set, never silently skip
+5	No forgot password flow	login.tsx, routes/auth.ts	Users who forget their password are permanently locked out
+6	No rate limiting on login — brute-forceable	app.ts	Add express-rate-limit to the login and register routes
+7	Phone marked required on register form but optional on backend — blocks signups	pages/register.tsx line 148	Remove the required attribute from the phone input
+8	Cancel challenge allows cancelling completed/disputed matches	routes/challenges.ts line 317	Add a status check before allowing cancel
+⚠️ Fix Soon After Launch (High)
+#	Issue
+9	No confirmation dialog before cancelling/declining a challenge
+10	Leaderboard shows "Challenge" buttons even when user has an active challenge
+11	Email functions called without await — failures silently dropped
+12	No backend minimum password length check (frontend-only)
+13	Position swap not wrapped in a DB transaction (can corrupt ladder if two score confirmations hit at once)
+14	Inactivity cron drops teams mid-challenge
+📋 Nice-to-Have Before Launch
+Terms of Service & Privacy Policy pages — legally required once you take payments (I already wrote both of these — they just need to be wired into App.tsx and linked from the register page and footer)
+No email verification on registration — users can sign up with someone else's email
+All-zero scores (0–0, 0–0) accepted with arbitrary winner declared

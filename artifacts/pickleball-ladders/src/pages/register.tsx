@@ -137,14 +137,13 @@ export default function Register() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Phone <span className="text-xs text-muted-foreground font-normal">(optional)</span></Label>
                 <Input
                   id="phone"
                   type="tel"
                   placeholder="123-456-7891"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  required
                   data-testid="input-phone"
                 />
               </div>
@@ -224,6 +223,12 @@ export default function Register() {
                 {register.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 Create Account
               </Button>
+              <p className="text-[11px] text-center text-muted-foreground leading-snug">
+                By creating an account you agree to our{" "}
+                <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+              </p>
             </form>
             <p className="text-sm text-center text-muted-foreground mt-4">
               Already have an account?{" "}

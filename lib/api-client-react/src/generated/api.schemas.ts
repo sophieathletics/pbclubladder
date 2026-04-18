@@ -124,6 +124,15 @@ export interface ChangePasswordBody {
   newPassword: string;
 }
 
+export interface ForgotPasswordBody {
+  email: string;
+}
+
+export interface ResetPasswordBody {
+  token: string;
+  newPassword: string;
+}
+
 export type TeamStatus = (typeof TeamStatus)[keyof typeof TeamStatus];
 
 export const TeamStatus = {

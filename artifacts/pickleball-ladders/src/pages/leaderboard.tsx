@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useGetLadder, useListLadders, useGetMyTeams, useCreateChallenge, useGetCurrentPlayer } from "@workspace/api-client-react";
+import { useGetLadder, useListLadders, useGetMyTeams, useCreateChallenge, useGetCurrentPlayer, useGetMyLadderPosition } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,11 @@ export default function Leaderboard() {
   const qc = useQueryClient();
   const [, setLocation] = useLocation();
   const createChallenge = useCreateChallenge();
+  const { data: myPositionData } = useGetMyLadderPosition(
+    { ladder_id: ladderId } as any,
+    { query: { enabled: !!ladderId && !!player } } as any,
+  );
+  const hasActiveChallenge = !!(myPositionData as any)?.hasActiveChallenge;
 
   const myTeamInLadder = useMemo(() => {
     if (!season || !myTeams) return undefined;
@@ -260,7 +265,7 @@ export default function Leaderboard() {
                           <span className="text-red-500">{standing.losses}L</span>
                         </div>
                       </div>
-                      {showChallenge && (
+                      {showChallenge && !hasActiveChallenge && (
                         <div className="mt-2 pl-12">
                           <Button
                             size="sm"
@@ -284,6 +289,11 @@ export default function Leaderboard() {
         <p className="text-center text-xs text-muted-foreground mt-6">
           Challenge teams 1 to 3 spots above you to climb the ladder. Win to take their place.
         </p>
+        {hasActiveChallenge && myTeamInLadder && (
+          <p className="text-center text-xs text-muted-foreground mt-2">
+            You already have an active challenge. Finish it before starting another.
+          </p>
+        )}
       </div>
     </MainLayout>
   );

@@ -6,6 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Swords, Users, CheckCircle, XCircle, Calendar, ArrowRight, MapPin, Clock, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -359,15 +370,54 @@ function ChallengeDetailContent() {
               <Button onClick={handleAccept} disabled={acceptChallenge.isPending} data-testid="btn-accept">
                 <CheckCircle className="w-4 h-4 mr-1" /> Accept Challenge
               </Button>
-              <Button variant="outline" onClick={handleDecline} disabled={declineChallenge.isPending} data-testid="btn-decline">
-                <XCircle className="w-4 h-4 mr-1" /> Decline
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" disabled={declineChallenge.isPending} data-testid="btn-decline">
+                    <XCircle className="w-4 h-4 mr-1" /> Decline
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Decline this challenge?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      The challenger will be notified that you've declined. This can't be undone — they'd have to
+                      send a new challenge if you change your mind.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="btn-decline-cancel">Keep challenge</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDecline} data-testid="btn-decline-confirm">
+                      Yes, decline
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
-          {["pending", "accepted", "scheduling"].includes(c.status) && (isChallenger || isChallenged) && (
-            <Button variant="destructive" size="sm" onClick={handleCancel} disabled={cancelChallenge.isPending}>
-              Cancel Challenge
-            </Button>
+          {["pending", "accepted", "scheduling", "scheduled"].includes(c.status) && (isChallenger || isChallenged) && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={cancelChallenge.isPending} data-testid="btn-cancel">
+                  Cancel Challenge
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this challenge?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {c.status === "scheduled"
+                      ? "A match has already been booked. Cancelling will notify the other team and remove the booking."
+                      : "The other team will be notified that the challenge has been cancelled. This can't be undone."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="btn-cancel-cancel">Keep challenge</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCancel} data-testid="btn-cancel-confirm">
+                    Yes, cancel
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </div>
