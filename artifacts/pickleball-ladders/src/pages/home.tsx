@@ -174,14 +174,6 @@ export default function Home() {
                               <h3 className="font-semibold text-foreground truncate flex items-center gap-2 flex-wrap">
                                 {l.name}
                                 <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground">{catLabel[cat]}</span>
-                                {l.activeSeason && (() => {
-                                  const c = signupCutoff(l.activeSeason.endDate);
-                                  return c ? (
-                                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700" title={`Signup closes ${c.toLocaleDateString()}`}>
-                                      Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                                    </span>
-                                  ) : null;
-                                })()}
                               </h3>
                               <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                                 {(l.city || l.state) && (
@@ -305,14 +297,6 @@ export default function Home() {
                           <h3 className="font-semibold text-foreground truncate flex items-center gap-2 flex-wrap">
                             {l.name}
                             <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-muted text-muted-foreground">{catLabel[cat]}</span>
-                            {l.activeSeason && (() => {
-                              const c = signupCutoff(l.activeSeason.endDate);
-                              return c ? (
-                                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-500/10 text-green-700" title={`Signup closes ${c.toLocaleDateString()}`}>
-                                  Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                                </span>
-                              ) : null;
-                            })()}
                           </h3>
                           <p className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
                             {(l.city || l.state) && (

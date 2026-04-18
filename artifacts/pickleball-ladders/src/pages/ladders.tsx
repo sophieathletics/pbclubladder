@@ -184,15 +184,6 @@ export default function Ladders() {
                             <Calendar className="w-3.5 h-3.5" />
                             {ladder.activeSeason.name}
                           </span>
-                          {(() => {
-                            const c = new Date(ladder.activeSeason.endDate);
-                            c.setUTCDate(c.getUTCDate() - 30);
-                            return (
-                              <span className="inline-flex items-center gap-1 text-green-700 font-medium" title={`Signup closes ${c.toLocaleDateString()}`}>
-                                Signup ends {c.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                              </span>
-                            );
-                          })()}
                         </>
                       ) : (
                         <span className="text-amber-600">No active season</span>
