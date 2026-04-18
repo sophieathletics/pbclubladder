@@ -37,7 +37,12 @@ async function enrichInvitation(inv: any) {
 router.get("/invitations", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
   const sent = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.inviterId, player.id));
-  const received = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.inviteeId, player.id));
+  const received = await db.select().from(teamInvitationsTable).where(
+    or(
+      eq(teamInvitationsTable.inviteeId, player.id),
+      eq(teamInvitationsTable.inviteeEmail, player.email.toLowerCase()),
+    )
+  );
   res.json({
     sent: await Promise.all(sent.map(enrichInvitation)),
     received: await Promise.all(received.map(enrichInvitation)),
@@ -186,13 +191,23 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   const [inv] = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.id, id)).limit(1);
-  if (!inv || inv.inviteeId !== player.id) {
+  const playerEmail = player.email?.toLowerCase();
+  const matchesByEmail = !inv?.inviteeId && inv?.inviteeEmail && inv.inviteeEmail.toLowerCase() === playerEmail;
+  if (!inv || (inv.inviteeId !== player.id && !matchesByEmail)) {
     res.status(404).json({ error: "Invitation not found" });
     return;
   }
   if (inv.status !== "pending") {
     res.status(400).json({ error: "Invitation is no longer pending" });
     return;
+  }
+
+  // Back-fill inviteeId so the row matches this player going forward
+  if (!inv.inviteeId) {
+    await db.update(teamInvitationsTable)
+      .set({ inviteeId: player.id })
+      .where(eq(teamInvitationsTable.id, id));
+    inv.inviteeId = player.id;
   }
 
   // Use the invitation's season (per-ladder), and ensure it is still active
@@ -296,7 +311,9 @@ router.post("/invitations/:id/decline", requireAuth, async (req, res): Promise<v
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   const [inv] = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.id, id)).limit(1);
-  if (!inv || inv.inviteeId !== player.id) {
+  const playerEmail = player.email?.toLowerCase();
+  const matchesByEmail = !inv?.inviteeId && inv?.inviteeEmail && inv.inviteeEmail.toLowerCase() === playerEmail;
+  if (!inv || (inv.inviteeId !== player.id && !matchesByEmail)) {
     res.status(404).json({ error: "Invitation not found" });
     return;
   }
@@ -305,7 +322,9 @@ router.post("/invitations/:id/decline", requireAuth, async (req, res): Promise<v
     return;
   }
 
-  await db.update(teamInvitationsTable).set({ status: "declined" }).where(eq(teamInvitationsTable.id, id));
+  await db.update(teamInvitationsTable)
+    .set({ status: "declined", ...(inv.inviteeId ? {} : { inviteeId: player.id }) })
+    .where(eq(teamInvitationsTable.id, id));
 
   const [inviter] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviterId)).limit(1);
   if (inviter?.email) {
