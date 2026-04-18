@@ -119,9 +119,13 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Check inviter not already on a team
+  // Check inviter not already on an ACTIVE team (withdrawn/dissolved teams don't count)
   const inviterTeam = await db.select().from(teamsTable).where(
-    and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+    and(
+      eq(teamsTable.seasonId, activeSeason.id),
+      eq(teamsTable.status, "active"),
+      or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)),
+    )
   ).limit(1);
   if (inviterTeam.length > 0) {
     res.status(400).json({ error: "You are already on a team this season" });
@@ -147,10 +151,14 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // If resolved to a known player, make sure they're not already on a team
+  // If resolved to a known player, make sure they're not already on an ACTIVE team
   if (resolvedInviteeId) {
     const existingTeam = await db.select().from(teamsTable).where(
-      and(eq(teamsTable.seasonId, activeSeason.id), or(eq(teamsTable.player1Id, resolvedInviteeId), eq(teamsTable.player2Id, resolvedInviteeId)))
+      and(
+        eq(teamsTable.seasonId, activeSeason.id),
+        eq(teamsTable.status, "active"),
+        or(eq(teamsTable.player1Id, resolvedInviteeId), eq(teamsTable.player2Id, resolvedInviteeId)),
+      )
     ).limit(1);
     if (existingTeam.length > 0) {
       res.status(400).json({ error: "That player is already on a team this season" });
