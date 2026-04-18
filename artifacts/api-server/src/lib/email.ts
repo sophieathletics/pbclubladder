@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { logger } from "./logger";
 
 // Resend integration via Replit connector (connector_names=resend)
-const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
+const APP_URL = process.env.APP_URL ?? "https://pbclubladder.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@example.com";
 const CLUB_NAME = "Pickleball Club Ladder";
 
