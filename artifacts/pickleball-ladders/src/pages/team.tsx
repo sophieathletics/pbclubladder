@@ -438,9 +438,13 @@ function TeamContent() {
                         Resend
                       </Button>
                     )}
-                    <Badge variant={inv.status === "pending" ? "outline" : inv.status === "accepted" ? "default" : "secondary"}>
-                      {inv.status}
-                    </Badge>
+                    {inv.teamDissolved ? (
+                      <Badge variant="secondary">dissolved</Badge>
+                    ) : (
+                      <Badge variant={inv.status === "pending" ? "outline" : inv.status === "accepted" ? "default" : "secondary"}>
+                        {inv.status}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               ))}

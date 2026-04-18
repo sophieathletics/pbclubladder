@@ -26,11 +26,31 @@ async function enrichInvitation(inv: any) {
     ? await db.select().from(playersTable).where(eq(playersTable.id, inv.inviteeId)).limit(1).then(r => r[0] ?? null)
     : null;
   const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
+
+  // For accepted invitations, surface whether the resulting team is still active
+  // so the UI can show "dissolved" instead of a stale "accepted" badge.
+  let teamDissolved = false;
+  if (inv.status === "accepted" && inv.inviteeId) {
+    const [team] = await db.select().from(teamsTable).where(
+      and(
+        eq(teamsTable.seasonId, inv.seasonId),
+        or(
+          and(eq(teamsTable.player1Id, inv.inviterId), eq(teamsTable.player2Id, inv.inviteeId)),
+          and(eq(teamsTable.player1Id, inv.inviteeId), eq(teamsTable.player2Id, inv.inviterId)),
+        ),
+      )
+    ).limit(1);
+    if (!team || team.status === "withdrawn" || team.withdrawnAt) {
+      teamDissolved = true;
+    }
+  }
+
   return {
     ...inv,
     inviter: inviter ? sanitizePlayer(inviter) : null,
     invitee: invitee ? sanitizePlayer(invitee) : null,
     season: season ?? null,
+    teamDissolved,
   };
 }
 
