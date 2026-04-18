@@ -959,6 +959,44 @@ export const GetTeamMatchesResponseItem = zod
 export const GetTeamMatchesResponse = zod.array(GetTeamMatchesResponseItem);
 
 /**
+ * @summary Player self-withdraws from their team (dissolves the team)
+ */
+export const WithdrawTeamParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const WithdrawTeamResponse = zod.object({
+  ok: zod.boolean().optional(),
+  refundedAmountCents: zod.number().nullish(),
+  refundIssued: zod.boolean().optional(),
+  partnerRefundedAmountCents: zod.number().nullish(),
+});
+
+/**
+ * @summary List all teams across the system
+ */
+export const ListAllTeamsAdminResponseItem = zod.object({}).passthrough();
+export const ListAllTeamsAdminResponse = zod.array(
+  ListAllTeamsAdminResponseItem,
+);
+
+/**
+ * @summary Admin removes a team, optionally refunding both players
+ */
+export const AdminRemoveTeamParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const AdminRemoveTeamBody = zod.object({
+  refund: zod.boolean().optional(),
+});
+
+export const AdminRemoveTeamResponse = zod.object({
+  ok: zod.boolean().optional(),
+  refundIssued: zod.boolean().optional(),
+});
+
+/**
  * @summary Update team status (admin only)
  */
 export const UpdateTeamStatusParams = zod.object({

@@ -1,11 +1,12 @@
 import { Router, type IRouter } from "express";
 import { db, challengesTable, matchResultsTable, matchesTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, inactivityDropsTable } from "@workspace/db";
-import { eq, and, sql, lt, isNull, or, asc } from "drizzle-orm";
+import { eq, and, sql, lt, isNull, or, asc, ne } from "drizzle-orm";
 import { requireCronSecret } from "../lib/auth";
 import { applyMatchResult } from "../lib/ladder";
-import { sendScoreAutoConfirmedEmail, sendInactivityDropEmail, sendChallengeExpiredEmail } from "../lib/email";
+import { sendScoreAutoConfirmedEmail, sendInactivityDropEmail, sendChallengeExpiredEmail, sendPaymentReminderEmail, sendTeamAutoDissolvedEmail } from "../lib/email";
 import { notifyPlayers } from "../lib/notifications";
 import { logger } from "../lib/logger";
+import { refundPlayer } from "./payments";
 
 const router: IRouter = Router();
 
@@ -155,6 +156,89 @@ router.post("/cron/expire-challenges", requireCronSecret, async (_req, res): Pro
     }
 
     details.push(`Challenge ${challenge.id} expired`);
+  }
+
+  res.json({ processed: details.length, details });
+});
+
+// Auto-dissolve unpaid teams after 5 days. Sends reminder emails on day 2 and day 4.
+router.post("/cron/auto-dissolve-unpaid", requireCronSecret, async (_req, res): Promise<void> => {
+  const now = Date.now();
+  const day2Cutoff = new Date(now - 2 * 24 * 60 * 60 * 1000);
+  const day4Cutoff = new Date(now - 4 * 24 * 60 * 60 * 1000);
+  const day5Cutoff = new Date(now - 5 * 24 * 60 * 60 * 1000);
+
+  // Candidates: unpaid teams not yet withdrawn
+  const candidates = await db.select().from(teamsTable).where(
+    and(
+      eq(teamsTable.paymentStatus, "unpaid"),
+      isNull(teamsTable.withdrawnAt),
+    )
+  );
+
+  const details: string[] = [];
+
+  for (const team of candidates) {
+    const createdAt = new Date(team.createdAt);
+    const [p1] = await db.select().from(playersTable).where(eq(playersTable.id, team.player1Id)).limit(1);
+    const [p2] = await db.select().from(playersTable).where(eq(playersTable.id, team.player2Id)).limit(1);
+    const emails = [p1?.email, p2?.email].filter(Boolean) as string[];
+    const playerIds = [p1?.id, p2?.id].filter(Boolean) as string[];
+
+    if (createdAt <= day5Cutoff) {
+      // Past 5 days — auto-dissolve. Compare-and-set claim on withdrawnAt prevents concurrent
+      // cron runs from double-processing.
+      const claimed = await db.update(teamsTable).set({
+        status: "withdrawn",
+        withdrawnAt: new Date(),
+        withdrawnReason: "auto_dissolve",
+      }).where(and(
+        eq(teamsTable.id, team.id),
+        isNull(teamsTable.withdrawnAt),
+        eq(teamsTable.paymentStatus, "unpaid"),
+      )).returning({ id: teamsTable.id });
+      if (claimed.length === 0) {
+        details.push(`Team ${team.id} auto-dissolve skipped (already processed)`);
+        continue;
+      }
+      await db.delete(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, team.id));
+      const r1 = await refundPlayer(team.id, 1, true);
+      const r2 = await refundPlayer(team.id, 2, true);
+      if (emails.length > 0) sendTeamAutoDissolvedEmail(emails, team.teamName);
+      if (playerIds.length > 0) {
+        notifyPlayers(playerIds, "team_auto_dissolved", `Your team "${team.teamName}" was dissolved (entry fee not paid in time).`, "/team");
+      }
+      details.push(`Team ${team.id} auto-dissolved; r1=${r1.amountCents}c r2=${r2.amountCents}c`);
+    } else if (createdAt <= day4Cutoff && !team.paymentReminderDay4SentAt) {
+      // Compare-and-set so two concurrent crons can't both send.
+      const claimed = await db.update(teamsTable)
+        .set({ paymentReminderDay4SentAt: new Date() })
+        .where(and(eq(teamsTable.id, team.id), isNull(teamsTable.paymentReminderDay4SentAt)))
+        .returning({ id: teamsTable.id });
+      if (claimed.length === 0) {
+        details.push(`Team ${team.id} day-4 reminder skipped (already sent)`);
+        continue;
+      }
+      if (emails.length > 0) sendPaymentReminderEmail(emails, team.teamName, 1, team.id);
+      if (playerIds.length > 0) {
+        notifyPlayers(playerIds, "payment_reminder", `Final reminder: pay your entry fee for "${team.teamName}" or it will be dissolved tomorrow.`, "/team");
+      }
+      details.push(`Team ${team.id} day-4 reminder sent`);
+    } else if (createdAt <= day2Cutoff && !team.paymentReminderDay2SentAt) {
+      const claimed = await db.update(teamsTable)
+        .set({ paymentReminderDay2SentAt: new Date() })
+        .where(and(eq(teamsTable.id, team.id), isNull(teamsTable.paymentReminderDay2SentAt)))
+        .returning({ id: teamsTable.id });
+      if (claimed.length === 0) {
+        details.push(`Team ${team.id} day-2 reminder skipped (already sent)`);
+        continue;
+      }
+      if (emails.length > 0) sendPaymentReminderEmail(emails, team.teamName, 3, team.id);
+      if (playerIds.length > 0) {
+        notifyPlayers(playerIds, "payment_reminder", `Reminder: please pay your entry fee for "${team.teamName}". 3 days left.`, "/team");
+      }
+      details.push(`Team ${team.id} day-2 reminder sent`);
+    }
   }
 
   res.json({ processed: details.length, details });

@@ -3,6 +3,7 @@ import { Link, useSearch } from "wouter";
 import {
   useGetCurrentPlayer,
   useGetMyTeams,
+  useWithdrawTeam,
   useListInvitations,
   useListPlayers,
   useCreateInvitation,
@@ -16,6 +17,17 @@ import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -442,6 +454,29 @@ function TeamContent() {
 
 function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
   const { data: me } = useGetCurrentPlayer();
+  const { toast: cardToast } = useToast();
+  const cardQc = useQueryClient();
+  const withdrawMut = useWithdrawTeam({
+    mutation: {
+      onSuccess: (data: any) => {
+        const cents = data?.refundedAmountCents ?? 0;
+        cardToast({
+          title: "Team dissolved",
+          description: data?.refundIssued
+            ? `You've been refunded $${(cents / 100).toFixed(2)}.`
+            : "Your team has been dissolved. No refund was issued (outside the 48-hour window or no payment on file).",
+        });
+        cardQc.invalidateQueries();
+      },
+      onError: (err: any) => {
+        cardToast({
+          title: "Could not leave team",
+          description: err?.response?.data?.error ?? "Please try again or contact support.",
+          variant: "destructive",
+        });
+      },
+    },
+  });
   const ladder = useMemo(
     () => ladders.find((x: any) => x.id === team.season?.ladderId),
     [ladders, team.season?.ladderId]
@@ -560,6 +595,50 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
                 </Link>
               </Button>
             </div>
+          </div>
+        )}
+        {(amIPlayer1 || amIPlayer2) && (
+          <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 text-xs text-muted-foreground">
+              Need to step away? Leaving the team dissolves it for both players. Refunds are issued automatically if it's been less than 48 hours since you paid.
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive border-destructive/40 hover:bg-destructive/5"
+                  data-testid={`btn-leave-team-${team.id}`}
+                >
+                  Leave Team
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Leave team "{team.teamName}"?</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>This dissolves the team for both you and {partnerName ?? "your partner"}. You can join a new team afterward.</p>
+                      {feeRequired && iPaid && (
+                        <p>If it's been less than 48 hours since you paid, your {feeDollars ? `$${feeDollars}` : ""} entry fee will be refunded automatically. After 48 hours, refunds require admin approval.</p>
+                      )}
+                      <p className="text-amber-700 font-medium">You can't leave if your team has played a completed match or has an open challenge — finish those first.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => withdrawMut.mutate({ id: team.id })}
+                    disabled={withdrawMut.isPending}
+                    data-testid={`btn-confirm-leave-${team.id}`}
+                  >
+                    {withdrawMut.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                    Yes, leave team
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </CardContent>

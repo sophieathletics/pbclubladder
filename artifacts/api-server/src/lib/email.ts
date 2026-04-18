@@ -237,3 +237,72 @@ export async function sendChallengeExpiredEmail(to: string | string[], challenge
     html: baseTemplate(`<p>${challengedTeam} did not respond within 48 hours. You are free to send a new challenge.</p>`, "Challenge a Team", `${APP_URL}/challenge`),
   });
 }
+
+export async function sendPaymentReminderEmail(to: string | string[], teamName: string, daysLeft: number, teamId: string): Promise<void> {
+  sendEmail({
+    to,
+    subject: `Reminder: pay your entry fee for "${teamName}"`,
+    html: baseTemplate(
+      `<p>Your team "${teamName}" still has an unpaid entry fee. Both teammates must pay within <strong>${daysLeft} day${daysLeft === 1 ? "" : "s"}</strong> or the team will be auto-dissolved.</p>`,
+      "Pay Now",
+      `${APP_URL}/team`
+    ),
+  });
+}
+
+export async function sendTeamAutoDissolvedEmail(to: string | string[], teamName: string): Promise<void> {
+  sendEmail({
+    to,
+    subject: `Team "${teamName}" was dissolved (unpaid entry fee)`,
+    html: baseTemplate(
+      `<p>Your team "${teamName}" was dissolved because the entry fee was not paid within 5 days of the team being formed. If anyone had paid, that payment has been refunded to their card. You're welcome to form a new team any time.</p>`,
+      "Back to App",
+      `${APP_URL}/`
+    ),
+  });
+}
+
+export async function sendTeamWithdrawnEmail(to: string | string[], teamName: string, withdrawerName: string, refundAmountCents: number | null): Promise<void> {
+  const refundLine = refundAmountCents != null && refundAmountCents > 0
+    ? `<p>Your entry fee of $${(refundAmountCents / 100).toFixed(2)} has been refunded to your card and should appear in 5–10 business days.</p>`
+    : "";
+  sendEmail({
+    to,
+    subject: `Your teammate withdrew — team "${teamName}" dissolved`,
+    html: baseTemplate(
+      `<p>${withdrawerName} has withdrawn from your team "${teamName}", so the team has been dissolved.</p>${refundLine}<p>You're welcome to form a new team any time.</p>`,
+      "Back to App",
+      `${APP_URL}/`
+    ),
+  });
+}
+
+export async function sendWithdrawalConfirmationEmail(to: string, teamName: string, refundAmountCents: number | null): Promise<void> {
+  const refundLine = refundAmountCents != null && refundAmountCents > 0
+    ? `<p>Your entry fee of $${(refundAmountCents / 100).toFixed(2)} has been refunded to your card and should appear in 5–10 business days.</p>`
+    : "";
+  sendEmail({
+    to,
+    subject: `You withdrew from team "${teamName}"`,
+    html: baseTemplate(
+      `<p>You've successfully withdrawn from team "${teamName}". The team has been dissolved.</p>${refundLine}`,
+      "Back to App",
+      `${APP_URL}/`
+    ),
+  });
+}
+
+export async function sendAdminRemovedTeamEmail(to: string | string[], teamName: string, refundAmountCents: number | null): Promise<void> {
+  const refundLine = refundAmountCents != null && refundAmountCents > 0
+    ? `<p>Your entry fee of $${(refundAmountCents / 100).toFixed(2)} has been refunded to your card and should appear in 5–10 business days.</p>`
+    : "";
+  sendEmail({
+    to,
+    subject: `Your team "${teamName}" was removed by an administrator`,
+    html: baseTemplate(
+      `<p>An administrator has removed your team "${teamName}" from the ladder.</p>${refundLine}<p>If you have questions, please contact the ladder organizer.</p>`,
+      "Back to App",
+      `${APP_URL}/`
+    ),
+  });
+}

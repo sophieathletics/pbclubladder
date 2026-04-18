@@ -1,10 +1,122 @@
 import { Router, type IRouter } from "express";
-import { db, teamsTable, playersTable, ladderStandingsTable, seasonsTable, laddersTable, matchesTable, matchScoresTable, matchResultsTable, challengesTable } from "@workspace/db";
-import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
+import express from "express";
+import { db, teamsTable, playersTable, ladderStandingsTable, seasonsTable, laddersTable, matchesTable, matchScoresTable, matchResultsTable, challengesTable, teamInvitationsTable } from "@workspace/db";
+import { eq, and, or, ilike, desc, asc, inArray, isNull, sql } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
+import { refundPlayer } from "./payments";
+import { sendTeamWithdrawnEmail, sendWithdrawalConfirmationEmail } from "../lib/email";
+import { notifyPlayers } from "../lib/notifications";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+// Returns blocking reason if team has played matches or has open challenges; null if safe to dissolve.
+async function checkDissolveBlockers(teamId: string): Promise<string | null> {
+  // Any played (completed) matches involving this team?
+  const challenges = await db.select().from(challengesTable).where(
+    or(eq(challengesTable.challengerTeamId, teamId), eq(challengesTable.challengedTeamId, teamId))
+  );
+  if (challenges.length > 0) {
+    const challengeIds = challenges.map(c => c.id);
+    const completed = await db.select().from(matchesTable).where(
+      and(eq(matchesTable.status, "completed"), inArray(matchesTable.challengeId, challengeIds))
+    );
+    if (completed.length > 0) {
+      return "Cannot withdraw — your team has already played a match in this ladder.";
+    }
+    // Any open (non-cancelled, non-completed) challenges?
+    // Mirror the active set used in routes/challenges.ts to keep semantics consistent.
+    const openStatuses = ["pending", "accepted", "scheduling", "scheduled"];
+    const openCount = challenges.filter(c => openStatuses.includes(c.status)).length;
+    if (openCount > 0) {
+      return "Cannot withdraw — you have an active challenge. Cancel or finish it first.";
+    }
+  }
+  return null;
+}
+
+router.post("/teams/:id/withdraw", requireAuth, express.json(), async (req, res): Promise<void> => {
+  const player = (req as any).player;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  // Atomically lock the team row, validate state, mark withdrawn, and clear standings.
+  // Refunds are issued AFTER the row is claimed so concurrent withdraw attempts can't double-process.
+  let team: any;
+  let claimError: { code: number; msg: string } | null = null;
+  try {
+    team = await db.transaction(async (tx) => {
+      const locked = await tx.execute(
+        sql`SELECT * FROM ${teamsTable} WHERE id = ${id} FOR UPDATE`
+      );
+      const row = (locked as any).rows?.[0] ?? (Array.isArray(locked) ? locked[0] : null);
+      if (!row) { claimError = { code: 404, msg: "Team not found" }; return null; }
+      if (row.player1_id !== player.id && row.player2_id !== player.id) {
+        claimError = { code: 403, msg: "You are not on this team" }; return null;
+      }
+      if (row.withdrawn_at) {
+        claimError = { code: 400, msg: "This team has already been withdrawn" }; return null;
+      }
+      const blocker = await checkDissolveBlockers(row.id);
+      if (blocker) { claimError = { code: 400, msg: blocker }; return null; }
+
+      await tx.update(teamsTable).set({
+        status: "withdrawn",
+        withdrawnAt: new Date(),
+        withdrawnReason: "self",
+      }).where(eq(teamsTable.id, row.id));
+      await tx.delete(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, row.id));
+
+      return {
+        id: row.id,
+        player1Id: row.player1_id,
+        player2Id: row.player2_id,
+        teamName: row.team_name,
+      };
+    });
+  } catch (err: any) {
+    logger.error({ err, teamId: id }, "Withdraw transaction failed");
+    res.status(500).json({ error: "Failed to withdraw" });
+    return;
+  }
+  if (claimError) {
+    res.status(claimError.code).json({ error: claimError.msg });
+    return;
+  }
+  if (!team) {
+    res.status(500).json({ error: "Withdraw failed" });
+    return;
+  }
+
+  // Refund both players (eligible only when within 48h of paying). After commit so a Stripe
+  // failure doesn't block the dissolution; refundPlayer is itself idempotent via its own gating.
+  const r1 = await refundPlayer(team.id, 1, false);
+  const r2 = await refundPlayer(team.id, 2, false);
+
+  // Notify partner
+  const partnerId = team.player1Id === player.id ? team.player2Id : team.player1Id;
+  const [partner] = await db.select().from(playersTable).where(eq(playersTable.id, partnerId)).limit(1);
+  const partnerRefund = team.player1Id === partnerId ? r1.amountCents : r2.amountCents;
+  const myRefund = team.player1Id === player.id ? r1.amountCents : r2.amountCents;
+  if (partner?.email) {
+    sendTeamWithdrawnEmail(partner.email, team.teamName, player.fullName, partnerRefund);
+  }
+  if (player.email) {
+    sendWithdrawalConfirmationEmail(player.email, team.teamName, myRefund);
+  }
+  if (partnerId) {
+    notifyPlayers([partnerId], "team_withdrawn", `${player.fullName} withdrew from "${team.teamName}". The team has been dissolved.`, "/team");
+  }
+
+  logger.info({ teamId: team.id, playerId: player.id, r1, r2 }, "Team withdrawn (self)");
+
+  res.json({
+    ok: true,
+    refundedAmountCents: myRefund,
+    refundIssued: (myRefund ?? 0) > 0,
+    partnerRefundedAmountCents: partnerRefund,
+  });
+});
 
 async function enrichTeam(team: any) {
   const [p1, p2] = await Promise.all([
@@ -79,7 +191,11 @@ router.get("/teams/my-teams", requireAuth, async (req, res): Promise<void> => {
   const results: any[] = [];
   for (const s of activeSeasons) {
     const [team] = await db.select().from(teamsTable).where(
-      and(eq(teamsTable.seasonId, s.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+      and(
+        eq(teamsTable.seasonId, s.id),
+        or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)),
+        isNull(teamsTable.withdrawnAt),
+      )
     ).limit(1);
     if (team) results.push(await enrichTeam(team));
   }

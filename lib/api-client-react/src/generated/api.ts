@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminRemoveTeam200,
+  AdminRemoveTeamBody,
   AdminStats,
   AuthResponse,
   AvailabilityResponse,
@@ -45,6 +47,7 @@ import type {
   LadderStandingWithTeam,
   LadderWithSeason,
   ListAdminPlayersParams,
+  ListAllTeamsAdmin200Item,
   ListChallengesParams,
   ListDisputesParams,
   ListLaddersParams,
@@ -72,6 +75,7 @@ import type {
   UpdatePositionBody,
   UpdateProfileBody,
   UpdateTeamStatusBody,
+  WithdrawTeam200,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -2117,6 +2121,252 @@ export function useGetTeamMatches<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Player self-withdraws from their team (dissolves the team)
+ */
+export const getWithdrawTeamUrl = (id: string) => {
+  return `/api/teams/${id}/withdraw`;
+};
+
+export const withdrawTeam = async (
+  id: string,
+  options?: RequestInit,
+): Promise<WithdrawTeam200> => {
+  return customFetch<WithdrawTeam200>(getWithdrawTeamUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWithdrawTeamMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawTeam>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof withdrawTeam>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["withdrawTeam"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof withdrawTeam>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return withdrawTeam(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WithdrawTeamMutationResult = NonNullable<
+  Awaited<ReturnType<typeof withdrawTeam>>
+>;
+
+export type WithdrawTeamMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Player self-withdraws from their team (dissolves the team)
+ */
+export const useWithdrawTeam = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof withdrawTeam>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof withdrawTeam>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getWithdrawTeamMutationOptions(options));
+};
+
+/**
+ * @summary List all teams across the system
+ */
+export const getListAllTeamsAdminUrl = () => {
+  return `/api/admin/teams`;
+};
+
+export const listAllTeamsAdmin = async (
+  options?: RequestInit,
+): Promise<ListAllTeamsAdmin200Item[]> => {
+  return customFetch<ListAllTeamsAdmin200Item[]>(getListAllTeamsAdminUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAllTeamsAdminQueryKey = () => {
+  return [`/api/admin/teams`] as const;
+};
+
+export const getListAllTeamsAdminQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAllTeamsAdmin>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAllTeamsAdmin>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAllTeamsAdminQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAllTeamsAdmin>>
+  > = ({ signal }) => listAllTeamsAdmin({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAllTeamsAdmin>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAllTeamsAdminQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAllTeamsAdmin>>
+>;
+export type ListAllTeamsAdminQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all teams across the system
+ */
+
+export function useListAllTeamsAdmin<
+  TData = Awaited<ReturnType<typeof listAllTeamsAdmin>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAllTeamsAdmin>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAllTeamsAdminQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Admin removes a team, optionally refunding both players
+ */
+export const getAdminRemoveTeamUrl = (id: string) => {
+  return `/api/admin/teams/${id}/remove`;
+};
+
+export const adminRemoveTeam = async (
+  id: string,
+  adminRemoveTeamBody?: AdminRemoveTeamBody,
+  options?: RequestInit,
+): Promise<AdminRemoveTeam200> => {
+  return customFetch<AdminRemoveTeam200>(getAdminRemoveTeamUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminRemoveTeamBody),
+  });
+};
+
+export const getAdminRemoveTeamMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRemoveTeam>>,
+    TError,
+    { id: string; data: BodyType<AdminRemoveTeamBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adminRemoveTeam>>,
+  TError,
+  { id: string; data: BodyType<AdminRemoveTeamBody> },
+  TContext
+> => {
+  const mutationKey = ["adminRemoveTeam"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adminRemoveTeam>>,
+    { id: string; data: BodyType<AdminRemoveTeamBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return adminRemoveTeam(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdminRemoveTeamMutationResult = NonNullable<
+  Awaited<ReturnType<typeof adminRemoveTeam>>
+>;
+export type AdminRemoveTeamMutationBody = BodyType<AdminRemoveTeamBody>;
+export type AdminRemoveTeamMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Admin removes a team, optionally refunding both players
+ */
+export const useAdminRemoveTeam = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adminRemoveTeam>>,
+    TError,
+    { id: string; data: BodyType<AdminRemoveTeamBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof adminRemoveTeam>>,
+  TError,
+  { id: string; data: BodyType<AdminRemoveTeamBody> },
+  TContext
+> => {
+  return useMutation(getAdminRemoveTeamMutationOptions(options));
+};
 
 /**
  * @summary Update team status (admin only)

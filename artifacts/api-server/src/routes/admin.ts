@@ -1,12 +1,15 @@
 import { Router, type IRouter } from "express";
+import express from "express";
 import { db, playersTable, teamsTable, matchResultsTable, matchesTable, matchScoresTable, seasonsTable, ladderStandingsTable, challengesTable } from "@workspace/db";
 import { eq, and, sql, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
 import { applyMatchResult } from "../lib/ladder";
-import { sendDisputeResolvedEmail } from "../lib/email";
+import { sendDisputeResolvedEmail, sendAdminRemovedTeamEmail } from "../lib/email";
 import { notifyPlayers } from "../lib/notifications";
 import { enrichMatch } from "./matches";
+import { refundPlayer } from "./payments";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -183,6 +186,72 @@ router.post("/admin/disputes/:id/resolve", requireAdmin, async (req, res): Promi
 
   const enriched = await enrichMatch(match);
   res.json(enriched);
+});
+
+router.get("/admin/teams", requireAdmin, async (_req, res): Promise<void> => {
+  const all = await db.select().from(teamsTable);
+  const playerIds = Array.from(new Set(all.flatMap(t => [t.player1Id, t.player2Id].filter(Boolean) as string[])));
+  const seasonIds = Array.from(new Set(all.map(t => t.seasonId)));
+  const players = playerIds.length > 0
+    ? await db.select().from(playersTable).where(or(...playerIds.map(id => eq(playersTable.id, id))))
+    : [];
+  const seasons = seasonIds.length > 0
+    ? await db.select().from(seasonsTable).where(or(...seasonIds.map(id => eq(seasonsTable.id, id))))
+    : [];
+  const playerMap = new Map(players.map(p => [p.id, sanitizePlayer(p)]));
+  const seasonMap = new Map(seasons.map(s => [s.id, s]));
+  const enriched = all.map(t => ({
+    ...t,
+    player1: t.player1Id ? playerMap.get(t.player1Id) ?? null : null,
+    player2: t.player2Id ? playerMap.get(t.player2Id) ?? null : null,
+    season: seasonMap.get(t.seasonId) ?? null,
+  }));
+  enriched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  res.json(enriched);
+});
+
+router.post("/admin/teams/:id/remove", requireAdmin, express.json(), async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const refundFlag = (req.body?.refund ?? false) === true;
+
+  const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, id)).limit(1);
+  if (!team) {
+    res.status(404).json({ error: "Team not found" });
+    return;
+  }
+  if (team.withdrawnAt) {
+    res.status(400).json({ error: "Team already removed" });
+    return;
+  }
+
+  let r1 = { amountCents: 0, refunded: false };
+  let r2 = { amountCents: 0, refunded: false };
+  if (refundFlag) {
+    r1 = await refundPlayer(team.id, 1, true);
+    r2 = await refundPlayer(team.id, 2, true);
+  }
+
+  await db.update(teamsTable).set({
+    status: "withdrawn",
+    withdrawnAt: new Date(),
+    withdrawnReason: "admin",
+  }).where(eq(teamsTable.id, team.id));
+  await db.delete(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, team.id));
+
+  // Notify both players
+  const [p1] = await db.select().from(playersTable).where(eq(playersTable.id, team.player1Id)).limit(1);
+  const [p2] = await db.select().from(playersTable).where(eq(playersTable.id, team.player2Id)).limit(1);
+  if (p1?.email) sendAdminRemovedTeamEmail(p1.email, team.teamName, refundFlag ? r1.amountCents : null);
+  if (p2?.email) sendAdminRemovedTeamEmail(p2.email, team.teamName, refundFlag ? r2.amountCents : null);
+  notifyPlayers(
+    [team.player1Id, team.player2Id].filter(Boolean) as string[],
+    "team_removed_by_admin",
+    `Your team "${team.teamName}" was removed by an administrator.`,
+    "/team"
+  );
+
+  logger.info({ teamId: team.id, refundFlag, r1, r2 }, "Team removed by admin");
+  res.json({ ok: true, refundIssued: refundFlag, refund1: r1, refund2: r2 });
 });
 
 export default router;

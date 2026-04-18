@@ -100,5 +100,14 @@ All routes under `/api/`:
 - `/api/availability/*` — get, submit
 - `/api/matches/*` — list, get, submit/confirm/dispute score
 - `/api/notifications/*` — list, mark read, mark all read
-- `/api/admin/*` — stats, players, deactivate player, disputes, resolve dispute
-- `/api/cron/*` — inactivity-drop, auto-confirm, expire-challenges (protected by x-cron-secret)
+- `/api/admin/*` — stats, players, deactivate player, disputes, resolve dispute, list all teams, remove team (with optional refund)
+- `/api/teams/:id/withdraw` — player self-withdraws from team (auto-refund within 48h of paying)
+- `/api/cron/*` — inactivity-drop, auto-confirm, expire-challenges, auto-dissolve-unpaid (day-2 + day-4 reminder emails, dissolve at day 5) (all protected by x-cron-secret)
+
+## Team withdrawal & refund model (Option A)
+
+- A team exists immediately on invitation accept. Both players must pay before the team can challenge.
+- 48-hour self-refund window: a player who paid less than 48 hours ago gets an automatic 100% refund when they leave the team. After 48 hours, they can still leave but no auto-refund (admin-only).
+- Auto-dissolve: unpaid teams receive reminder emails on day 2 and day 4, and are auto-dissolved at day 5 (cron `/api/cron/auto-dissolve-unpaid`). Any partial payments are refunded.
+- Admin Remove Team can force-remove any team with an optional refund flag.
+- All dissolve flows use a row-locked transaction; refunds use a compare-and-set claim plus a deterministic Stripe idempotency key (`refund_<teamId>_p<slot>_<intentId>`) to prevent double-processing.

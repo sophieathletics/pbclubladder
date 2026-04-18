@@ -1,12 +1,87 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import express from "express";
 import { db, teamsTable, seasonsTable, laddersTable, playersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { getStripe, getWebhookSecret, isStripeConfigured } from "../lib/stripe";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
+
+// Refund a specific player's payment for a team. Returns the refund amount in cents (or 0 if nothing to refund).
+// `force=true` bypasses the 48-hour window (admin override).
+export async function refundPlayer(teamId: string, playerSlot: 1 | 2, force: boolean): Promise<{ refunded: boolean; amountCents: number; refundId: string | null; reason?: string }> {
+  const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, teamId)).limit(1);
+  if (!team) return { refunded: false, amountCents: 0, refundId: null, reason: "Team not found" };
+
+  const paidAt = playerSlot === 1 ? team.player1PaidAt : team.player2PaidAt;
+  const intentId = playerSlot === 1 ? team.player1StripePaymentIntentId : team.player2StripePaymentIntentId;
+  const alreadyRefundedAt = playerSlot === 1 ? team.player1RefundedAt : team.player2RefundedAt;
+
+  if (alreadyRefundedAt) return { refunded: false, amountCents: 0, refundId: null, reason: "Already refunded" };
+  if (!paidAt || !intentId) return { refunded: false, amountCents: 0, refundId: null, reason: "Player has not paid" };
+
+  if (!force) {
+    const ageMs = Date.now() - new Date(paidAt).getTime();
+    if (ageMs > 48 * 60 * 60 * 1000) {
+      return { refunded: false, amountCents: 0, refundId: null, reason: "Outside 48-hour refund window" };
+    }
+  }
+
+  if (!isStripeConfigured()) {
+    return { refunded: false, amountCents: 0, refundId: null, reason: "Stripe not configured" };
+  }
+
+  // Compare-and-set claim: atomically mark this slot as in-progress (refundedAt non-null) BEFORE
+  // calling Stripe, so concurrent callers can't both reach the Stripe API. We use the paid-at
+  // timestamp as a sentinel (it'll be overwritten with the real refund timestamp on success).
+  const claimSentinel = new Date();
+  const claimResult = playerSlot === 1
+    ? await db.update(teamsTable)
+        .set({ player1RefundedAt: claimSentinel })
+        .where(and(eq(teamsTable.id, teamId), isNull(teamsTable.player1RefundedAt)))
+        .returning({ id: teamsTable.id })
+    : await db.update(teamsTable)
+        .set({ player2RefundedAt: claimSentinel })
+        .where(and(eq(teamsTable.id, teamId), isNull(teamsTable.player2RefundedAt)))
+        .returning({ id: teamsTable.id });
+  if (claimResult.length === 0) {
+    return { refunded: false, amountCents: 0, refundId: null, reason: "Already refunded (concurrent claim)" };
+  }
+
+  const stripe = getStripe();
+  // Deterministic idempotency key — Stripe will dedupe duplicate calls (eg. retries) for the
+  // same logical refund.
+  const idempotencyKey = `refund_${teamId}_p${playerSlot}_${intentId}`;
+  let refund;
+  try {
+    refund = await stripe.refunds.create(
+      { payment_intent: intentId },
+      { idempotencyKey }
+    );
+  } catch (err: any) {
+    // Roll back our claim so an admin/user can retry. This keeps the pre-existing semantics.
+    const rollback: any = playerSlot === 1 ? { player1RefundedAt: null } : { player2RefundedAt: null };
+    await db.update(teamsTable).set(rollback).where(eq(teamsTable.id, teamId));
+    logger.error({ err: err?.message, teamId, playerSlot, intentId }, "Stripe refund failed");
+    return { refunded: false, amountCents: 0, refundId: null, reason: `Stripe refund failed: ${err?.message ?? "unknown"}` };
+  }
+
+  const amount = refund.amount ?? 0;
+  const patch: any = {};
+  if (playerSlot === 1) {
+    patch.player1RefundedAt = new Date();
+    patch.player1RefundId = refund.id;
+    patch.player1RefundAmountCents = amount;
+  } else {
+    patch.player2RefundedAt = new Date();
+    patch.player2RefundId = refund.id;
+    patch.player2RefundAmountCents = amount;
+  }
+  await db.update(teamsTable).set(patch).where(eq(teamsTable.id, teamId));
+  logger.info({ teamId, playerSlot, refundId: refund.id, amount, idempotencyKey }, "Player refunded");
+  return { refunded: true, amountCents: amount, refundId: refund.id };
+}
 
 // Mark a specific player as paid, and if both teammates have paid, mark the team paid.
 async function markPlayerPaid(teamId: string, payerId: string, paymentIntentId: string) {

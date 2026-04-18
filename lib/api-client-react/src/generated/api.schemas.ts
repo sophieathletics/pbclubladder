@@ -560,6 +560,24 @@ export type GetTeamMatchesParams = {
   limit?: number;
 };
 
+export type WithdrawTeam200 = {
+  ok?: boolean;
+  refundedAmountCents?: number | null;
+  refundIssued?: boolean;
+  partnerRefundedAmountCents?: number | null;
+};
+
+export type ListAllTeamsAdmin200Item = { [key: string]: unknown };
+
+export type AdminRemoveTeamBody = {
+  refund?: boolean;
+};
+
+export type AdminRemoveTeam200 = {
+  ok?: boolean;
+  refundIssued?: boolean;
+};
+
 export type GetLadderParams = {
   season_id?: string;
   search?: string;

@@ -524,6 +524,75 @@ paths:
                 items:
                   $ref: "#/components/schemas/MatchWithDetails"
 
+  /teams/{id}/withdraw:
+    post:
+      operationId: withdrawTeam
+      tags: [teams]
+      summary: Player self-withdraws from their team (dissolves the team)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Withdrawal result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  refundedAmountCents: { type: integer, nullable: true }
+                  refundIssued: { type: boolean }
+                  partnerRefundedAmountCents: { type: integer, nullable: true }
+
+  /admin/teams:
+    get:
+      operationId: listAllTeamsAdmin
+      tags: [admin]
+      summary: List all teams across the system
+      responses:
+        "200":
+          description: All teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /admin/teams/{id}/remove:
+    post:
+      operationId: adminRemoveTeam
+      tags: [admin]
+      summary: Admin removes a team, optionally refunding both players
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refund: { type: boolean }
+      responses:
+        "200":
+          description: Removal result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  refundIssued: { type: boolean }
+
   /teams/{id}/status:
     patch:
       operationId: updateTeamStatus

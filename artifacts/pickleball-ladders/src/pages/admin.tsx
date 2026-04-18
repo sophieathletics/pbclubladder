@@ -4,8 +4,19 @@ import {
   useGetAdminStats, useListAdminPlayers, useListDisputes, useResolveDispute,
   useCreateSeason, useActivateSeason, useDeactivateSeason, useGetInactivityLog,
   useListLadders, useCreateLadder, useUpdateLadder, useListSeasons,
-  useDeactivatePlayer,
+  useDeactivatePlayer, useListAllTeamsAdmin, useAdminRemoveTeam,
 } from "@workspace/api-client-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,9 +180,11 @@ function AdminContent() {
             </TabsTrigger>
             <TabsTrigger value="ladders">Ladders</TabsTrigger>
             <TabsTrigger value="seasons">Seasons</TabsTrigger>
+            <TabsTrigger value="teams">Teams</TabsTrigger>
             <TabsTrigger value="players">Players</TabsTrigger>
             <TabsTrigger value="inactivity">Inactivity Log</TabsTrigger>
           </TabsList>
+          <TabsContent value="teams"><AdminTeamsPanel /></TabsContent>
 
           {/* Disputes */}
           <TabsContent value="disputes">
@@ -789,5 +802,121 @@ function DisputeCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function AdminTeamsPanel() {
+  const { data: teams } = useListAllTeamsAdmin();
+  const list: any[] = (teams as any[]) ?? [];
+  const [filter, setFilter] = useState("");
+  const filtered = list.filter(t => {
+    const q = filter.toLowerCase();
+    if (!q) return true;
+    return (
+      t.teamName?.toLowerCase().includes(q) ||
+      t.player1?.fullName?.toLowerCase().includes(q) ||
+      t.player2?.fullName?.toLowerCase().includes(q) ||
+      t.player1?.email?.toLowerCase().includes(q) ||
+      t.player2?.email?.toLowerCase().includes(q)
+    );
+  });
+  return (
+    <Card className="border-primary/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5" /> All Teams ({list.length})
+        </CardTitle>
+        <Input placeholder="Search team or player..." value={filter} onChange={e => setFilter(e.target.value)} className="mt-2 max-w-md" data-testid="input-team-filter" />
+      </CardHeader>
+      <CardContent>
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No teams match.</p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(t => (
+              <AdminTeamRow key={t.id} team={t} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AdminTeamRow({ team }: { team: any }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [refundChecked, setRefundChecked] = useState(true);
+  const removeMut = useAdminRemoveTeam({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Team removed", description: refundChecked ? "Refunds processed where applicable." : "Removed without refund." });
+        qc.invalidateQueries();
+      },
+      onError: (err: any) => {
+        toast({ title: "Failed to remove team", description: err?.response?.data?.error ?? "Try again.", variant: "destructive" });
+      },
+    },
+  });
+  const isWithdrawn = !!team.withdrawnAt;
+  return (
+    <div className="border rounded-lg p-3 flex flex-col sm:flex-row sm:items-center gap-3" data-testid={`row-team-${team.id}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold break-words">{team.teamName}</span>
+          {isWithdrawn ? (
+            <Badge variant="outline" className="text-[10px] border-red-300 text-red-700 bg-red-50">Removed ({team.withdrawnReason ?? "—"})</Badge>
+          ) : team.paymentStatus === "paid" ? (
+            <Badge variant="outline" className="text-[10px] border-green-300 text-green-700 bg-green-50">Paid</Badge>
+          ) : team.paymentStatus === "partial" ? (
+            <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">Partial</Badge>
+          ) : team.paymentStatus === "not_required" ? (
+            <Badge variant="outline" className="text-[10px]">No fee</Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">Unpaid</Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground break-words">
+          {team.player1?.fullName ?? "—"} & {team.player2?.fullName ?? "—"}
+        </p>
+        <p className="text-[11px] text-muted-foreground">
+          Season: {team.season?.name ?? "—"} · Created {new Date(team.createdAt).toLocaleDateString()}
+        </p>
+      </div>
+      {!isWithdrawn && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-destructive border-destructive/40 hover:bg-destructive/5" data-testid={`btn-admin-remove-team-${team.id}`}>
+              Remove
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove team "{team.teamName}"?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  <p>This dissolves the team and removes it from the ladder. Both players will be notified.</p>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={refundChecked} onChange={e => setRefundChecked(e.target.checked)} data-testid={`chk-refund-${team.id}`} />
+                    <span>Issue refunds to both players (where Stripe payments exist)</span>
+                  </label>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => removeMut.mutate({ id: team.id, data: { refund: refundChecked } })}
+                disabled={removeMut.isPending}
+                data-testid={`btn-confirm-admin-remove-${team.id}`}
+              >
+                {removeMut.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+                Remove team
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
   );
 }
