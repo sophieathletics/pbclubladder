@@ -22,11 +22,27 @@ export default function Leaderboard() {
     () => new Set(((myTeams as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
     [myTeams]
   );
+  const playerSex = (player as any)?.sex as string | undefined;
+  const isEligible = (cat: string | null | undefined) => {
+    const c = cat ?? "coed";
+    if (!playerSex) return true;
+    if (c === "men") return playerSex === "male";
+    if (c === "women") return playerSex === "female";
+    if (c === "mixed") return playerSex === "male" || playerSex === "female";
+    return true;
+  };
   const ladderList = useMemo(() => {
     if (!player) return allLadderList;
-    if (myLadderIds.size === 0) return allLadderList;
-    return allLadderList.filter(l => myLadderIds.has(l.id));
-  }, [allLadderList, player, myLadderIds]);
+    const base = myLadderIds.size > 0
+      ? allLadderList.filter(l => myLadderIds.has(l.id))
+      : allLadderList;
+    // Sort eligible-by-gender ladders first so the default selection matches the user.
+    return [...base].sort((a, b) => {
+      const ae = isEligible(a.category) ? 0 : 1;
+      const be = isEligible(b.category) ? 0 : 1;
+      return ae - be;
+    });
+  }, [allLadderList, player, myLadderIds, playerSex]);
 
   const [ladderId, setLadderId] = useState<string | undefined>(undefined);
 
