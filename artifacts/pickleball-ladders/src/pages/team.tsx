@@ -55,8 +55,16 @@ function TeamContent() {
   const { data: ladders } = useListLadders();
   const ladderList = (ladders as any[]) ?? [];
   const teams = (myTeams as any[]) ?? [];
+  const playerSex = (player as any)?.sex ?? null;
+  const playerCanJoinLadder = (l: any) => {
+    if (!playerSex) return false;
+    if (l.category === "men") return playerSex === "male";
+    if (l.category === "women") return playerSex === "female";
+    if (l.category === "mixed") return playerSex === "male" || playerSex === "female";
+    return true;
+  };
   const laddersWithoutTeam = ladderList.filter(
-    l => l.activeSeason && !teams.some(t => t.season?.ladderId === l.id),
+    l => l.activeSeason && !teams.some(t => t.season?.ladderId === l.id) && playerCanJoinLadder(l),
   );
 
   const search = useSearch();
