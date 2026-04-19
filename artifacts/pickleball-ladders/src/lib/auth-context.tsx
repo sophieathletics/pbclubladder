@@ -17,13 +17,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const setToken = useCallback((t: string | null) => {
+    const prev = localStorage.getItem(TOKEN_KEY);
     if (t) {
       localStorage.setItem(TOKEN_KEY, t);
     } else {
       localStorage.removeItem(TOKEN_KEY);
     }
     setTokenState(t);
-  }, []);
+    // If the identity is changing (login as different user, register while
+    // another session exists, or logout), wipe all cached query data so the
+    // UI cannot leak data from the previous user.
+    if (prev !== t) {
+      queryClient.clear();
+    }
+  }, [queryClient]);
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
