@@ -45,7 +45,7 @@ export default function Home() {
   const [filterCity, setFilterCity] = useState<string>("all");
   const ladders = useMemo(() => {
     const list = ((laddersData as any[]) ?? []).filter(l => {
-      if (!l.isActive || !l.activeSeason || !isSignupOpen(l.activeSeason?.endDate)) return false;
+      if (!l.isActive) return false;
       if (filterState !== "all" && l.state !== filterState) return false;
       if (filterCity !== "all" && l.city !== filterCity) return false;
       return true;

@@ -29,13 +29,16 @@ export default function Ladders() {
   );
   const [filterState, setFilterState] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
+  const isSignupOpen = (endDate?: string) => {
+    if (!endDate) return false;
+    const cutoff = new Date(endDate);
+    cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+    return Date.now() <= cutoff.getTime();
+  };
+  // Show every active ladder, even ones without an active season yet, so users
+  // can see what's coming. Joinability is gated separately on the card.
   const openLadders = useMemo(
-    () => ((laddersData as any[]) ?? []).filter(l => {
-      if (!l.isActive || !l.activeSeason?.endDate) return false;
-      const cutoff = new Date(l.activeSeason.endDate);
-      cutoff.setUTCDate(cutoff.getUTCDate() - 30);
-      return Date.now() <= cutoff.getTime();
-    }),
+    () => ((laddersData as any[]) ?? []).filter(l => l.isActive),
     [laddersData]
   );
   const availableStates = useMemo(() => {
@@ -205,16 +208,24 @@ export default function Ladders() {
                         <Check className="w-4 h-4 mr-1" />
                         Joined
                       </Button>
-                    ) : eligible ? (
+                    ) : !eligible ? (
+                      <Button variant="ghost" disabled className="cursor-default text-xs italic">
+                        Not your category
+                      </Button>
+                    ) : !ladder.activeSeason ? (
+                      <Button variant="ghost" disabled className="cursor-default text-xs italic">
+                        Coming soon
+                      </Button>
+                    ) : !isSignupOpen(ladder.activeSeason.endDate) ? (
+                      <Button variant="ghost" disabled className="cursor-default text-xs italic">
+                        Signup closed
+                      </Button>
+                    ) : (
                       <Button asChild data-testid={`btn-join-${ladder.id}`}>
                         <Link href={`/team?ladder=${ladder.id}`} className="flex items-center gap-1">
                           Join
                           <ArrowRight className="w-4 h-4" />
                         </Link>
-                      </Button>
-                    ) : (
-                      <Button variant="ghost" disabled className="cursor-default text-xs italic">
-                        Not your category
                       </Button>
                     )}
                   </div>
