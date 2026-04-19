@@ -139,16 +139,18 @@ function TeamContent() {
   };
 
   const handleAccept = (id: string) => {
+    if (acceptInv.isPending) return;
     acceptInv.mutate({ id }, {
       onSuccess: () => { toast({ title: "Invitation accepted! Welcome to the ladder!" }); qc.invalidateQueries(); },
-      onError: (err: any) => toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" }),
+      onError: (err: any) => { toast({ title: "Failed to accept", description: err?.data?.error, variant: "destructive" }); qc.invalidateQueries(); },
     });
   };
 
   const handleDecline = (id: string) => {
+    if (declineInv.isPending) return;
     declineInv.mutate({ id }, {
       onSuccess: () => { toast({ title: "Invitation declined" }); qc.invalidateQueries(); },
-      onError: (err: any) => toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" }),
+      onError: (err: any) => { toast({ title: "Failed to decline", description: err?.data?.error, variant: "destructive" }); qc.invalidateQueries(); },
     });
   };
 
@@ -385,10 +387,10 @@ function TeamContent() {
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <Button size="sm" onClick={() => handleAccept(inv.id)} data-testid={`btn-accept-${inv.id}`}>
+                    <Button size="sm" onClick={() => handleAccept(inv.id)} disabled={acceptInv.isPending || declineInv.isPending} data-testid={`btn-accept-${inv.id}`}>
                       <CheckCircle className="w-4 h-4 mr-1" /> Accept
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDecline(inv.id)}>
+                    <Button size="sm" variant="outline" onClick={() => handleDecline(inv.id)} disabled={acceptInv.isPending || declineInv.isPending}>
                       <XCircle className="w-4 h-4 mr-1" /> Decline
                     </Button>
                   </div>

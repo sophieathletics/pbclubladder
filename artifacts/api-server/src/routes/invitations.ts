@@ -225,6 +225,33 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     res.status(404).json({ error: "Invitation not found" });
     return;
   }
+
+  // Idempotent: if this player already accepted (e.g., double-click race),
+  // return the existing team instead of erroring.
+  if (inv.status === "accepted" && inv.inviteeId === player.id) {
+    const [existingTeam] = await db.select().from(teamsTable).where(
+      and(
+        eq(teamsTable.seasonId, inv.seasonId),
+        or(
+          and(eq(teamsTable.player1Id, inv.inviterId), eq(teamsTable.player2Id, player.id)),
+          and(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, inv.inviterId)),
+        ),
+      )
+    ).limit(1);
+    if (existingTeam && existingTeam.status === "active") {
+      const [inviterRow2] = await db.select().from(playersTable).where(eq(playersTable.id, inv.inviterId)).limit(1);
+      const [seasonRow2] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
+      res.json({
+        ...existingTeam,
+        player1: sanitizePlayer(inviterRow2),
+        player2: sanitizePlayer(player),
+        standing: await db.select().from(ladderStandingsTable).where(eq(ladderStandingsTable.teamId, existingTeam.id)).limit(1).then(r => r[0] ?? null),
+        season: seasonRow2 ?? null,
+      });
+      return;
+    }
+  }
+
   if (inv.status !== "pending") {
     res.status(400).json({ error: "Invitation is no longer pending" });
     return;
