@@ -69,7 +69,6 @@ function baseTemplate(content: string, ctaText?: string, ctaUrl?: string): strin
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f5f7f6;padding:32px 16px"><tr><td align="center">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08)">
     <tr><td style="background:linear-gradient(135deg,#16a34a,#15803d);padding:28px 32px;text-align:center">
-      <div style="font-size:28px;margin-bottom:6px">🏓</div>
       <div style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.3px">${CLUB_NAME}</div>
     </td></tr>
     <tr><td style="padding:32px;font-size:15px;line-height:1.6;color:#1f2937">
@@ -92,7 +91,7 @@ export async function sendTeamInvitationEmail(to: string, inviterName: string, t
     to,
     subject: `You've been invited to join a team on the Pickleball Ladder`,
     html: baseTemplate(
-      `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">You're invited to join a team! 🎾</h2>
+      `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">You're invited to join a team!</h2>
 <p style="margin:0 0 12px"><strong>${escapeHtml(inviterName)}</strong> has invited you to form a team called <strong>${escapeHtml(teamName)}</strong> for the <strong>${escapeHtml(seasonName)}</strong> season.</p>
 <p style="margin:0 0 8px;color:#4b5563">Click below to create your free account — you'll be taken straight to the invitation so you can accept and start competing.</p>`,
       "View Invitation",
