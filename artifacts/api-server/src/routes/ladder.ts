@@ -33,15 +33,16 @@ router.get("/ladder", async (req, res): Promise<void> => {
   const limit = limitQ ? Math.min(parseInt(limitQ as string), 200) : 200;
   const offset = offsetQ ? parseInt(offsetQ as string) : 0;
 
-  // Resolve season: explicit season_id > ladder_id's active season > any active season
+  // Resolve season: explicit season_id > ladder_id's active season.
+  // Only fall back to "any active season" when no ladder was specified —
+  // otherwise we'd leak a different ladder's standings under the requested one.
   let seasonId = season_id as string | undefined;
   if (!seasonId && ladder_id) {
     const [active] = await db.select().from(seasonsTable)
       .where(and(eq(seasonsTable.ladderId, ladder_id as string), eq(seasonsTable.isActive, true)))
       .limit(1);
     seasonId = active?.id;
-  }
-  if (!seasonId) {
+  } else if (!seasonId && !ladder_id) {
     const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
     seasonId = active?.id;
   }
