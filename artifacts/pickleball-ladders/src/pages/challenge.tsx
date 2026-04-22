@@ -46,7 +46,8 @@ function ChallengeContent() {
   const createChallenge = useCreateChallenge();
 
   const myStanding = ladderPos?.myStanding;
-  const challengeableTeams = ladderPos?.challengeableTeams ?? [];
+  const challengeableTeams = (ladderPos as any)?.challengeableTeams ?? [];
+  const teamsInRange: number = (ladderPos as any)?.teamsInRange ?? 0;
   const hasActiveChallenge = !!activeChallenge;
 
   const handleChallenge = (challengedTeamId: string, teamName: string) => {
@@ -179,14 +180,18 @@ function ChallengeContent() {
                 <CardContent className="py-10 text-center">
                   <Trophy className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <p className="font-semibold mb-2">
-                    {!myStanding ? "No ladder standing found" : "No teams in challenge range"}
+                    {!myStanding
+                      ? "No ladder standing found"
+                      : teamsInRange === 0
+                      ? "You're at the top of the ladder!"
+                      : "All teams are currently in a challenge"}
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {!myStanding
                       ? "Your team hasn't been placed on the ladder yet."
-                      : myStanding.position <= 2
-                      ? "You're at or near the top — keep defending!"
-                      : "Teams 1 to 3 spots above you may already have active challenges."}
+                      : teamsInRange === 0
+                      ? "There are no teams above you to challenge — keep defending your spot!"
+                      : "All teams within your challenge range are currently playing. Check back later."}
                   </p>
                 </CardContent>
               </Card>

@@ -141,24 +141,25 @@ router.get("/ladder/my-position", requireAuth, async (req, res): Promise<void> =
 
   // Get teams 1-3 spots above
   const challengePositions = [myStandingRaw.position - 1, myStandingRaw.position - 2, myStandingRaw.position - 3].filter(p => p >= 1);
-  const challengeableRaw = await db.select().from(ladderStandingsTable).where(
-    and(
-      eq(ladderStandingsTable.seasonId, active.id),
-    )
-  );
-  const eligibleRaw = challengeableRaw.filter(s => challengePositions.includes(s.position));
+  const allStandings = await db.select().from(ladderStandingsTable).where(eq(ladderStandingsTable.seasonId, active.id));
+  const inRangeRaw = allStandings.filter(s => challengePositions.includes(s.position));
+
+  // Find all teams currently in an active challenge so we can exclude them
+  const seasonChallenges = await db.select().from(challengesTable).where(eq(challengesTable.seasonId, active.id));
+  const busyTeamIds = new Set<string>();
+  for (const c of seasonChallenges) {
+    if (["pending", "accepted", "scheduling", "scheduled"].includes(c.status)) {
+      busyTeamIds.add(c.challengerTeamId);
+      busyTeamIds.add(c.challengedTeamId);
+    }
+  }
+  const eligibleRaw = inRangeRaw.filter(s => !busyTeamIds.has(s.teamId));
   const challengeableTeams = await Promise.all(eligibleRaw.map(enrichStanding));
 
-  // Check for active challenge
-  const activeChallenge = await db.select().from(challengesTable).where(
-    and(
-      eq(challengesTable.seasonId, active.id),
-      or(eq(challengesTable.challengerTeamId, myTeam.id), eq(challengesTable.challengedTeamId, myTeam.id))
-    )
-  );
-  const hasActiveChallenge = activeChallenge.some(c => ["pending", "accepted", "scheduling", "scheduled"].includes(c.status));
+  // Check whether this player's own team has an active challenge
+  const hasActiveChallenge = busyTeamIds.has(myTeam.id);
 
-  res.json({ myStanding, challengeableTeams, hasActiveChallenge });
+  res.json({ myStanding, challengeableTeams, hasActiveChallenge, teamsInRange: inRangeRaw.length });
 });
 
 router.patch("/ladder/:id/position", requireAdmin, async (req, res): Promise<void> => {
