@@ -1,9 +1,9 @@
 import { Resend } from "resend";
 import { logger } from "./logger";
 
-// Resend integration via Replit connector (connector_names=resend)
 const APP_URL = process.env.APP_URL ?? "https://pbclubladder.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@example.com";
+const FROM_EMAIL = process.env.FROM_EMAIL ?? "Pickleball Club Ladder <noreply@pbclubladder.com>";
 const CLUB_NAME = "Pickleball Club Ladder";
 
 interface EmailPayload {
@@ -12,39 +12,21 @@ interface EmailPayload {
   html: string;
 }
 
-async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: string } | null> {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? "depl " + process.env.WEB_REPL_RENEWAL
-    : null;
-  if (!hostname || !xReplitToken) return null;
-  try {
-    const data = await fetch(
-      "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-      { headers: { Accept: "application/json", "X-Replit-Token": xReplitToken } },
-    ).then((res) => res.json());
-    const item = data?.items?.[0];
-    if (!item?.settings?.api_key) return null;
-    return { apiKey: item.settings.api_key, fromEmail: item.settings.from_email };
-  } catch (err) {
-    logger.error({ err }, "Failed to fetch Resend connection settings");
-    return null;
-  }
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
 }
 
 async function sendEmail(payload: EmailPayload): Promise<void> {
-  const creds = await getResendCredentials();
-  if (!creds) {
-    logger.warn({ to: payload.to, subject: payload.subject }, "Resend not connected, email not sent");
+  const resend = getResend();
+  if (!resend) {
+    logger.warn({ to: payload.to, subject: payload.subject }, "RESEND_API_KEY not set, email not sent");
     return;
   }
-  const fromEmail = process.env.FROM_EMAIL ?? creds.fromEmail ?? `${CLUB_NAME} <onboarding@resend.dev>`;
   try {
-    const resend = new Resend(creds.apiKey);
     const { error } = await resend.emails.send({
-      from: fromEmail,
+      from: FROM_EMAIL,
       to: Array.isArray(payload.to) ? payload.to : [payload.to],
       subject: payload.subject,
       html: payload.html,
@@ -96,6 +78,20 @@ export async function sendTeamInvitationEmail(to: string, inviterName: string, t
 <p style="margin:0 0 8px;color:#4b5563">Click below to create your free account — you'll be taken straight to the invitation so you can accept and start competing.</p>`,
       "View Invitation",
       ctaUrl
+    ),
+  });
+}
+
+export async function sendExistingUserInvitationEmail(to: string, inviterName: string, teamName: string, seasonName: string): Promise<void> {
+  sendEmail({
+    to,
+    subject: `You've been invited to join a team on PB Club Ladder`,
+    html: baseTemplate(
+      `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">You're invited to join a team!</h2>
+<p style="margin:0 0 12px"><strong>${escapeHtml(inviterName)}</strong> has invited you to form a team called <strong>${escapeHtml(teamName)}</strong> for the <strong>${escapeHtml(seasonName)}</strong> season.</p>
+<p style="margin:0 0 8px;color:#4b5563">Log in to accept your invitation and start competing.</p>`,
+      "Log In to Accept",
+      `${APP_URL}/login?redirect=${encodeURIComponent("/team")}`
     ),
   });
 }

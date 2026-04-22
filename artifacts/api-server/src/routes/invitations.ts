@@ -3,7 +3,7 @@ import { db, teamInvitationsTable, teamsTable, playersTable, ladderStandingsTabl
 import { eq, and, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
-import { sendTeamInvitationEmail, sendInvitationAcceptedEmail, sendInvitationDeclinedEmail } from "../lib/email";
+import { sendTeamInvitationEmail, sendExistingUserInvitationEmail, sendInvitationAcceptedEmail, sendInvitationDeclinedEmail } from "../lib/email";
 import { notifyPlayers } from "../lib/notifications";
 
 const router: IRouter = Router();
@@ -135,6 +135,8 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   // Resolve invitee — look up by ID or email
   let resolvedInviteeId: string | null = inviteeId ?? null;
   let resolvedEmail: string | null = inviteeEmail ? inviteeEmail.toLowerCase().trim() : null;
+  // Track whether the invitee already has an account (determines which email to send)
+  let inviteeHasAccount: boolean = !!resolvedInviteeId;
 
   if (!resolvedInviteeId && resolvedEmail) {
     // Try to find existing player by email
@@ -142,6 +144,7 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     if (found) {
       resolvedInviteeId = found.id;
       resolvedEmail = null;
+      inviteeHasAccount = true;
     }
   }
 
@@ -197,13 +200,17 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
     status: "pending",
   } as any).returning();
 
-  // Send email — either to the registered player or the external address
+  // Send email — existing users get a "log in to accept" email; new users get the signup link
   const emailTarget = resolvedEmail ?? (resolvedInviteeId
     ? await db.select().from(playersTable).where(eq(playersTable.id, resolvedInviteeId)).limit(1).then(r => r[0]?.email ?? null)
     : null);
 
   if (emailTarget) {
-    sendTeamInvitationEmail(emailTarget, player.fullName, teamName, activeSeason.name);
+    if (inviteeHasAccount) {
+      sendExistingUserInvitationEmail(emailTarget, player.fullName, teamName, activeSeason.name);
+    } else {
+      sendTeamInvitationEmail(emailTarget, player.fullName, teamName, activeSeason.name);
+    }
   }
 
   if (resolvedInviteeId) {
@@ -343,6 +350,7 @@ router.post("/invitations/:id/resend", requireAuth, async (req, res): Promise<vo
   const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, inv.seasonId)).limit(1);
   const seasonName = season?.name ?? "current season";
 
+  const isExistingUser = !!inv.inviteeId;
   const emailTarget = inv.inviteeEmail ?? (inv.inviteeId
     ? await db.select().from(playersTable).where(eq(playersTable.id, inv.inviteeId)).limit(1).then(r => r[0]?.email ?? null)
     : null);
@@ -352,7 +360,11 @@ router.post("/invitations/:id/resend", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  sendTeamInvitationEmail(emailTarget, player.fullName, inv.teamName, seasonName);
+  if (isExistingUser) {
+    sendExistingUserInvitationEmail(emailTarget, player.fullName, inv.teamName, seasonName);
+  } else {
+    sendTeamInvitationEmail(emailTarget, player.fullName, inv.teamName, seasonName);
+  }
 
   if (inv.inviteeId) {
     notifyPlayers([inv.inviteeId], "invitation_received", `${player.fullName} resent their invitation for team "${inv.teamName}"`, "/team");
