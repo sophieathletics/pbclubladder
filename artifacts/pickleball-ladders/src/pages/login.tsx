@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 
 export default function Login() {
@@ -17,13 +16,14 @@ export default function Login() {
   const registerHref = `/register?redirect=${encodeURIComponent(redirectTo)}${prefillEmail ? `&email=${encodeURIComponent(prefillEmail)}` : ""}`;
   const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
   const { setToken } = useAuth();
   const login = useLoginPlayer();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     login.mutate(
       { data: { email, password } },
       {
@@ -32,11 +32,7 @@ export default function Login() {
           setLocation(redirectTo);
         },
         onError: (err: any) => {
-          toast({
-            title: "Login failed",
-            description: err?.data?.error ?? "Invalid email or password",
-            variant: "destructive",
-          });
+          setErrorMessage(err?.data?.error ?? "Invalid email or password");
         },
       }
     );
@@ -58,6 +54,11 @@ export default function Login() {
             <CardDescription>Sign in to your account</CardDescription>
           </CardHeader>
           <CardContent>
+            {errorMessage && (
+              <div className="mb-4 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
