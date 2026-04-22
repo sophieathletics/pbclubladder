@@ -13,9 +13,12 @@ RUN git clone --depth 1 --branch main https://github.com/sophieathletics/pbclubl
 
 RUN pnpm install --no-frozen-lockfile
 
+# VITE_API_URL must be present at build time — Vite bakes VITE_* vars into
+# the bundle. Pass it via Railway's build argument settings.
+ARG VITE_API_URL
 # PORT and BASE_PATH are inlined here only — not baked as ENV layers that
 # would persist into the runtime stage and shadow Railway's injected PORT.
-RUN PORT=3000 BASE_PATH=/ NODE_ENV=production \
+RUN PORT=3000 BASE_PATH=/ NODE_ENV=production VITE_API_URL=${VITE_API_URL} \
     pnpm --filter @workspace/pickleball-ladders build
 
 # Runtime stage — serve reads PORT from the environment automatically
