@@ -1,20 +1,24 @@
-FROM node:20-slim
+FROM node:20-slim AS build
+
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-WORKDIR /app
-
-# Copy everything — pnpm install must run from the monorepo root
-COPY . .
+# Clone the full monorepo so pnpm can resolve workspace packages from lib/
+WORKDIR /monorepo
+RUN git clone --depth 1 --branch main https://github.com/sophieathletics/pbclubladder.git .
 
 RUN pnpm install --no-frozen-lockfile
-
 RUN pnpm --filter @workspace/api-server build
 
+# Runtime stage — esbuild bundles everything, so only the dist dir is needed
+FROM node:20-slim
+WORKDIR /app
+COPY --from=build /monorepo/artifacts/api-server/dist ./dist
+
 ENV NODE_ENV=production
-
 EXPOSE 3000
-
-CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "./dist/index.mjs"]
