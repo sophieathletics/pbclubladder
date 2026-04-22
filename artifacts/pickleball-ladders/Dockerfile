@@ -25,4 +25,4 @@ WORKDIR /app
 COPY --from=build /monorepo/artifacts/pickleball-ladders/dist/public ./public
 
 ENV NODE_ENV=production
-CMD ["serve", "-s", "public"]
+CMD ["sh", "-c", "serve -s public -l $PORT"]
