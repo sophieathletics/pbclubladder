@@ -13,7 +13,12 @@ async function enrichMatch(match: any, myTeamId?: string) {
   const challenge = await db.select().from(challengesTable).where(eq(challengesTable.id, match.challengeId)).limit(1).then(r => r[0]);
   const scores = await db.select().from(matchScoresTable).where(eq(matchScoresTable.matchId, match.id));
   const [result] = await db.select().from(matchResultsTable).where(eq(matchResultsTable.matchId, match.id)).limit(1);
-  const attendance = await db.select().from(matchAttendanceTable).where(eq(matchAttendanceTable.matchId, match.id));
+  let attendance: any[] = [];
+  try {
+    attendance = await db.select().from(matchAttendanceTable).where(eq(matchAttendanceTable.matchId, match.id));
+  } catch {
+    // match_attendance table may not exist yet — safe to return empty array
+  }
 
   let enrichedChallenge = null;
   if (challenge) {
