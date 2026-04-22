@@ -7,6 +7,7 @@
  */
 import type { ChallengeWithTeams } from "./challengeWithTeams";
 import type { Match } from "./match";
+import type { MatchAttendance } from "./matchAttendance";
 import type { MatchResult } from "./matchResult";
 import type { MatchScore } from "./matchScore";
 
@@ -14,4 +15,5 @@ export type MatchWithDetails = Match & {
   challenge?: ChallengeWithTeams;
   scores?: MatchScore[];
   result?: MatchResult;
+  attendance?: MatchAttendance[];
 };

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, matchesTable, matchScoresTable, matchResultsTable, challengesTable, teamsTable, playersTable, seasonsTable } from "@workspace/db";
+import { db, matchesTable, matchScoresTable, matchResultsTable, challengesTable, teamsTable, playersTable, seasonsTable, matchAttendanceTable } from "@workspace/db";
 import { eq, and, or, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { applyMatchResult } from "../lib/ladder";
@@ -13,13 +13,14 @@ async function enrichMatch(match: any, myTeamId?: string) {
   const challenge = await db.select().from(challengesTable).where(eq(challengesTable.id, match.challengeId)).limit(1).then(r => r[0]);
   const scores = await db.select().from(matchScoresTable).where(eq(matchScoresTable.matchId, match.id));
   const [result] = await db.select().from(matchResultsTable).where(eq(matchResultsTable.matchId, match.id)).limit(1);
+  const attendance = await db.select().from(matchAttendanceTable).where(eq(matchAttendanceTable.matchId, match.id));
 
   let enrichedChallenge = null;
   if (challenge) {
     enrichedChallenge = await enrichChallenge(challenge, myTeamId);
   }
 
-  return { ...match, challenge: enrichedChallenge, scores, result: result ?? null };
+  return { ...match, challenge: enrichedChallenge, scores, result: result ?? null, attendance };
 }
 
 router.get("/matches", requireAuth, async (req, res): Promise<void> => {
@@ -333,6 +334,48 @@ router.post("/matches/:id/dispute", requireAuth, async (req, res): Promise<void>
   );
 
   const enriched = await enrichMatch({ ...match, status: "disputed" }, myTeam.id);
+  res.json(enriched);
+});
+
+router.post("/matches/:id/confirm-attendance", requireAuth, async (req, res): Promise<void> => {
+  const player = (req as any).player;
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, id)).limit(1);
+  if (!match) {
+    res.status(404).json({ error: "Match not found" });
+    return;
+  }
+
+  if (match.status === "completed") {
+    res.status(400).json({ error: "Match is already completed" });
+    return;
+  }
+
+  const [challenge] = await db.select().from(challengesTable).where(eq(challengesTable.id, match.challengeId)).limit(1);
+  if (!challenge) {
+    res.status(404).json({ error: "Challenge not found" });
+    return;
+  }
+
+  const [myTeam] = await db.select().from(teamsTable).where(
+    and(eq(teamsTable.seasonId, challenge.seasonId), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
+  ).limit(1);
+
+  if (!myTeam || (myTeam.id !== challenge.challengerTeamId && myTeam.id !== challenge.challengedTeamId)) {
+    res.status(403).json({ error: "You are not part of this match" });
+    return;
+  }
+
+  const existing = await db.select().from(matchAttendanceTable).where(
+    and(eq(matchAttendanceTable.matchId, id), eq(matchAttendanceTable.playerId, player.id))
+  ).limit(1);
+
+  if (existing.length === 0) {
+    await db.insert(matchAttendanceTable).values({ matchId: id, teamId: myTeam.id, playerId: player.id });
+  }
+
+  const enriched = await enrichMatch(match, myTeam.id);
   res.json(enriched);
 });
 

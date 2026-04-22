@@ -419,10 +419,19 @@ export interface MatchResult {
   disputeResolved: boolean;
 }
 
+export interface MatchAttendance {
+  id: string;
+  matchId: string;
+  teamId: string;
+  playerId: string;
+  confirmedAt: string;
+}
+
 export type MatchWithDetails = Match & {
   challenge?: ChallengeWithTeams;
   scores?: MatchScore[];
   result?: MatchResult;
+  attendance?: MatchAttendance[];
 };
 
 export interface TimeSlot {

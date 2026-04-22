@@ -979,6 +979,17 @@ export const GetTeamMatchesResponseItem = zod
           disputeResolved: zod.boolean(),
         })
         .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
+        .optional(),
     }),
   );
 export const GetTeamMatchesResponse = zod.array(GetTeamMatchesResponseItem);
@@ -2141,6 +2152,17 @@ export const ListChallengesResponseItem = zod
                 disputeResolved: zod.boolean(),
               })
               .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -2392,6 +2414,17 @@ export const GetMyActiveChallengeResponse = zod
                 disputeResolved: zod.boolean(),
               })
               .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -2635,6 +2668,17 @@ export const GetChallengeResponse = zod
                 disputeReason: zod.string().optional(),
                 disputeResolved: zod.boolean(),
               })
+              .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
               .optional(),
           }),
         )
@@ -2880,6 +2924,17 @@ export const AcceptChallengeResponse = zod
                 disputeResolved: zod.boolean(),
               })
               .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3124,6 +3179,17 @@ export const DeclineChallengeResponse = zod
                 disputeResolved: zod.boolean(),
               })
               .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
+              .optional(),
           }),
         )
         .optional(),
@@ -3367,6 +3433,17 @@ export const CancelChallengeResponse = zod
                 disputeReason: zod.string().optional(),
                 disputeResolved: zod.boolean(),
               })
+              .optional(),
+            attendance: zod
+              .array(
+                zod.object({
+                  id: zod.string(),
+                  matchId: zod.string(),
+                  teamId: zod.string(),
+                  playerId: zod.string(),
+                  confirmedAt: zod.string(),
+                }),
+              )
               .optional(),
           }),
         )
@@ -3650,6 +3727,17 @@ export const BookMatchResponse = zod
           disputeReason: zod.string().optional(),
           disputeResolved: zod.boolean(),
         })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
         .optional(),
     }),
   );
@@ -4003,6 +4091,17 @@ export const ListMatchesResponseItem = zod
           disputeResolved: zod.boolean(),
         })
         .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
+        .optional(),
     }),
   );
 export const ListMatchesResponse = zod.array(ListMatchesResponseItem);
@@ -4247,6 +4346,17 @@ export const GetMatchResponse = zod
           disputeReason: zod.string().optional(),
           disputeResolved: zod.boolean(),
         })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
         .optional(),
     }),
   );
@@ -4506,6 +4616,17 @@ export const SubmitScoreResponse = zod
           disputeResolved: zod.boolean(),
         })
         .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
+        .optional(),
     }),
   );
 
@@ -4752,6 +4873,17 @@ export const ConfirmScoreResponse = zod
           disputeReason: zod.string().optional(),
           disputeResolved: zod.boolean(),
         })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
         .optional(),
     }),
   );
@@ -5003,6 +5135,275 @@ export const DisputeScoreResponse = zod
           disputeReason: zod.string().optional(),
           disputeResolved: zod.boolean(),
         })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
+        .optional(),
+    }),
+  );
+
+/**
+ * @summary Confirm match attendance
+ */
+export const ConfirmAttendanceParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ConfirmAttendanceResponse = zod
+  .object({
+    id: zod.string(),
+    challengeId: zod.string(),
+    scheduledDate: zod.string(),
+    scheduledTime: zod.string(),
+    courtLocation: zod.string(),
+    bookedByTeamId: zod.string().optional(),
+    status: zod.enum(["scheduled", "completed", "disputed"]),
+    createdAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      challenge: zod
+        .object({
+          id: zod.string(),
+          seasonId: zod.string(),
+          challengerTeamId: zod.string(),
+          challengedTeamId: zod.string(),
+          status: zod.enum([
+            "pending",
+            "accepted",
+            "scheduling",
+            "scheduled",
+            "completed",
+            "cancelled",
+            "disputed",
+          ]),
+          createdAt: zod.string(),
+        })
+        .and(
+          zod.object({
+            challengerTeam: zod
+              .object({
+                id: zod.string(),
+                seasonId: zod.string(),
+                player1Id: zod.string(),
+                player2Id: zod.string(),
+                teamName: zod.string(),
+                status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
+                player1PaidAt: zod.string().nullish(),
+                player2PaidAt: zod.string().nullish(),
+                createdAt: zod.string(),
+              })
+              .and(
+                zod.object({
+                  player1: zod
+                    .object({
+                      id: zod.string(),
+                      fullName: zod.string(),
+                      firstName: zod.string().optional(),
+                      lastName: zod.string().optional(),
+                      email: zod.string(),
+                      phone: zod.string().optional(),
+                      sex: zod.enum(["male", "female", "other"]).optional(),
+                      selfRating: zod.string().optional(),
+                      shareContact: zod.boolean().optional(),
+                      role: zod.enum(["player", "admin"]),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  player2: zod
+                    .object({
+                      id: zod.string(),
+                      fullName: zod.string(),
+                      firstName: zod.string().optional(),
+                      lastName: zod.string().optional(),
+                      email: zod.string(),
+                      phone: zod.string().optional(),
+                      sex: zod.enum(["male", "female", "other"]).optional(),
+                      selfRating: zod.string().optional(),
+                      shareContact: zod.boolean().optional(),
+                      role: zod.enum(["player", "admin"]),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  standing: zod
+                    .object({
+                      id: zod.string(),
+                      seasonId: zod.string(),
+                      teamId: zod.string(),
+                      position: zod.number(),
+                      wins: zod.number(),
+                      losses: zod.number(),
+                      lastMatchDate: zod.string().optional(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  season: zod
+                    .object({
+                      id: zod.string(),
+                      ladderId: zod.string().nullish(),
+                      name: zod.string(),
+                      startDate: zod.string(),
+                      endDate: zod.string(),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                }),
+              )
+              .optional(),
+            challengedTeam: zod
+              .object({
+                id: zod.string(),
+                seasonId: zod.string(),
+                player1Id: zod.string(),
+                player2Id: zod.string(),
+                teamName: zod.string(),
+                status: zod.enum(["pending", "active", "inactive"]),
+                paymentStatus: zod.enum(["not_required", "unpaid", "paid"]),
+                stripePaymentIntentId: zod.string().nullish(),
+                player1PaidAt: zod.string().nullish(),
+                player2PaidAt: zod.string().nullish(),
+                createdAt: zod.string(),
+              })
+              .and(
+                zod.object({
+                  player1: zod
+                    .object({
+                      id: zod.string(),
+                      fullName: zod.string(),
+                      firstName: zod.string().optional(),
+                      lastName: zod.string().optional(),
+                      email: zod.string(),
+                      phone: zod.string().optional(),
+                      sex: zod.enum(["male", "female", "other"]).optional(),
+                      selfRating: zod.string().optional(),
+                      shareContact: zod.boolean().optional(),
+                      role: zod.enum(["player", "admin"]),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  player2: zod
+                    .object({
+                      id: zod.string(),
+                      fullName: zod.string(),
+                      firstName: zod.string().optional(),
+                      lastName: zod.string().optional(),
+                      email: zod.string(),
+                      phone: zod.string().optional(),
+                      sex: zod.enum(["male", "female", "other"]).optional(),
+                      selfRating: zod.string().optional(),
+                      shareContact: zod.boolean().optional(),
+                      role: zod.enum(["player", "admin"]),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  standing: zod
+                    .object({
+                      id: zod.string(),
+                      seasonId: zod.string(),
+                      teamId: zod.string(),
+                      position: zod.number(),
+                      wins: zod.number(),
+                      losses: zod.number(),
+                      lastMatchDate: zod.string().optional(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                  season: zod
+                    .object({
+                      id: zod.string(),
+                      ladderId: zod.string().nullish(),
+                      name: zod.string(),
+                      startDate: zod.string(),
+                      endDate: zod.string(),
+                      isActive: zod.boolean(),
+                      createdAt: zod.string(),
+                    })
+                    .optional(),
+                }),
+              )
+              .optional(),
+            match: zod.unknown().optional(),
+            myTeamId: zod.string().optional(),
+            overlappingSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengerAvailabilitySubmitted: zod.boolean().optional(),
+            challengedAvailabilitySubmitted: zod.boolean().optional(),
+            challengerSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+            challengedSlots: zod
+              .array(
+                zod.object({
+                  date: zod.string(),
+                  times: zod.array(zod.string()),
+                }),
+              )
+              .optional(),
+          }),
+        )
+        .optional(),
+      scores: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            gameNumber: zod.number(),
+            team1Score: zod.number(),
+            team2Score: zod.number(),
+          }),
+        )
+        .optional(),
+      result: zod
+        .object({
+          id: zod.string(),
+          matchId: zod.string(),
+          winnerTeamId: zod.string(),
+          loserTeamId: zod.string(),
+          submittedByTeamId: zod.string(),
+          confirmedByTeamId: zod.string().optional(),
+          submittedAt: zod.string(),
+          confirmedAt: zod.string().optional(),
+          autoConfirmed: zod.boolean(),
+          disputeReason: zod.string().optional(),
+          disputeResolved: zod.boolean(),
+        })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
         .optional(),
     }),
   );
@@ -5429,6 +5830,17 @@ export const ListDisputesResponseItem = zod.object({
             disputeResolved: zod.boolean(),
           })
           .optional(),
+        attendance: zod
+          .array(
+            zod.object({
+              id: zod.string(),
+              matchId: zod.string(),
+              teamId: zod.string(),
+              playerId: zod.string(),
+              confirmedAt: zod.string(),
+            }),
+          )
+          .optional(),
       }),
     ),
 });
@@ -5688,6 +6100,17 @@ export const ResolveDisputeResponse = zod
           disputeReason: zod.string().optional(),
           disputeResolved: zod.boolean(),
         })
+        .optional(),
+      attendance: zod
+        .array(
+          zod.object({
+            id: zod.string(),
+            matchId: zod.string(),
+            teamId: zod.string(),
+            playerId: zod.string(),
+            confirmedAt: zod.string(),
+          }),
+        )
         .optional(),
     }),
   );

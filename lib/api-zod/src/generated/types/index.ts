@@ -53,6 +53,7 @@ export * from "./listPlayersParams";
 export * from "./listTeamsParams";
 export * from "./loginBody";
 export * from "./match";
+export * from "./matchAttendance";
 export * from "./matchResult";
 export * from "./matchScore";
 export * from "./matchStatus";

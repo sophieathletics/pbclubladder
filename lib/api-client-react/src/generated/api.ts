@@ -4738,6 +4738,90 @@ export const useDisputeScore = <
 };
 
 /**
+ * @summary Confirm match attendance
+ */
+export const getConfirmAttendanceUrl = (id: string) => {
+  return `/api/matches/${id}/confirm-attendance`;
+};
+
+export const confirmAttendance = async (
+  id: string,
+  options?: RequestInit,
+): Promise<MatchWithDetails> => {
+  return customFetch<MatchWithDetails>(getConfirmAttendanceUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmAttendanceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmAttendance>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmAttendance>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["confirmAttendance"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmAttendance>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return confirmAttendance(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmAttendanceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmAttendance>>
+>;
+
+export type ConfirmAttendanceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Confirm match attendance
+ */
+export const useConfirmAttendance = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmAttendance>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmAttendance>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getConfirmAttendanceMutationOptions(options));
+};
+
+/**
  * @summary List notifications for current player
  */
 export const getListNotificationsUrl = (params?: ListNotificationsParams) => {

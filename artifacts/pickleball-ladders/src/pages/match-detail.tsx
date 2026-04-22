@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
-import { useGetMatch, useGetCurrentPlayer, useGetMyTeam, useSubmitScore, useConfirmScore, useDisputeScore } from "@workspace/api-client-react";
+import { useGetMatch, useGetCurrentPlayer, useGetMyTeam, useSubmitScore, useConfirmScore, useDisputeScore, useConfirmAttendance } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Trophy, Calendar, MapPin, Clock, CheckCircle, AlertTriangle, Plus, Minus, Loader2 } from "lucide-react";
+import { Trophy, Calendar, MapPin, Clock, CheckCircle, AlertTriangle, Plus, Minus, Loader2, CalendarClock, UserCheck } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function MatchDetail() {
@@ -29,6 +29,7 @@ function MatchDetailContent() {
   const submitScore = useSubmitScore();
   const confirmScore = useConfirmScore();
   const disputeScore = useDisputeScore();
+  const confirmAttendance = useConfirmAttendance();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -122,6 +123,16 @@ function MatchDetailContent() {
     );
   };
 
+  const handleConfirmAttendance = () => {
+    confirmAttendance.mutate(
+      { id: id! },
+      {
+        onSuccess: () => { toast({ title: "You're confirmed! See you on the court." }); qc.invalidateQueries(); },
+        onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
+      }
+    );
+  };
+
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto py-8 px-4">
@@ -170,6 +181,87 @@ function MatchDetailContent() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Attendance confirmation — scheduled matches only */}
+        {m.status === "scheduled" && isTeamInMatch && (() => {
+          const attendance: any[] = m.attendance ?? [];
+          const myPlayerId = player?.id;
+          const alreadyConfirmed = attendance.some((a: any) => a.playerId === myPlayerId);
+
+          // Build all four expected players from both teams
+          const allPlayers = [
+            ...(challengerTeam ? [
+              { player: challengerTeam.player1, teamName: challengerTeam.teamName },
+              { player: challengerTeam.player2, teamName: challengerTeam.teamName },
+            ] : []),
+            ...(challengedTeam ? [
+              { player: challengedTeam.player1, teamName: challengedTeam.teamName },
+              { player: challengedTeam.player2, teamName: challengedTeam.teamName },
+            ] : []),
+          ].filter(({ player }) => !!player);
+
+          return (
+            <Card className="border-primary/10 mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <UserCheck className="w-4 h-4 text-primary" />
+                  Attendance Confirmation
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  {allPlayers.map(({ player: p, teamName }) => {
+                    const confirmed = attendance.some((a: any) => a.playerId === p.id);
+                    return (
+                      <div key={p.id} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {p.fullName}
+                          <span className="ml-1 text-xs">({teamName})</span>
+                        </span>
+                        {confirmed ? (
+                          <span className="flex items-center gap-1 text-green-600 font-medium">
+                            <CheckCircle className="w-3.5 h-3.5" /> Confirmed
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Pending</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {!alreadyConfirmed && (
+                  <Button
+                    onClick={handleConfirmAttendance}
+                    disabled={confirmAttendance.isPending}
+                    variant="outline"
+                    className="w-full"
+                    data-testid="btn-confirm-attendance"
+                  >
+                    {confirmAttendance.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    I've seen the date, time, and location — see you there!
+                  </Button>
+                )}
+                {alreadyConfirmed && (
+                  <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" /> You've confirmed your attendance.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* Reschedule — available to participants while not completed */}
+        {isTeamInMatch && m.status !== "completed" && m.challengeId && (
+          <div className="mb-6">
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+              <Link href={`/availability/${m.challengeId}`}>
+                <CalendarClock className="w-4 h-4 mr-1" />
+                Reschedule match
+              </Link>
+            </Button>
+          </div>
+        )}
 
         {/* Score / Result */}
         {m.result && (

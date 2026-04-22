@@ -1170,6 +1170,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/MatchWithDetails"
 
+  /matches/{id}/confirm-attendance:
+    post:
+      operationId: confirmAttendance
+      tags: [matches]
+      summary: Confirm match attendance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Attendance confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchWithDetails"
+
   # NOTIFICATIONS
   /notifications:
     get:
@@ -2218,6 +2237,26 @@ components:
         - autoConfirmed
         - disputeResolved
 
+    MatchAttendance:
+      type: object
+      properties:
+        id:
+          type: string
+        matchId:
+          type: string
+        teamId:
+          type: string
+        playerId:
+          type: string
+        confirmedAt:
+          type: string
+      required:
+        - id
+        - matchId
+        - teamId
+        - playerId
+        - confirmedAt
+
     MatchWithDetails:
       allOf:
         - $ref: "#/components/schemas/Match"
@@ -2231,6 +2270,10 @@ components:
                 $ref: "#/components/schemas/MatchScore"
             result:
               $ref: "#/components/schemas/MatchResult"
+            attendance:
+              type: array
+              items:
+                $ref: "#/components/schemas/MatchAttendance"
 
     SubmitScoreBody:
       type: object
