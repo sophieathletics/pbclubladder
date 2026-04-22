@@ -13,10 +13,14 @@ const app: Express = express();
 // (Replit deployments sit behind a reverse proxy).
 app.set("trust proxy", 1);
 
-const PROD_ORIGIN = "https://pbclubladder.com";
 const allowedOrigins = new Set<string>([
-  PROD_ORIGIN,
+  "https://pbclubladder.com",
   "https://www.pbclubladder.com",
+  // Extra origins for staging/Railway preview URLs, set via env var (comma-separated)
+  ...( process.env.EXTRA_ALLOWED_ORIGINS
+    ? process.env.EXTRA_ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+    : []
+  ),
 ]);
 
 const corsOptions = {
@@ -24,7 +28,7 @@ const corsOptions = {
     // Allow same-origin / server-to-server / curl (no Origin header)
     if (!origin) return cb(null, true);
     if (allowedOrigins.has(origin)) return cb(null, true);
-    // In non-production, allow Replit preview/dev domains so we can iterate.
+    // In non-production, allow Replit and localhost domains for local iteration.
     if (process.env.NODE_ENV !== "production") {
       if (
         origin.endsWith(".replit.dev") ||
