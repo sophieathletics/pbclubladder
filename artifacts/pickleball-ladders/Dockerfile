@@ -22,7 +22,7 @@ RUN PORT=3000 BASE_PATH=/ NODE_ENV=production \
 FROM node:20-slim
 RUN npm install -g serve
 WORKDIR /app
-COPY --from=build /monorepo/artifacts/pickleball-ladders/dist/public ./public
+COPY --from=build /monorepo/artifacts/pickleball-ladders/dist/public /app
 
 ENV NODE_ENV=production
-CMD ["sh", "-c", "serve -s public -l $PORT"]
+CMD ["sh", "-c", "serve -s . -l $PORT"]
