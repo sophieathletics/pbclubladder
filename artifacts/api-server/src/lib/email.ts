@@ -144,12 +144,41 @@ export async function sendAvailabilitySubmittedEmail(to: string | string[], team
   });
 }
 
-export async function sendCommonAvailabilityEmail(to: string | string[], slots: string[], challengeId: string): Promise<void> {
-  const slotList = slots.map(s => `<li>${s}</li>`).join("");
+function formatEmailDate(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function formatEmailTime(timeStr: string): string {
+  const [h] = timeStr.split(":");
+  const hour = parseInt(h, 10);
+  if (hour === 0) return "12 AM";
+  if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return "12 PM";
+  return `${hour - 12} PM`;
+}
+
+export async function sendCommonAvailabilityEmail(to: string | string[], slots: Array<{ date: string; times: string[] }>, challengeId: string): Promise<void> {
+  const dateBlocks = slots.map(s => {
+    const pills = s.times.map(t =>
+      `<span style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:6px 14px;border-radius:20px;font-size:14px;font-weight:500">${formatEmailTime(t)}</span>`
+    ).join(" ");
+    return `<div style="margin-bottom:20px">
+  <div style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#16a34a;margin-bottom:10px">${formatEmailDate(s.date)}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">${pills}</div>
+</div>`;
+  }).join("");
+
   sendEmail({
     to,
     subject: `Common availability found — book your court!`,
-    html: baseTemplate(`<p>You have overlapping availability on these dates/times:</p><ul>${slotList}</ul><p>Please confirm a time and book a court.</p>`, "Book Match", `${APP_URL}/challenges/${challengeId}`),
+    html: baseTemplate(
+      `<h2 style="margin:0 0 8px;font-size:20px;color:#111827">Common availability found!</h2>
+<p style="margin:0 0 24px;color:#4b5563">Both teams are free at these times. Head to the app to pick a slot and confirm your match.</p>
+${dateBlocks}`,
+      "Book Match",
+      `${APP_URL}/challenges/${challengeId}`
+    ),
   });
 }
 

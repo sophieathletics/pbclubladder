@@ -127,8 +127,7 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
     }
 
     if (overlappingSlots.length > 0) {
-      const slotStrings = overlappingSlots.flatMap(s => s.times.map((t: string) => `${s.date} at ${t}`));
-      try { sendCommonAvailabilityEmail(allEmails, slotStrings, challengeId); } catch (e) { console.error("[email error] sendCommonAvailabilityEmail", e); }
+      try { sendCommonAvailabilityEmail(allEmails, overlappingSlots, challengeId); } catch (e) { console.error("[email error] sendCommonAvailabilityEmail", e); }
       notifyPlayers(allPlayerIds, "common_availability", "Common availability found! Book your court.", `/challenges/${challengeId}`);
     } else {
       const team1Info = `${challengerTeam[0]?.teamName}`;
