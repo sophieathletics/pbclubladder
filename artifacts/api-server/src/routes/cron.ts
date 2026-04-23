@@ -19,7 +19,7 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
 
   const details: string[] = [];
   const now = new Date();
-  const INACTIVITY_DAYS = 14;
+  const INACTIVITY_DAYS = 7;
 
   for (const activeSeason of activeSeasons) {
     const standings = await db.select().from(ladderStandingsTable)
@@ -87,7 +87,7 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
 });
 
 router.post("/cron/auto-confirm", requireCronSecret, async (_req, res): Promise<void> => {
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
   const results = await db.select().from(matchResultsTable).where(
     and(
