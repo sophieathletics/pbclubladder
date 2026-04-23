@@ -22,4 +22,9 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Keep-alive: ping every 10 minutes to prevent Railway cold starts
+  setInterval(() => {
+    fetch(`http://localhost:${port}/api/health`).catch(() => {});
+  }, 10 * 60 * 1000);
 });
