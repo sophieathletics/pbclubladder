@@ -59,14 +59,14 @@ function NotificationsContent() {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto py-8 px-4">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-black flex items-center gap-2">
-            <Bell className="w-6 h-6 text-primary" />
-            Notifications
-            {unreadCount > 0 && <Badge className="ml-1">{unreadCount} new</Badge>}
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <h1 className="text-2xl font-black flex items-center gap-2 min-w-0">
+            <Bell className="w-6 h-6 text-primary flex-shrink-0" />
+            <span>Notifications</span>
+            {unreadCount > 0 && <Badge className="ml-1 flex-shrink-0">{unreadCount} new</Badge>}
           </h1>
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAll}>
+            <Button variant="outline" size="sm" onClick={handleMarkAll} className="flex-shrink-0">
               <CheckCheck className="w-4 h-4 mr-1" />
               Mark all read
             </Button>
