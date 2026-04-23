@@ -35,12 +35,18 @@ const ALL_TIME_SLOTS = [
 const WEEKEND_END_VALUE = "16:00"; // Sat/Sun end at 4pm
 const WEEKDAY_END_VALUE = "19:00"; // Mon-Fri end at 7pm
 
-function slotsForDate(dateValue: string) {
+function slotsForDate(dateValue: string, todayValue: string) {
   const d = new Date(dateValue + "T00:00:00");
   const dow = d.getDay();
   const isWeekend = dow === 0 || dow === 6;
   const endValue = isWeekend ? WEEKEND_END_VALUE : WEEKDAY_END_VALUE;
-  return ALL_TIME_SLOTS.filter(t => t.value <= endValue);
+  let slots = ALL_TIME_SLOTS.filter(t => t.value <= endValue);
+  if (dateValue === todayValue) {
+    const currentHour = new Date().getHours();
+    const minValue = String(currentHour + 1).padStart(2, "0") + ":00";
+    slots = slots.filter(t => t.value >= minValue);
+  }
+  return slots;
 }
 
 function formatDate(d: Date): string {
@@ -63,7 +69,7 @@ function AvailabilityContent() {
   const dates = useMemo(() => {
     const out: { value: string; weekday: string; day: string; month: string }[] = [];
     const today = new Date();
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       out.push({
@@ -89,10 +95,12 @@ function AvailabilityContent() {
     });
   };
 
+  const todayValue = formatDate(new Date());
+
   const toggleAllForDate = (date: string) => {
     setSelected(prev => {
       const next = new Set(prev);
-      const slots = slotsForDate(date);
+      const slots = slotsForDate(date, todayValue);
       const allSelected = slots.every(t => next.has(`${date}|${t.value}`));
       if (allSelected) {
         slots.forEach(t => next.delete(`${date}|${t.value}`));
@@ -192,7 +200,8 @@ function AvailabilityContent() {
           <CardContent>
             <div className="space-y-3">
               {dates.map(date => {
-                const slotsForThisDate = slotsForDate(date.value);
+                const slotsForThisDate = slotsForDate(date.value, todayValue);
+                if (slotsForThisDate.length === 0) return null;
                 const allSelected = slotsForThisDate.every(t => selected.has(`${date.value}|${t.value}`));
                 const anySelected = slotsForThisDate.some(t => selected.has(`${date.value}|${t.value}`));
                 return (
