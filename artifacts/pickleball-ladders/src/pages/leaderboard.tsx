@@ -10,7 +10,7 @@ import { Trophy, Users, Medal, Search, Swords } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
@@ -44,15 +44,22 @@ export default function Leaderboard() {
     });
   }, [allLadderList, player, myLadderIds, playerSex]);
 
-  const [ladderId, setLadderId] = useState<string | undefined>(undefined);
+  const search = useSearch();
+  const urlLadderId = useMemo(() => new URLSearchParams(search).get("ladder") ?? undefined, [search]);
+  const [ladderId, setLadderId] = useState<string | undefined>(urlLadderId);
 
   useEffect(() => {
     if (ladderList.length === 0) return;
+    // Honour ?ladder= URL param if it matches a known ladder
+    if (urlLadderId && ladderList.some(l => l.id === urlLadderId)) {
+      setLadderId(urlLadderId);
+      return;
+    }
     if (!ladderId || !ladderList.some(l => l.id === ladderId)) {
       const withSeason = ladderList.find(l => l.activeSeason) ?? ladderList[0];
       setLadderId(withSeason.id);
     }
-  }, [ladderList, ladderId]);
+  }, [ladderList, ladderId, urlLadderId]);
 
   const { data, isLoading } = useGetLadder(
     { search: search || undefined, ladder_id: ladderId },

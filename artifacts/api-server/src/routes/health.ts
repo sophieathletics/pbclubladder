@@ -8,4 +8,9 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
+// Standard /health alias for uptime monitors
+router.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 export default router;

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MainLayout } from "@/components/layout/main-layout";
 import { Trophy, ArrowRight, Activity, Users, MapPin, Tag, DollarSign, Check } from "lucide-react";
-import { useGetTopLadder, useGetCurrentPlayer, useListLadders, useGetMyTeams } from "@workspace/api-client-react";
+import { useGetLadder, useGetCurrentPlayer, useListLadders, useGetMyTeams } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STATE_NAME } from "@/lib/us-states";
@@ -32,7 +32,6 @@ function isSignupOpen(endDate: string | null | undefined): boolean {
 }
 
 export default function Home() {
-  const { data: ladderResponse, isLoading: isLoadingStandings } = useGetTopLadder();
   const { data: currentPlayer } = useGetCurrentPlayer();
   const { data: laddersData, isLoading: isLoadingLadders } = useListLadders();
   const { data: myTeamsData } = useGetMyTeams();
@@ -41,6 +40,21 @@ export default function Home() {
     () => new Set(((myTeamsData as any[]) ?? []).map((t: any) => t.season?.ladderId).filter(Boolean)),
     [myTeamsData]
   );
+
+  // Pick default standings ladder — prefer the one with an active season, then first
+  const activeWithSeason = useMemo(() => {
+    const list = ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason);
+    return list[0] ?? ((laddersData as any[]) ?? [])[0];
+  }, [laddersData]);
+
+  const [standingsLadderId, setStandingsLadderId] = useState<string | undefined>(undefined);
+  const resolvedLadderId = standingsLadderId ?? activeWithSeason?.id;
+
+  const { data: ladderResponse, isLoading: isLoadingStandings } = useGetLadder(
+    { ladder_id: resolvedLadderId },
+    { query: { enabled: !!resolvedLadderId } }
+  );
+
   const [filterState, setFilterState] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
   const ladders = useMemo(() => {
@@ -112,18 +126,39 @@ export default function Home() {
 
         {/* Standings or Open Ladders panel — on top */}
         <section className="max-w-3xl mx-auto w-full">
-            <div className="flex items-center justify-between mb-6 px-2 sm:px-4">
+            <div className="flex items-center justify-between mb-4 px-2 sm:px-4">
               <h2 className="text-2xl font-bold flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
                 {isLoading ? "Top 10 Standings" : hasStandings ? "Top 10 Standings" : "Open Ladders"}
               </h2>
               <Button variant="ghost" size="sm" className="group" asChild data-testid="btn-view-all-ladder">
-                <Link href={hasStandings ? "/leaderboard" : "/ladders"} className="flex items-center gap-2">
+                <Link href={hasStandings ? `/leaderboard${resolvedLadderId ? `?ladder=${resolvedLadderId}` : ""}` : "/ladders"} className="flex items-center gap-2">
                   {hasStandings ? "Full Ladder" : "Browse all"}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
             </div>
+
+            {/* Ladder selector — only shown when there are standings */}
+            {hasStandings && (laddersData as any[])?.filter(l => l.isActive && l.activeSeason).length > 1 && (
+              <div className="mb-4 px-2 sm:px-4">
+                <Select value={resolvedLadderId} onValueChange={setStandingsLadderId}>
+                  <SelectTrigger className="w-full sm:w-64">
+                    <SelectValue placeholder="Select ladder" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason).map((l: any) => {
+                      const catLabel: Record<string, string> = { men: "Men's", women: "Women's", mixed: "Mixed", coed: "Co-ed" };
+                      return (
+                        <SelectItem key={l.id} value={l.id}>
+                          {l.name} — {catLabel[l.category ?? "coed"]}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {!isLoading && !hasStandings && availableStates.length > 0 && (
               <LadderFilterBar
