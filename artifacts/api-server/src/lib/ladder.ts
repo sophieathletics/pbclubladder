@@ -82,15 +82,17 @@ export async function applyMatchResult(
 }
 
 export function findOverlappingSlots(
-  slots1: Array<{ date: string; times: string[] }>,
-  slots2: Array<{ date: string; times: string[] }>
+  slots1: Array<{ date: string; times: string[] }> | null | undefined,
+  slots2: Array<{ date: string; times: string[] }> | null | undefined,
 ): Array<{ date: string; times: string[] }> {
+  if (!Array.isArray(slots1) || !Array.isArray(slots2)) return [];
   const result: Array<{ date: string; times: string[] }> = [];
 
   for (const s1 of slots1) {
-    const s2 = slots2.find(s => s.date === s1.date);
-    if (!s2) continue;
-    const commonTimes = s1.times.filter(t => s2.times.includes(t));
+    if (!s1 || typeof s1.date !== "string" || !Array.isArray(s1.times)) continue;
+    const s2 = slots2.find(s => s && s.date === s1.date);
+    if (!s2 || !Array.isArray(s2.times)) continue;
+    const commonTimes = s1.times.filter(t => typeof t === "string" && s2.times.includes(t));
     if (commonTimes.length > 0) {
       result.push({ date: s1.date, times: commonTimes });
     }

@@ -9,32 +9,38 @@ import { notifyPlayers } from "../lib/notifications";
 const router: IRouter = Router();
 
 router.get("/availability/:challengeId", requireAuth, async (req, res): Promise<void> => {
-  const challengeId = Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
+  try {
+    const challengeId = Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
 
-  const [challenge] = await db.select().from(challengesTable).where(eq(challengesTable.id, challengeId)).limit(1);
-  if (!challenge) {
-    res.status(404).json({ error: "Challenge not found" });
-    return;
+    const [challenge] = await db.select().from(challengesTable).where(eq(challengesTable.id, challengeId)).limit(1);
+    if (!challenge) {
+      res.status(404).json({ error: "Challenge not found" });
+      return;
+    }
+
+    const avail = await db.select().from(availabilityTable).where(eq(availabilityTable.challengeId, challengeId));
+    const challengerAvail = avail.find(a => a.teamId === challenge.challengerTeamId) ?? null;
+    const challengedAvail = avail.find(a => a.teamId === challenge.challengedTeamId) ?? null;
+
+    let overlappingSlots: any[] = [];
+    if (challengerAvail && challengedAvail) {
+      overlappingSlots = findOverlappingSlots(challengerAvail.slots as any[], challengedAvail.slots as any[]);
+    }
+
+    res.json({
+      challengerAvailability: challengerAvail,
+      challengedAvailability: challengedAvail,
+      overlappingSlots,
+      hasOverlap: overlappingSlots.length > 0,
+    });
+  } catch (err) {
+    console.error("[availability GET error]", err);
+    res.status(500).json({ error: "Failed to load availability. Please try again." });
   }
-
-  const avail = await db.select().from(availabilityTable).where(eq(availabilityTable.challengeId, challengeId));
-  const challengerAvail = avail.find(a => a.teamId === challenge.challengerTeamId) ?? null;
-  const challengedAvail = avail.find(a => a.teamId === challenge.challengedTeamId) ?? null;
-
-  let overlappingSlots: any[] = [];
-  if (challengerAvail && challengedAvail) {
-    overlappingSlots = findOverlappingSlots(challengerAvail.slots as any[], challengedAvail.slots as any[]);
-  }
-
-  res.json({
-    challengerAvailability: challengerAvail,
-    challengedAvailability: challengedAvail,
-    overlappingSlots,
-    hasOverlap: overlappingSlots.length > 0,
-  });
 });
 
 router.post("/availability/:challengeId", requireAuth, async (req, res): Promise<void> => {
+  try {
   const player = (req as any).player;
   const challengeId = Array.isArray(req.params.challengeId) ? req.params.challengeId[0] : req.params.challengeId;
   const { slots } = req.body;
@@ -95,7 +101,7 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
     ]);
     const emails = [p1[0]?.email, p2[0]?.email].filter(Boolean) as string[];
     const playerIds = [p1[0]?.id, p2[0]?.id].filter(Boolean) as string[];
-    sendAvailabilitySubmittedEmail(emails, myTeam.teamName, challengeId);
+    try { sendAvailabilitySubmittedEmail(emails, myTeam.teamName, challengeId); } catch (e) { console.error("[email error] sendAvailabilitySubmittedEmail", e); }
     notifyPlayers(playerIds, "availability_submitted", `${myTeam.teamName} submitted their availability.`, `/availability/${challengeId}`);
   }
 
@@ -122,12 +128,12 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
 
     if (overlappingSlots.length > 0) {
       const slotStrings = overlappingSlots.flatMap(s => s.times.map((t: string) => `${s.date} at ${t}`));
-      sendCommonAvailabilityEmail(allEmails, slotStrings, challengeId);
+      try { sendCommonAvailabilityEmail(allEmails, slotStrings, challengeId); } catch (e) { console.error("[email error] sendCommonAvailabilityEmail", e); }
       notifyPlayers(allPlayerIds, "common_availability", "Common availability found! Book your court.", `/challenges/${challengeId}`);
     } else {
       const team1Info = `${challengerTeam[0]?.teamName}`;
       const team2Info = `${challengedTeam[0]?.teamName}`;
-      sendNoCommonAvailabilityEmail(allEmails, team1Info, team2Info);
+      try { sendNoCommonAvailabilityEmail(allEmails, team1Info, team2Info); } catch (e) { console.error("[email error] sendNoCommonAvailabilityEmail", e); }
       notifyPlayers(allPlayerIds, "no_common_availability", "No common availability found. Please coordinate directly.", `/challenges/${challengeId}`);
     }
 
@@ -147,6 +153,10 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
     overlappingSlots: [],
     hasOverlap: false,
   });
+  } catch (err) {
+    console.error("[availability POST error]", err);
+    res.status(500).json({ error: "Failed to submit availability. Please try again." });
+  }
 });
 
 export default router;
