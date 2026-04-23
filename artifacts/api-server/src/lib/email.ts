@@ -65,6 +65,21 @@ function baseTemplate(content: string, ctaText?: string, ctaUrl?: string): strin
 </body></html>`;
 }
 
+export async function sendVerificationEmail(to: string, token: string): Promise<void> {
+  const url = `${APP_URL}/verify-email?token=${token}`;
+  sendEmail({
+    to,
+    subject: "Verify your email — Pickleball Club Ladder",
+    html: baseTemplate(
+      `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">Verify your email</h2>
+<p style="margin:0 0 16px;color:#4b5563">Click the button below to verify your email address and unlock all features.</p>
+<p style="margin:0 0 8px;color:#6b7280;font-size:13px">This link expires in 24 hours.</p>`,
+      "Verify Email",
+      url
+    ),
+  });
+}
+
 export async function sendTeamInvitationEmail(to: string, inviterName: string, teamName: string, seasonName: string): Promise<void> {
   const redirect = encodeURIComponent("/team");
   const emailParam = encodeURIComponent(to);
@@ -75,7 +90,7 @@ export async function sendTeamInvitationEmail(to: string, inviterName: string, t
     html: baseTemplate(
       `<h2 style="margin:0 0 12px;font-size:22px;color:#111827">You're invited to join a team!</h2>
 <p style="margin:0 0 12px"><strong>${escapeHtml(inviterName)}</strong> has invited you to form a team called <strong>${escapeHtml(teamName)}</strong> for the <strong>${escapeHtml(seasonName)}</strong> season.</p>
-<p style="margin:0 0 8px;color:#4b5563">Click below to create your free account — you'll be taken straight to the invitation so you can accept and start competing.</p>`,
+<p style="margin:0 0 8px;color:#4b5563">Click below to create your account — you'll be taken straight to the invitation so you can accept and start competing.</p>`,
       "View Invitation",
       ctaUrl
     ),
