@@ -56,6 +56,7 @@ function ChallengeDetailContent() {
 
   const [bookSlot, setBookSlot] = useState<string | null>(null);
   const [bookLocation, setBookLocation] = useState("");
+  const [locationError, setLocationError] = useState(false);
   const [showBookForm, setShowBookForm] = useState(false);
 
   if (isLoading) {
@@ -105,10 +106,15 @@ function ChallengeDetailContent() {
   };
 
   const handleBook = () => {
-    if (!bookSlot || !bookLocation) {
-      toast({ title: "Pick a slot and add the court location", variant: "destructive" });
+    if (!bookSlot) {
+      toast({ title: "Pick a time slot first", variant: "destructive" });
       return;
     }
+    if (!bookLocation.trim()) {
+      setLocationError(true);
+      return;
+    }
+    setLocationError(false);
     const [bookDate, bookTime] = bookSlot.split("|");
     bookMatch.mutate(
       { id: id!, data: { date: bookDate, time: bookTime, courtLocation: bookLocation } },
@@ -338,14 +344,16 @@ function ChallengeDetailContent() {
                     {showBookForm && bookSlot && (
                       <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
                         <div>
-                          <Label className="text-xs">Court Location</Label>
+                          <Label className="text-xs">Court Location <span className="text-destructive">*</span></Label>
                           <Input
                             placeholder="e.g. Riverside Courts, Court 3"
                             value={bookLocation}
-                            onChange={e => setBookLocation(e.target.value)}
-                            className="mt-1"
+                            onChange={e => { setBookLocation(e.target.value); if (e.target.value.trim()) setLocationError(false); }}
+                            className={`mt-1${locationError ? " border-destructive focus-visible:ring-destructive" : ""}`}
                             data-testid="input-court-location"
+                            required
                           />
+                          {locationError && <p className="text-xs text-destructive mt-1">Court location is required</p>}
                         </div>
                         <div className="flex gap-2">
                           <Button onClick={handleBook} disabled={bookMatch.isPending} size="sm" data-testid="btn-confirm-booking">
