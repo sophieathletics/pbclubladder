@@ -45,8 +45,12 @@ router.post("/availability/:challengeId", requireAuth, async (req, res): Promise
   }
 
   const [challenge] = await db.select().from(challengesTable).where(eq(challengesTable.id, challengeId)).limit(1);
-  if (!challenge || !["accepted", "scheduling"].includes(challenge.status)) {
-    res.status(400).json({ error: "Challenge not found or not in correct state" });
+  if (!challenge) {
+    res.status(404).json({ error: "Challenge not found" });
+    return;
+  }
+  if (!["pending", "accepted", "scheduling"].includes(challenge.status)) {
+    res.status(400).json({ error: "This challenge isn't ready for availability yet — it needs to be accepted first." });
     return;
   }
 

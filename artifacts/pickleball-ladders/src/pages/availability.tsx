@@ -129,7 +129,7 @@ function AvailabilityContent() {
           qc.invalidateQueries();
           setLocation(`/challenges/${challengeId}`);
         },
-        onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
+        onError: (err: any) => toast({ title: "Error", description: err?.data?.error || err?.message || "Something went wrong. Please try again.", variant: "destructive" }),
       }
     );
   };
