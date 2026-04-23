@@ -11,28 +11,29 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-// Returns blocking reason if team has played matches or has open challenges; null if safe to dissolve.
+// Returns blocking reason if team has any match history or non-cancelled challenge; null if safe to dissolve.
 async function checkDissolveBlockers(teamId: string): Promise<string | null> {
-  // Any played (completed) matches involving this team?
+  const BLOCKER_MSG = "Teams with match history cannot be dissolved. Contact info@pbclubladder.com for help.";
+
   const challenges = await db.select().from(challengesTable).where(
     or(eq(challengesTable.challengerTeamId, teamId), eq(challengesTable.challengedTeamId, teamId))
   );
+
+  if (challenges.some(c => c.status !== "cancelled")) {
+    return BLOCKER_MSG;
+  }
+
+  // Edge-case: all challenges are cancelled but match data somehow exists
   if (challenges.length > 0) {
     const challengeIds = challenges.map(c => c.id);
-    const completed = await db.select().from(matchesTable).where(
-      and(eq(matchesTable.status, "completed"), inArray(matchesTable.challengeId, challengeIds))
-    );
-    if (completed.length > 0) {
-      return "Cannot withdraw — your team has already played a match in this ladder.";
-    }
-    // Any open (non-cancelled, non-completed) challenges?
-    // Mirror the active set used in routes/challenges.ts to keep semantics consistent.
-    const openStatuses = ["pending", "accepted", "scheduling", "scheduled"];
-    const openCount = challenges.filter(c => openStatuses.includes(c.status)).length;
-    if (openCount > 0) {
-      return "Cannot withdraw — you have an active challenge. Cancel or finish it first.";
+    const matches = await db.select().from(matchesTable).where(inArray(matchesTable.challengeId, challengeIds));
+    if (matches.length > 0) {
+      const matchIds = matches.map(m => m.id);
+      const results = await db.select().from(matchResultsTable).where(inArray(matchResultsTable.matchId, matchIds));
+      if (results.length > 0) return BLOCKER_MSG;
     }
   }
+
   return null;
 }
 

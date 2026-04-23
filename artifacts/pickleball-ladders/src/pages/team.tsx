@@ -12,6 +12,7 @@ import {
   useResendInvitation,
   useGetMyLadderPosition,
   useListLadders,
+  useListChallenges,
 } from "@workspace/api-client-react";
 import { MainLayout } from "@/components/layout/main-layout";
 import { ProtectedRoute } from "@/components/layout/protected-route";
@@ -500,6 +501,10 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
   const { data: pos } = useGetMyLadderPosition({ ladder_id: team.season?.ladderId });
   const myStanding = pos?.myStanding;
 
+  const { data: teamChallengesData } = useListChallenges({ team_id: team.id });
+  const teamChallenges = (teamChallengesData as any[]) ?? [];
+  const isLeaveBlocked = teamChallenges.some((c: any) => !["cancelled", "declined"].includes(c.status));
+
   const feeRequired = team.paymentStatus !== "not_required";
   const feeDollars = ladder?.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : null;
 
@@ -628,29 +633,48 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Leave team "{team.teamName}"?</AlertDialogTitle>
-                  <AlertDialogDescription asChild>
-                    <div className="space-y-2 text-sm">
-                      <p>This dissolves the team for both you and {partnerName ?? "your partner"}. You can join a new team afterward.</p>
-                      {feeRequired && iPaid && (
-                        <p>If it's been less than 48 hours since you paid, your {feeDollars ? `$${feeDollars}` : ""} entry fee will be refunded automatically. After 48 hours, refunds require admin approval.</p>
-                      )}
-                      <p className="text-amber-700 font-medium">You can't leave if your team has played a completed match or has an open challenge — finish those first.</p>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => withdrawMut.mutate({ id: team.id })}
-                    disabled={withdrawMut.isPending}
-                    data-testid={`btn-confirm-leave-${team.id}`}
-                  >
-                    {withdrawMut.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                    Yes, leave team
-                  </AlertDialogAction>
-                </AlertDialogFooter>
+                {isLeaveBlocked ? (
+                  <>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Can't leave team</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Your team has active or completed matches. To leave the team, email us at{" "}
+                        <a href="mailto:info@pbclubladder.com" className="text-primary underline">
+                          info@pbclubladder.com
+                        </a>{" "}
+                        and we'll help.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>OK</AlertDialogCancel>
+                    </AlertDialogFooter>
+                  </>
+                ) : (
+                  <>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Leave team "{team.teamName}"?</AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-2 text-sm">
+                          <p>This dissolves the team for both you and {partnerName ?? "your partner"}. You can join a new team afterward.</p>
+                          {feeRequired && iPaid && (
+                            <p>If it's been less than 48 hours since you paid, your {feeDollars ? `$${feeDollars}` : ""} entry fee will be refunded automatically. After 48 hours, refunds require admin approval.</p>
+                          )}
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => withdrawMut.mutate({ id: team.id })}
+                        disabled={withdrawMut.isPending}
+                        data-testid={`btn-confirm-leave-${team.id}`}
+                      >
+                        {withdrawMut.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                        Yes, leave team
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </>
+                )}
               </AlertDialogContent>
             </AlertDialog>
           </div>
