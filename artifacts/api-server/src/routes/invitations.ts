@@ -71,6 +71,10 @@ router.get("/invitations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
+  if (!player.emailVerified) {
+    res.status(403).json({ error: "Please verify your email before doing this." });
+    return;
+  }
   const { inviteeId, inviteeEmail, teamName, ladderId, seasonId: bodySeasonId } = req.body;
 
   if (!teamName) {
@@ -223,6 +227,10 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
+  if (!player.emailVerified) {
+    res.status(403).json({ error: "Please verify your email before doing this." });
+    return;
+  }
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   const [inv] = await db.select().from(teamInvitationsTable).where(eq(teamInvitationsTable.id, id)).limit(1);

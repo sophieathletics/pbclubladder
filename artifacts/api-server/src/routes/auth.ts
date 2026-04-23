@@ -3,7 +3,7 @@ import { db, playersTable, teamInvitationsTable, passwordResetTokensTable } from
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import { hashPassword, verifyPassword, createToken, requireAuth } from "../lib/auth";
-import { sendPasswordResetEmail } from "../lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -45,6 +45,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
   }
 
   const passwordHash = hashPassword(password);
+  const verificationToken = randomBytes(32).toString("hex");
   const [player] = await db.insert(playersTable).values({
     fullName: finalFullName,
     firstName: finalFirst || null,
@@ -57,6 +58,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     passwordHash,
     role: "player",
     isActive: true,
+    emailVerified: false,
+    emailVerificationToken: verificationToken,
   }).returning();
 
   // Link any pending email invitations sent to this address before they registered
@@ -64,6 +67,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     .set({ inviteeId: player.id, inviteeEmail: null })
     .where(eq(teamInvitationsTable.inviteeEmail, player.email))
     .catch(() => {}); // non-fatal
+
+  try { sendVerificationEmail(player.email, verificationToken); } catch (e) { logger.error({ err: e }, "Failed to send verification email"); }
 
   const token = createToken(player.id);
 
@@ -223,8 +228,37 @@ router.post("/auth/reset-password", async (req, res): Promise<void> => {
   res.json({ success: true, message: "Password updated. You can now sign in." });
 });
 
+router.get("/auth/verify-email", async (req, res): Promise<void> => {
+  const { token } = req.query;
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "Token is required" });
+    return;
+  }
+  const [player] = await db.select().from(playersTable).where(eq(playersTable.emailVerificationToken, token)).limit(1);
+  if (!player) {
+    res.status(400).json({ error: "Invalid or expired verification link." });
+    return;
+  }
+  await db.update(playersTable)
+    .set({ emailVerified: true, emailVerificationToken: null })
+    .where(eq(playersTable.id, player.id));
+  res.json({ success: true, message: "Email verified!" });
+});
+
+router.post("/auth/resend-verification", requireAuth, async (req, res): Promise<void> => {
+  const player = (req as any).player;
+  if (player.emailVerified) {
+    res.json({ success: true, message: "Email already verified" });
+    return;
+  }
+  const verificationToken = randomBytes(32).toString("hex");
+  await db.update(playersTable).set({ emailVerificationToken: verificationToken }).where(eq(playersTable.id, player.id));
+  try { sendVerificationEmail(player.email, verificationToken); } catch (e) { logger.error({ err: e }, "Failed to send verification email"); }
+  res.json({ success: true, message: "Verification email sent" });
+});
+
 export function sanitizePlayer(player: any) {
-  const { passwordHash, ...safe } = player;
+  const { passwordHash, emailVerificationToken, ...safe } = player;
   return safe;
 }
 

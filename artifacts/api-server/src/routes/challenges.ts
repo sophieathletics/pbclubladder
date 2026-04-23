@@ -138,6 +138,10 @@ router.get("/challenges/:id", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
+  if (!player.emailVerified) {
+    res.status(403).json({ error: "Please verify your email before doing this." });
+    return;
+  }
   const { challengedTeamId } = req.body;
 
   if (!challengedTeamId) {
@@ -242,6 +246,10 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
 
 router.post("/challenges/:id/accept", requireAuth, async (req, res): Promise<void> => {
   const player = (req as any).player;
+  if (!player.emailVerified) {
+    res.status(403).json({ error: "Please verify your email before doing this." });
+    return;
+  }
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
 
   const [challenge] = await db.select().from(challengesTable).where(eq(challengesTable.id, id)).limit(1);

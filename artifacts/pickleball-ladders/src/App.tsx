@@ -22,6 +22,7 @@ import Pay from "@/pages/pay";
 import PaymentComplete from "@/pages/payment-complete";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import VerifyEmail from "@/pages/verify-email";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/payment-complete" component={PaymentComplete} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route component={NotFound} />
