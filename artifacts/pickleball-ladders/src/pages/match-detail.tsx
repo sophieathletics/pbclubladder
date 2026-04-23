@@ -93,6 +93,16 @@ function MatchDetailContent() {
   const handleSubmitScore = () => {
     const finalWinner = effectiveWinnerTeamId;
     if (!finalWinner) { toast({ title: "Select the winner", variant: "destructive" }); return; }
+    const invalidGame = games.some(g => {
+      const a = Number.isFinite(g.team1Score) ? g.team1Score : 0;
+      const b = Number.isFinite(g.team2Score) ? g.team2Score : 0;
+      if (a === 0 && b === 0) return false; // skip blank optional games
+      return Math.max(a, b) < 11;
+    });
+    if (invalidGame) {
+      toast({ title: "Invalid score", description: "The winning score for each game must be at least 11.", variant: "destructive" });
+      return;
+    }
     submitScore.mutate(
       { id: id!, data: { games, winnerTeamId: finalWinner } },
       {

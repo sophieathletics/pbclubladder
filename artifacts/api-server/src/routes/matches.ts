@@ -136,6 +136,18 @@ router.post("/matches/:id/score", requireAuth, async (req, res): Promise<void> =
     return;
   }
 
+  // Validate: each played game must have a max score of at least 11.
+  const hasLowScore = games.some((g: any) => {
+    const a = Number(g.team1Score) || 0;
+    const b = Number(g.team2Score) || 0;
+    if (a === 0 && b === 0) return false; // skip blank optional games
+    return Math.max(a, b) < 11;
+  });
+  if (hasLowScore) {
+    res.status(400).json({ error: "The winning score for each game must be at least 11." });
+    return;
+  }
+
   // Validate: winner must match the games-won majority (team1 = challenger, team2 = challenged).
   // Ties are allowed and the caller decides the overall winner.
   let team1Wins = 0;
