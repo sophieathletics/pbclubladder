@@ -27,9 +27,23 @@ export default function Login() {
     login.mutate(
       { data: { email, password } },
       {
-        onSuccess: (data: any) => {
+        onSuccess: async (data: any) => {
           setToken(data.token);
-          setLocation(redirectTo);
+          // If an explicit redirect was provided (e.g. from email link), honour it
+          if (params.get("redirect")) {
+            setLocation(redirectTo);
+            return;
+          }
+          // Otherwise smart-redirect: players with a team go to dashboard, others to ladders
+          try {
+            const res = await fetch("/api/teams/my-teams", {
+              headers: { Authorization: `Bearer ${data.token}` },
+            });
+            const teams = await res.json();
+            setLocation(Array.isArray(teams) && teams.length > 0 ? "/dashboard" : "/ladders");
+          } catch {
+            setLocation("/dashboard");
+          }
         },
         onError: (err: any) => {
           setErrorMessage(err?.data?.error ?? "Invalid email or password");
