@@ -228,4 +228,11 @@ export function sanitizePlayer(player: any) {
   return safe;
 }
 
+// Use this when returning player data to OTHER users (public/leaderboard)
+// Strips all PII — only returns what's needed for display
+export function sanitizePublicPlayer(player: any) {
+  const { passwordHash, email, phone, ...safe } = player;
+  return safe;
+}
+
 export default router;

@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, ladderStandingsTable, teamsTable, playersTable, seasonsTable, challengesTable, inactivityDropsTable } from "@workspace/db";
 import { eq, and, or, asc, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth";
-import { sanitizePlayer } from "./auth";
+import { sanitizePublicPlayer } from "./auth";
 
 const router: IRouter = Router();
 
@@ -20,8 +20,8 @@ async function enrichStanding(standing: any) {
     ...standing,
     team: {
       ...team,
-      player1: p1[0] ? sanitizePlayer(p1[0]) : null,
-      player2: p2[0] ? sanitizePlayer(p2[0]) : null,
+      player1: p1[0] ? sanitizePublicPlayer(p1[0]) : null,
+      player2: p2[0] ? sanitizePublicPlayer(p2[0]) : null,
       standing,
       season: season ?? null,
     },
@@ -74,14 +74,30 @@ router.get("/ladder", async (req, res): Promise<void> => {
 });
 
 router.get("/ladder/top", async (_req, res): Promise<void> => {
-  const [active] = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true)).limit(1);
-  if (!active) {
+  const activeSeasons = await db.select().from(seasonsTable).where(eq(seasonsTable.isActive, true));
+  if (activeSeasons.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // Pick the season with the most standings so the home page always shows a populated ladder
+  let bestSeasonId = activeSeasons[0].id;
+  let bestCount = 0;
+  for (const season of activeSeasons) {
+    const rows = await db.select().from(ladderStandingsTable).where(eq(ladderStandingsTable.seasonId, season.id));
+    if (rows.length > bestCount) {
+      bestCount = rows.length;
+      bestSeasonId = season.id;
+    }
+  }
+
+  if (bestCount === 0) {
     res.json([]);
     return;
   }
 
   const standings = await db.select().from(ladderStandingsTable)
-    .where(eq(ladderStandingsTable.seasonId, active.id))
+    .where(eq(ladderStandingsTable.seasonId, bestSeasonId))
     .orderBy(asc(ladderStandingsTable.position))
     .limit(10);
 
