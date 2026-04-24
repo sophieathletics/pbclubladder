@@ -44,8 +44,8 @@ export default function Leaderboard() {
     });
   }, [allLadderList, player, myLadderIds, playerSex]);
 
-  const search = useSearch();
-  const urlLadderId = useMemo(() => new URLSearchParams(search).get("ladder") ?? undefined, [search]);
+  const locationSearch = useSearch();
+  const urlLadderId = useMemo(() => new URLSearchParams(locationSearch).get("ladder") ?? undefined, [locationSearch]);
   const [ladderId, setLadderId] = useState<string | undefined>(urlLadderId);
 
   useEffect(() => {
