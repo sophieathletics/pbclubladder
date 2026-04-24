@@ -36,7 +36,8 @@ export default function Login() {
           }
           // Otherwise smart-redirect: players with a team go to dashboard, others to ladders
           try {
-            const res = await fetch("/api/teams/my-teams", {
+            const apiBase = import.meta.env.VITE_API_URL ?? "";
+            const res = await fetch(`${apiBase}/api/teams/my-teams`, {
               headers: { Authorization: `Bearer ${data.token}` },
             });
             const teams = await res.json();

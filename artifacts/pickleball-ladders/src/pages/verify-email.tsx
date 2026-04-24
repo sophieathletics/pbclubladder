@@ -17,7 +17,8 @@ export default function VerifyEmail() {
       return;
     }
 
-    fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+    const apiBase = import.meta.env.VITE_API_URL ?? "";
+    fetch(`${apiBase}/api/auth/verify-email?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         const data = await res.json();
         if (res.ok) {
