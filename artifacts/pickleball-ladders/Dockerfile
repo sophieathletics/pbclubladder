@@ -9,7 +9,7 @@ RUN corepack enable
 
 # Cache-bust: changing this value invalidates the git clone and every step
 # after it, forcing a fresh clone and vite build on each deploy.
-ARG CACHE_BUST=2026-04-25
+ARG CACHE_BUST=2026-04-26
 
 # Clone the full monorepo so pnpm can resolve workspace packages from lib/
 WORKDIR /monorepo
