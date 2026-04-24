@@ -23,6 +23,7 @@ RUN pnpm install --no-frozen-lockfile
 RUN echo "VITE_API_URL=https://api.pbclubladder.com" && \
     PORT=3000 BASE_PATH=/ NODE_ENV=production \
     VITE_API_URL=https://api.pbclubladder.com \
+    VITE_STRIPE_PUBLISHABLE_KEY=pk_live_51TNGdk2MA2q6YDRjXphofUqfaHh84Vo7JodtiIydT5g4kmLDON056sOzeESBDx4FqRg3PLRDiE6BWj6lMDD2xFW4007AQE2B9U \
     pnpm --filter @workspace/pickleball-ladders build
 
 # Runtime stage — serve reads PORT from the environment automatically
