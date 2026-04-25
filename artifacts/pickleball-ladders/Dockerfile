@@ -7,14 +7,12 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
-# Cache-bust: changing this value invalidates the git clone and every step
-# after it, forcing a fresh clone and vite build on each deploy.
-ARG CACHE_BUST=2026-04-27
-
-# Clone the full monorepo so pnpm can resolve workspace packages from lib/
+# Auto cache-bust: ADD fetches this URL at build time. The GitHub API returns
+# the latest commit SHA for main, so every push automatically invalidates this
+# layer and all layers after it — no manual bumping needed.
 WORKDIR /monorepo
-RUN echo "Cache bust: ${CACHE_BUST}" && \
-    git clone --depth 1 --branch main https://github.com/sophieathletics/pbclubladder.git .
+ADD https://api.github.com/repos/sophieathletics/pbclubladder/git/refs/heads/main /tmp/latest-commit
+RUN git clone --depth 1 --branch main https://github.com/sophieathletics/pbclubladder.git .
 
 RUN pnpm install --no-frozen-lockfile
 
