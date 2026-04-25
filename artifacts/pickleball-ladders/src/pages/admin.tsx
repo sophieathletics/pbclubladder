@@ -63,7 +63,7 @@ function AdminContent() {
   const s = stats as any;
 
   const [newSeason, setNewSeason] = useState({ name: "", startDate: "", endDate: "", ladderId: "" });
-  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; address: string; city: string; state: string; level: string; isPaid: boolean; entryFeeDollars: string }>({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "" });
+  const [newLadder, setNewLadder] = useState<{ name: string; description: string; category: "men" | "women" | "mixed" | "coed"; location: string; address: string; city: string; state: string; level: string; isPaid: boolean; entryFeeDollars: string; startDate: string; endDate: string; signupDeadline: string }>({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "", startDate: "", endDate: "", signupDeadline: "" });
 
   const handleCreateSeason = () => {
     const { name, startDate, endDate, ladderId } = newSeason;
@@ -114,10 +114,13 @@ function AdminContent() {
           state: newLadder.state,
           level: newLadder.level || undefined,
           entryFeeCents,
-        },
+          startDate: newLadder.startDate || undefined,
+          endDate: newLadder.endDate || undefined,
+          signupDeadline: newLadder.signupDeadline || undefined,
+        } as any,
       },
       {
-        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "" }); },
+        onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "", startDate: "", endDate: "", signupDeadline: "" }); },
         onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
       }
     );
@@ -179,7 +182,6 @@ function AdminContent() {
               Disputes {disputeList.length > 0 && <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">{disputeList.length}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="ladders">Ladders</TabsTrigger>
-            <TabsTrigger value="seasons">Seasons</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
             <TabsTrigger value="players">Players</TabsTrigger>
             <TabsTrigger value="inactivity">Inactivity Log</TabsTrigger>
@@ -330,6 +332,21 @@ function AdminContent() {
                     {newLadder.category === "coed" && "Open to any combination of players."}
                   </p>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <Label className="text-xs">Start Date</Label>
+                    <Input type="date" className="mt-1" value={newLadder.startDate} onChange={e => setNewLadder(p => ({ ...p, startDate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">End Date</Label>
+                    <Input type="date" className="mt-1" value={newLadder.endDate} onChange={e => setNewLadder(p => ({ ...p, endDate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Signup Deadline</Label>
+                    <Input type="date" className="mt-1" value={newLadder.signupDeadline} onChange={e => setNewLadder(p => ({ ...p, signupDeadline: e.target.value }))} />
+                    <p className="text-xs text-muted-foreground mt-1">Last day players can join.</p>
+                  </div>
+                </div>
                 <Button onClick={handleCreateLadder} disabled={createLadder.isPending} data-testid="btn-create-ladder">
                   {createLadder.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Create Ladder
@@ -351,86 +368,6 @@ function AdminContent() {
             </Card>
           </TabsContent>
 
-          {/* Seasons */}
-          <TabsContent value="seasons" className="space-y-4">
-            <Card className="border-primary/10">
-              <CardHeader><CardTitle className="text-base">All Seasons (per Ladder)</CardTitle></CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {seasonList.length === 0 ? (
-                    <p className="p-4 text-sm text-muted-foreground">No seasons yet.</p>
-                  ) : seasonList.map((season: any) => {
-                    const ladder = ladderList.find((l: any) => l.id === season.ladderId);
-                    return (
-                      <div key={season.id} className="p-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm truncate">{season.name}</p>
-                            {season.isActive && <Badge className="bg-green-600 text-xs">Active</Badge>}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {ladder?.name ?? "(no ladder)"} · {season.startDate} → {season.endDate}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant={season.isActive ? "outline" : "default"}
-                          onClick={() => handleToggleSeason(season)}
-                          disabled={activateSeason.isPending || deactivateSeason.isPending}
-                        >
-                          {season.isActive ? "Deactivate" : "Activate"}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-primary/10">
-              <CardHeader><CardTitle className="text-base">Create New Season</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label className="text-xs">Ladder</Label>
-                  <Select value={newSeason.ladderId} onValueChange={v => setNewSeason(p => ({ ...p, ladderId: v }))}>
-                    <SelectTrigger className="mt-1" data-testid="select-season-ladder">
-                      <SelectValue placeholder={ladderList.length === 0 ? "Create a ladder first" : "Select ladder"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ladderList.map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-xs">Season Name</Label>
-                  <Input value={newSeason.name} onChange={e => setNewSeason(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Fall 2026" className="mt-1" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs">Start Date</Label>
-                    <Input type="date" value={newSeason.startDate} onChange={e => setNewSeason(p => ({ ...p, startDate: e.target.value }))} className="mt-1" />
-                  </div>
-                  <div>
-                    <Label className="text-xs">End Date</Label>
-                    <Input type="date" value={newSeason.endDate} onChange={e => setNewSeason(p => ({ ...p, endDate: e.target.value }))} className="mt-1" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Player signups close 1 month before the end date.
-                  {newSeason.endDate && (() => {
-                    const c = new Date(newSeason.endDate);
-                    if (isNaN(c.getTime())) return null;
-                    c.setUTCDate(c.getUTCDate() - 30);
-                    return <> New teams can join until <strong>{c.toLocaleDateString()}</strong>.</>;
-                  })()}
-                </p>
-                <Button onClick={handleCreateSeason} disabled={createSeason.isPending || ladderList.length === 0} data-testid="btn-create-season">
-                  {createSeason.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Create Season
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Inactivity Log */}
           <TabsContent value="inactivity">
@@ -525,6 +462,9 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [level, setLevel] = useState(ladder.level ?? "");
   const [feeDollars, setFeeDollars] = useState(ladder.entryFeeCents != null ? (ladder.entryFeeCents / 100).toFixed(2) : "");
   const [isActive, setIsActive] = useState(ladder.isActive);
+  const [startDate, setStartDate] = useState(ladder.activeSeason?.startDate ?? "");
+  const [endDate, setEndDate] = useState(ladder.activeSeason?.endDate ?? "");
+  const [signupDeadline, setSignupDeadline] = useState(ladder.activeSeason?.signupDeadline ?? "");
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -542,7 +482,10 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           state: stateCode,
           level: level || undefined,
           entryFeeCents: feeDollars === "" ? null : Math.round(parseFloat(feeDollars) * 100),
-        },
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          signupDeadline: signupDeadline || undefined,
+        } as any,
       },
       {
         onSuccess: () => { toast({ title: "Ladder updated" }); qc.invalidateQueries(); setEditing(false); },
@@ -597,6 +540,20 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
             <SelectItem value="coed">Co-ed</SelectItem>
           </SelectContent>
         </Select>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <Label className="text-xs">Start Date</Label>
+            <Input type="date" className="mt-1" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">End Date</Label>
+            <Input type="date" className="mt-1" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-xs">Signup Deadline</Label>
+            <Input type="date" className="mt-1" value={signupDeadline} onChange={e => setSignupDeadline(e.target.value)} />
+          </div>
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={isActive} onChange={e => setIsActive(e.target.checked)} />
           Active
@@ -629,6 +586,12 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
         {!ladder.city && !ladder.state && ladder.location && <p className="text-xs text-muted-foreground">📍 {ladder.location}</p>}
         {ladder.address && <p className="text-xs text-muted-foreground truncate">🗺️ {ladder.address}</p>}
         {ladder.description && <p className="text-xs text-muted-foreground truncate">{ladder.description}</p>}
+        {ladder.activeSeason && (
+          <p className="text-xs text-muted-foreground">
+            📅 {ladder.activeSeason.startDate} → {ladder.activeSeason.endDate}
+            {ladder.activeSeason.signupDeadline && ` · Signup closes ${ladder.activeSeason.signupDeadline}`}
+          </p>
+        )}
       </div>
       <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
     </div>

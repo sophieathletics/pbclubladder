@@ -18,17 +18,22 @@ function isLadderEligible(sex: string | null | undefined, category: string | nul
   return true;
 }
 
-function signupCutoff(endDate: string | null | undefined): Date | null {
-  if (!endDate) return null;
-  const d = new Date(endDate);
-  if (isNaN(d.getTime())) return null;
-  d.setUTCDate(d.getUTCDate() - 30);
-  return d;
+function parseLocalDate(d: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(y, m - 1, day);
+  }
+  return new Date(d);
 }
 
-function isSignupOpen(endDate: string | null | undefined): boolean {
-  const c = signupCutoff(endDate);
-  return !!c && Date.now() <= c.getTime();
+function isSignupOpen(season: { endDate?: string | null; signupDeadline?: string | null } | null | undefined): boolean {
+  if (!season) return false;
+  // Use explicit signup deadline if set, otherwise fall back to end date
+  const cutoffStr = season.signupDeadline || season.endDate;
+  if (!cutoffStr) return false;
+  const cutoff = parseLocalDate(cutoffStr);
+  if (isNaN(cutoff.getTime())) return false;
+  return Date.now() <= cutoff.getTime();
 }
 
 export default function Home() {
@@ -78,7 +83,7 @@ export default function Home() {
   const isLoading = isLoadingStandings || (!hasStandings && isLoadingLadders);
 
   const allActiveLadders = useMemo(
-    () => ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason && isSignupOpen(l.activeSeason?.endDate)),
+    () => ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason && isSignupOpen(l.activeSeason)),
     [laddersData]
   );
   const availableStates = useMemo(() => {

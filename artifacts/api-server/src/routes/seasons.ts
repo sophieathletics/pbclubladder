@@ -45,7 +45,7 @@ router.get("/seasons/:id", async (req, res): Promise<void> => {
 });
 
 router.post("/seasons", requireAdmin, async (req, res): Promise<void> => {
-  const { ladderId, name, startDate, endDate } = req.body;
+  const { ladderId, name, startDate, endDate, signupDeadline } = req.body;
   if (!ladderId || !name || !startDate || !endDate) {
     res.status(400).json({ error: "ladderId, name, startDate, endDate required" });
     return;
@@ -55,8 +55,29 @@ router.post("/seasons", requireAdmin, async (req, res): Promise<void> => {
     res.status(400).json({ error: "Ladder not found" });
     return;
   }
-  const [season] = await db.insert(seasonsTable).values({ ladderId, name, startDate, endDate, isActive: false }).returning();
+  const [season] = await db.insert(seasonsTable).values({
+    ladderId, name, startDate, endDate,
+    signupDeadline: signupDeadline || null,
+    isActive: false,
+  }).returning();
   res.status(201).json(season);
+});
+
+router.patch("/seasons/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { name, startDate, endDate, signupDeadline } = req.body;
+  const [season] = await db.select().from(seasonsTable).where(eq(seasonsTable.id, id)).limit(1);
+  if (!season) {
+    res.status(404).json({ error: "Season not found" });
+    return;
+  }
+  const [updated] = await db.update(seasonsTable).set({
+    name: name ?? season.name,
+    startDate: startDate ?? season.startDate,
+    endDate: endDate ?? season.endDate,
+    signupDeadline: signupDeadline !== undefined ? (signupDeadline || null) : season.signupDeadline,
+  }).where(eq(seasonsTable.id, id)).returning();
+  res.json(updated);
 });
 
 router.post("/seasons/:id/activate", requireAdmin, async (req, res): Promise<void> => {

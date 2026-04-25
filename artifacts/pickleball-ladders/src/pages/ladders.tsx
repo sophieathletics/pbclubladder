@@ -29,16 +29,18 @@ export default function Ladders() {
   );
   const [filterState, setFilterState] = useState<string>("all");
   const [filterCity, setFilterCity] = useState<string>("all");
-  const isSignupOpen = (endDate?: string) => {
-    if (!endDate) return false;
-    const cutoff = new Date(endDate);
-    cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  const isSignupOpen = (season?: { endDate?: string | null; signupDeadline?: string | null } | null) => {
+    const cutoffStr = season?.signupDeadline || season?.endDate;
+    if (!cutoffStr) return false;
+    // Parse date-only strings as local midnight to avoid UTC off-by-one
+    const cutoff = /^\d{4}-\d{2}-\d{2}$/.test(cutoffStr)
+      ? (() => { const [y, m, d] = cutoffStr.split("-").map(Number); return new Date(y, m - 1, d); })()
+      : new Date(cutoffStr);
     return Date.now() <= cutoff.getTime();
   };
-  // Show every active ladder, even ones without an active season yet, so users
-  // can see what's coming. Joinability is gated separately on the card.
+  // Only show ladders that have an active season
   const openLadders = useMemo(
-    () => ((laddersData as any[]) ?? []).filter(l => l.isActive),
+    () => ((laddersData as any[]) ?? []).filter(l => l.isActive && l.activeSeason),
     [laddersData]
   );
   const availableStates = useMemo(() => {
@@ -216,7 +218,7 @@ export default function Ladders() {
                       <Button variant="ghost" disabled className="cursor-default text-xs italic">
                         Coming soon
                       </Button>
-                    ) : !isSignupOpen(ladder.activeSeason.endDate) ? (
+                    ) : !isSignupOpen(ladder.activeSeason) ? (
                       <Button variant="ghost" disabled className="cursor-default text-xs italic">
                         Signup closed
                       </Button>

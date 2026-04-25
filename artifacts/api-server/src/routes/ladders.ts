@@ -51,7 +51,7 @@ function validateFee(v: any): { ok: boolean; value?: number | null; error?: stri
 }
 
 router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
-  const { name, description, sortOrder, category, location, address, city, state, level, entryFeeCents } = req.body;
+  const { name, description, sortOrder, category, location, address, city, state, level, entryFeeCents, startDate, endDate, signupDeadline } = req.body;
   if (!name) {
     res.status(400).json({ error: "name is required" });
     return;
@@ -86,7 +86,20 @@ router.post("/ladders", requireAdmin, async (req, res): Promise<void> => {
     isActive: true,
     sortOrder: sortOrder ?? "0",
   }).returning();
-  res.status(201).json(ladder);
+
+  // Auto-create and activate a season if dates are provided
+  if (startDate && endDate) {
+    await db.insert(seasonsTable).values({
+      ladderId: ladder.id,
+      name,
+      startDate,
+      endDate,
+      signupDeadline: signupDeadline || null,
+      isActive: true,
+    });
+  }
+
+  res.status(201).json(await enrichLadder(ladder));
 });
 
 router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
@@ -127,7 +140,34 @@ router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Ladder not found" });
     return;
   }
-  res.json(ladder);
+
+  // If season dates were provided, update the active season (or create one if none exists)
+  const { startDate, endDate, signupDeadline } = req.body;
+  if (startDate || endDate || signupDeadline !== undefined) {
+    const [activeSeason] = await db.select().from(seasonsTable)
+      .where(and(eq(seasonsTable.ladderId, id), eq(seasonsTable.isActive, true)))
+      .limit(1);
+    if (activeSeason) {
+      await db.update(seasonsTable).set({
+        name: startDate || endDate ? ladder.name : activeSeason.name,
+        startDate: startDate ?? activeSeason.startDate,
+        endDate: endDate ?? activeSeason.endDate,
+        signupDeadline: signupDeadline !== undefined ? (signupDeadline || null) : activeSeason.signupDeadline,
+      }).where(eq(seasonsTable.id, activeSeason.id));
+    } else if (startDate && endDate) {
+      // No active season yet — create and activate one
+      await db.insert(seasonsTable).values({
+        ladderId: id,
+        name: ladder.name,
+        startDate,
+        endDate,
+        signupDeadline: signupDeadline || null,
+        isActive: true,
+      });
+    }
+  }
+
+  res.json(await enrichLadder(ladder));
 });
 
 export default router;

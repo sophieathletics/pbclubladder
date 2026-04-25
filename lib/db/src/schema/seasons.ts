@@ -9,6 +9,7 @@ export const seasonsTable = pgTable("seasons", {
   name: text("name").notNull(),
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
+  signupDeadline: date("signup_deadline"),
   isActive: boolean("is_active").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
