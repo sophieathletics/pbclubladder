@@ -170,4 +170,15 @@ router.patch("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
   res.json(await enrichLadder(ladder));
 });
 
+router.delete("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const [ladder] = await db.select().from(laddersTable).where(eq(laddersTable.id, id)).limit(1);
+  if (!ladder) {
+    res.status(404).json({ error: "Ladder not found" });
+    return;
+  }
+  await db.delete(laddersTable).where(eq(laddersTable.id, id));
+  res.json({ success: true });
+});
+
 export default router;

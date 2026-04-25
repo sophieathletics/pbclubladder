@@ -1532,6 +1532,31 @@ export const useUpdateLadder = <
 };
 
 /**
+ * @summary Delete a ladder
+ */
+export const getDeleteLadderUrl = (id: string) => `/api/ladders/${id}`;
+
+export const deleteLadder = async (id: string, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(getDeleteLadderUrl(id), { ...options, method: "DELETE" });
+};
+
+export const getDeleteLadderMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteLadder>>, TError, { id: string }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const mutationKey = ["deleteLadder"];
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  return { mutationKey, mutationFn: ({ id }: { id: string }) => deleteLadder(id, requestOptions), ...mutationOptions };
+};
+
+export const useDeleteLadder = <TError = ErrorType<unknown>, TContext = unknown>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteLadder>>, TError, { id: string }, TContext>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  return useMutation(getDeleteLadderMutationOptions(options));
+};
+
+/**
  * @summary List all seasons
  */
 export const getListSeasonsUrl = () => {

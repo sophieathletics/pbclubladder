@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
   useGetAdminStats, useListAdminPlayers, useListDisputes, useResolveDispute,
   useCreateSeason, useActivateSeason, useDeactivateSeason, useGetInactivityLog,
-  useListLadders, useCreateLadder, useUpdateLadder, useListSeasons,
+  useListLadders, useCreateLadder, useUpdateLadder, useDeleteLadder, useListSeasons,
   useDeactivatePlayer, useListAllTeamsAdmin, useAdminRemoveTeam,
 } from "@workspace/api-client-react";
 import {
@@ -52,6 +52,7 @@ function AdminContent() {
   const resolveDispute = useResolveDispute();
   const createLadder = useCreateLadder();
   const updateLadder = useUpdateLadder();
+  const deleteLadder = useDeleteLadder();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -229,7 +230,7 @@ function AdminContent() {
                   {ladderList.length === 0 ? (
                     <p className="p-4 text-sm text-muted-foreground">No ladders yet. Create one below.</p>
                   ) : ladderList.map((l: any) => (
-                    <LadderRow key={l.id} ladder={l} onUpdate={updateLadder} />
+                    <LadderRow key={l.id} ladder={l} onUpdate={updateLadder} onDelete={deleteLadder} />
                   ))}
                 </div>
               </CardContent>
@@ -450,7 +451,7 @@ function PlayerRow({ player }: { player: any }) {
   );
 }
 
-function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typeof useUpdateLadder> }) {
+function LadderRow({ ladder, onUpdate, onDelete }: { ladder: any; onUpdate: ReturnType<typeof useUpdateLadder>; onDelete: ReturnType<typeof useDeleteLadder> }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(ladder.name);
   const [description, setDescription] = useState(ladder.description ?? "");
@@ -467,6 +468,13 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
   const [signupDeadline, setSignupDeadline] = useState(ladder.activeSeason?.signupDeadline ?? "");
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  // Sync date fields when the ladder prop refreshes after a save
+  useEffect(() => {
+    setStartDate(ladder.activeSeason?.startDate ?? "");
+    setEndDate(ladder.activeSeason?.endDate ?? "");
+    setSignupDeadline(ladder.activeSeason?.signupDeadline ?? "");
+  }, [ladder.activeSeason?.startDate, ladder.activeSeason?.endDate, ladder.activeSeason?.signupDeadline]);
 
   const handleSave = () => {
     if (!city.trim()) { toast({ title: "City is required", variant: "destructive" }); return; }
@@ -593,7 +601,34 @@ function LadderRow({ ladder, onUpdate }: { ladder: any; onUpdate: ReturnType<typ
           </p>
         )}
       </div>
-      <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+      <div className="flex gap-2 shrink-0">
+        <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" variant="destructive">Delete</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete "{ladder.name}"?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the ladder and all its seasons, teams, challenges and matches. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => onDelete.mutate({ id: ladder.id }, {
+                  onSuccess: () => { toast({ title: "Ladder deleted" }); qc.invalidateQueries(); },
+                  onError: (err: any) => toast({ title: "Error", description: err?.data?.error, variant: "destructive" }),
+                })}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
