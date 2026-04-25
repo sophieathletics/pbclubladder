@@ -162,6 +162,13 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
+  // Block challenges before the season's start date
+  if (active.startDate && new Date() < new Date(active.startDate)) {
+    const fmt = new Date(active.startDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+    res.status(400).json({ error: `Challenges open on ${fmt} when the season starts.` });
+    return;
+  }
+
   const [myTeam] = await db.select().from(teamsTable).where(
     and(eq(teamsTable.seasonId, active.id), or(eq(teamsTable.player1Id, player.id), eq(teamsTable.player2Id, player.id)))
   ).limit(1);

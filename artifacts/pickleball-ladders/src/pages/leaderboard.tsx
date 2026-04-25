@@ -80,6 +80,16 @@ export default function Leaderboard() {
   );
   const hasActiveChallenge = !!(myPositionData as any)?.hasActiveChallenge;
 
+  const seasonStarted = useMemo(() => {
+    if (!season?.startDate) return true;
+    return new Date() >= new Date(season.startDate);
+  }, [season]);
+
+  const seasonStartLabel = useMemo(() => {
+    if (!season?.startDate) return "";
+    return new Date(season.startDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }, [season]);
+
   const myTeamInLadder = useMemo(() => {
     if (!season || !myTeams) return undefined;
     return (myTeams as any[]).find(t => t.seasonId === season.id);
@@ -290,15 +300,21 @@ export default function Leaderboard() {
                       </div>
                       {showChallenge && !hasActiveChallenge && (
                         <div className="mt-2 pl-12">
-                          <Button
-                            size="sm"
-                            onClick={() => handleChallenge((standing as any).team?.id, (standing as any).team?.teamName)}
-                            disabled={createChallenge.isPending}
-                            data-testid={`btn-challenge-${(standing as any).team?.id}`}
-                          >
-                            <Swords className="w-3.5 h-3.5 mr-1" />
-                            Challenge
-                          </Button>
+                          {seasonStarted ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleChallenge((standing as any).team?.id, (standing as any).team?.teamName)}
+                              disabled={createChallenge.isPending}
+                              data-testid={`btn-challenge-${(standing as any).team?.id}`}
+                            >
+                              <Swords className="w-3.5 h-3.5 mr-1" />
+                              Challenge
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Challenges open {seasonStartLabel}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
