@@ -82,12 +82,12 @@ export default function Leaderboard() {
 
   const seasonStarted = useMemo(() => {
     if (!season?.startDate) return true;
-    return new Date() >= new Date(season.startDate);
+    return new Date() >= parseLocalDate(season.startDate);
   }, [season]);
 
   const seasonStartLabel = useMemo(() => {
     if (!season?.startDate) return "";
-    return new Date(season.startDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return parseLocalDate(season.startDate).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }, [season]);
 
   const myTeamInLadder = useMemo(() => {
@@ -131,10 +131,19 @@ export default function Leaderboard() {
     );
   };
 
+  // Parse date-only strings (YYYY-MM-DD) as local midnight to avoid UTC off-by-one.
+  function parseLocalDate(d: string): Date {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [y, m, day] = d.split("-").map(Number);
+      return new Date(y, m - 1, day);
+    }
+    return new Date(d);
+  }
+
   function formatDateRange(start?: string, end?: string) {
     if (!start || !end) return "—";
     const fmt = (d: string) => {
-      const dt = new Date(d);
+      const dt = parseLocalDate(d);
       if (isNaN(dt.getTime())) return d;
       return dt.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     };
