@@ -97,6 +97,7 @@ export interface Player {
   role: PlayerRole;
   isActive: boolean;
   createdAt: string;
+  emailVerified: boolean;
 }
 
 export interface AuthResponse {
@@ -248,6 +249,9 @@ export interface CreateLadderBody {
   level?: string;
   entryFeeCents?: number | null;
   sortOrder?: string;
+  startDate?: string;
+  endDate?: string;
+  signupDeadline?: string;
 }
 
 export type UpdateLadderBodyCategory =
@@ -272,6 +276,9 @@ export interface UpdateLadderBody {
   entryFeeCents?: number | null;
   isActive?: boolean;
   sortOrder?: string;
+  startDate?: string;
+  endDate?: string;
+  signupDeadline?: string;
 }
 
 export interface CreateSeasonBody {
@@ -549,6 +556,10 @@ export interface CronJobResult {
   processed: number;
   details: string[];
 }
+
+export type VerifyEmailParams = {
+  token: string;
+};
 
 export type ListPlayersParams = {
   search?: string;

@@ -117,7 +117,7 @@ function AdminContent() {
           startDate: newLadder.startDate || undefined,
           endDate: newLadder.endDate || undefined,
           signupDeadline: newLadder.signupDeadline || undefined,
-        } as any,
+        },
       },
       {
         onSuccess: () => { toast({ title: "Ladder created!" }); qc.invalidateQueries(); setNewLadder({ name: "", description: "", category: "coed", location: "", address: "", city: "", state: "", level: "", isPaid: false, entryFeeDollars: "", startDate: "", endDate: "", signupDeadline: "" }); },
