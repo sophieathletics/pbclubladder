@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, challengesTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, availabilityTable, matchesTable, matchScoresTable, matchResultsTable } from "@workspace/db";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
 import { findOverlappingSlots } from "../lib/ladder";
@@ -214,24 +214,38 @@ router.post("/challenges", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Check challenged team also doesn't have an active challenge
-  const challengedExisting = await db.select().from(challengesTable).where(
-    and(
-      eq(challengesTable.seasonId, active.id),
-      or(eq(challengesTable.challengerTeamId, challengedTeamId), eq(challengesTable.challengedTeamId, challengedTeamId))
-    )
-  );
-  if (challengedExisting.some(c => ["pending", "accepted", "scheduling", "scheduled"].includes(c.status))) {
-    res.status(400).json({ error: "That team already has an active challenge" });
+  // Use a transaction + advisory lock so two simultaneous challenges to the same
+  // team can't both pass the "already has active challenge" check at once.
+  let challenge: any;
+  try {
+    challenge = await db.transaction(async (tx) => {
+      // Advisory lock scoped to this challenged team — released automatically at end of transaction.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${challengedTeamId}))`);
+
+      const challengedExisting = await tx.select().from(challengesTable).where(
+        and(
+          eq(challengesTable.seasonId, active.id),
+          or(eq(challengesTable.challengerTeamId, challengedTeamId), eq(challengesTable.challengedTeamId, challengedTeamId))
+        )
+      );
+      if (challengedExisting.some(c => ["pending", "accepted", "scheduling", "scheduled"].includes(c.status))) {
+        throw Object.assign(new Error("That team already has an active challenge"), { status: 400 });
+      }
+
+      const [row] = await tx.insert(challengesTable).values({
+        seasonId: active.id,
+        challengerTeamId: myTeam.id,
+        challengedTeamId,
+        status: "pending",
+      }).returning();
+      return row;
+    });
+  } catch (err: any) {
+    const status = err.status ?? 500;
+    const message = status === 400 ? err.message : "Failed to create challenge";
+    res.status(status).json({ error: message });
     return;
   }
-
-  const [challenge] = await db.insert(challengesTable).values({
-    seasonId: active.id,
-    challengerTeamId: myTeam.id,
-    challengedTeamId,
-    status: "pending",
-  }).returning();
 
   // Notify challenged team
   const [challengedTeam] = await db.select().from(teamsTable).where(eq(teamsTable.id, challengedTeamId)).limit(1);
