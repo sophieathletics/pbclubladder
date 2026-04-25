@@ -24,7 +24,7 @@ export default function VerifyEmail() {
         if (res.ok) {
           setStatus("success");
           setMessage(data.message ?? "Email verified!");
-          setTimeout(() => setLocation("/dashboard"), 3000);
+          setTimeout(() => setLocation("/team"), 3000);
         } else {
           setStatus("error");
           setMessage(data.error ?? "Verification failed.");
@@ -50,7 +50,7 @@ export default function VerifyEmail() {
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
             <h1 className="text-2xl font-black mb-2">Email verified!</h1>
             <p className="text-muted-foreground">{message}</p>
-            <p className="text-sm text-muted-foreground mt-2">Redirecting to dashboard…</p>
+            <p className="text-sm text-muted-foreground mt-2">Redirecting to your team…</p>
           </>
         )}
         {status === "error" && (
