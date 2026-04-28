@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History } from "lucide-react";
+import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History, CreditCard } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -89,6 +89,24 @@ function DashboardContent() {
             </div>
           )}
         </div>
+
+        {/* Unpaid entry fee banner — shown for any team where the current player hasn't paid */}
+        {teams.some((t: any) => {
+          const isMember = player && (t.player1Id === (player as any).id || t.player2Id === (player as any).id);
+          if (!isMember || t.paymentStatus === "not_required") return false;
+          const amP1 = (player as any).id === t.player1Id;
+          return amP1 ? !t.player1PaidAt : !t.player2PaidAt;
+        }) && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
+            <div className="flex items-center gap-2 text-amber-800">
+              <CreditCard className="w-4 h-4 shrink-0" />
+              <span>You have an unpaid entry fee — pay it under <strong>My Team</strong> to start challenging.</span>
+            </div>
+            <Link href="/team">
+              <Button size="sm" className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white border-0">Pay now</Button>
+            </Link>
+          </div>
+        )}
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card className="border-primary/10">

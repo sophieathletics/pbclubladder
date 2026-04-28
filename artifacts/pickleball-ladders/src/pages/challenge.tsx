@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { Swords, Trophy, Users, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -63,7 +64,11 @@ function ChallengeContent() {
           const msg: string = err?.data?.error ?? "Failed to send challenge";
           const isPaymentBlock = /entry fee/i.test(msg);
           if (isPaymentBlock) {
-            toast({ title: "Entry fees needed first", description: msg });
+            toast({
+              title: "Entry fees needed first",
+              description: "Go to My Team to pay your entry fee before challenging.",
+              action: <ToastAction altText="Pay now" onClick={() => setLocation("/team")}>Pay now</ToastAction>,
+            });
           } else {
             toast({ title: "Failed to send challenge", description: msg, variant: "destructive" });
           }

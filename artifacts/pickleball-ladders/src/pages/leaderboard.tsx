@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Medal, Search, Swords } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useSearch, Link } from "wouter";
 
@@ -121,7 +122,8 @@ export default function Leaderboard() {
           if (isPaymentBlock) {
             toast({
               title: "Entry fees needed first",
-              description: msg,
+              description: "Go to My Team to pay your entry fee before challenging.",
+              action: <ToastAction altText="Pay now" onClick={() => setLocation("/team")}>Pay now</ToastAction>,
             });
           } else {
             toast({ title: "Failed to send challenge", description: msg, variant: "destructive" });
