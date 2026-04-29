@@ -116,13 +116,12 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   const [activeLadder] = await db.select().from(laddersTable).where(eq(laddersTable.id, activeSeason.ladderId)).limit(1);
 
   // Signup window: use signupDeadline if set, otherwise closes 30 days before season end
-  const cutoffStr = activeSeason.signupDeadline || activeSeason.endDate;
+  // All date-only strings are treated as UTC midnight to avoid timezone off-by-one errors.
   const cutoff = (() => {
     if (activeSeason.signupDeadline) {
-      // date-only string — treat as local midnight
+      // End of the deadline day = start of the next day in UTC
       const [y, m, d] = activeSeason.signupDeadline.split("-").map(Number);
-      const dt = new Date(y, m - 1, d + 1); // day after deadline = closed
-      return dt;
+      return new Date(Date.UTC(y, m - 1, d + 1));
     }
     const dt = new Date(activeSeason.endDate);
     dt.setUTCDate(dt.getUTCDate() - 30);

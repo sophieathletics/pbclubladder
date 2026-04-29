@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, challengesTable, matchResultsTable, matchesTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, inactivityDropsTable } from "@workspace/db";
+import { db, challengesTable, matchResultsTable, matchesTable, matchScoresTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, inactivityDropsTable } from "@workspace/db";
 import { eq, and, sql, lt, isNull, or, asc, ne } from "drizzle-orm";
 import { requireCronSecret } from "../lib/auth";
 import { applyMatchResult } from "../lib/ladder";
@@ -87,7 +87,7 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
 });
 
 router.post("/cron/auto-confirm", requireCronSecret, async (_req, res): Promise<void> => {
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
   const results = await db.select().from(matchResultsTable).where(
     and(
@@ -129,7 +129,9 @@ router.post("/cron/auto-confirm", requireCronSecret, async (_req, res): Promise<
     }
 
     const [winnerTeam] = result.winnerTeamId ? await db.select().from(teamsTable).where(eq(teamsTable.id, result.winnerTeamId)).limit(1) : [null];
-    sendScoreAutoConfirmedEmail(allEmails, winnerTeam?.teamName ?? "Unknown", "auto-confirmed", result.matchId);
+    const scores = await db.select().from(matchScoresTable).where(eq(matchScoresTable.matchId, result.matchId));
+    const scoreStr = scores.length > 0 ? scores.map(s => `${s.team1Score}–${s.team2Score}`).join(", ") : "N/A";
+    sendScoreAutoConfirmedEmail(allEmails, winnerTeam?.teamName ?? "Unknown", scoreStr, result.matchId);
     notifyPlayers(allPlayerIds, "score_auto_confirmed", "Match result auto-confirmed after 48 hours. Rankings updated.", `/matches/${result.matchId}`);
 
     details.push(`Match ${result.matchId} auto-confirmed`);
