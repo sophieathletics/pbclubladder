@@ -619,7 +619,7 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
         {(amIPlayer1 || amIPlayer2) && (
           <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1 text-xs text-muted-foreground">
-              Need to step away? Leaving the team dissolves it for both players. Refunds are issued automatically if it's been less than 48 hours since you paid.
+              Need to step away? Leaving the team dissolves it for both players. Refunds are issued automatically if it's been less than 48 hours since you paid and your team has not been part of any challenges or matches.
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -657,7 +657,7 @@ function TeamCard({ team, ladders }: { team: any; ladders: any[] }) {
                         <div className="space-y-2 text-sm">
                           <p>This dissolves the team for both you and {partnerName ?? "your partner"}. You can join a new team afterward.</p>
                           {feeRequired && iPaid && (
-                            <p>If it's been less than 48 hours since you paid, your {feeDollars ? `$${feeDollars}` : ""} entry fee will be refunded automatically. After 48 hours, refunds require admin approval.</p>
+                            <p>If it's been less than 48 hours since you paid and your team has not been part of any challenges or matches, your {feeDollars ? `$${feeDollars}` : ""} entry fee will be refunded automatically. Otherwise, refunds require admin approval.</p>
                           )}
                         </div>
                       </AlertDialogDescription>
