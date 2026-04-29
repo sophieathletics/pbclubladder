@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import express from "express";
-import { db, teamsTable, seasonsTable, laddersTable, playersTable } from "@workspace/db";
-import { eq, and, isNull } from "drizzle-orm";
+import { db, teamsTable, seasonsTable, laddersTable, playersTable, challengesTable } from "@workspace/db";
+import { eq, and, isNull, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { getStripe, getWebhookSecret, isStripeConfigured } from "../lib/stripe";
 import { logger } from "../lib/logger";
@@ -25,6 +25,14 @@ export async function refundPlayer(teamId: string, playerSlot: 1 | 2, force: boo
     const ageMs = Date.now() - new Date(paidAt).getTime();
     if (ageMs > 48 * 60 * 60 * 1000) {
       return { refunded: false, amountCents: 0, refundId: null, reason: "Outside 48-hour refund window" };
+    }
+
+    // No refund if the team has been part of any challenge (matches are always tied to challenges)
+    const [existingChallenge] = await db.select({ id: challengesTable.id }).from(challengesTable)
+      .where(or(eq(challengesTable.challengerTeamId, team.id), eq(challengesTable.challengedTeamId, team.id)))
+      .limit(1);
+    if (existingChallenge) {
+      return { refunded: false, amountCents: 0, refundId: null, reason: "Team has been part of a challenge or match" };
     }
   }
 
