@@ -115,11 +115,21 @@ router.post("/invitations", requireAuth, async (req, res): Promise<void> => {
   // Look up the ladder for this season — needed for gender-rule validation
   const [activeLadder] = await db.select().from(laddersTable).where(eq(laddersTable.id, activeSeason.ladderId)).limit(1);
 
-  // Signup window: closes 30 days before the season end date
-  const cutoff = new Date(activeSeason.endDate);
-  cutoff.setUTCDate(cutoff.getUTCDate() - 30);
+  // Signup window: use signupDeadline if set, otherwise closes 30 days before season end
+  const cutoffStr = activeSeason.signupDeadline || activeSeason.endDate;
+  const cutoff = (() => {
+    if (activeSeason.signupDeadline) {
+      // date-only string — treat as local midnight
+      const [y, m, d] = activeSeason.signupDeadline.split("-").map(Number);
+      const dt = new Date(y, m - 1, d + 1); // day after deadline = closed
+      return dt;
+    }
+    const dt = new Date(activeSeason.endDate);
+    dt.setUTCDate(dt.getUTCDate() - 30);
+    return dt;
+  })();
   if (Date.now() > cutoff.getTime()) {
-    res.status(400).json({ error: "Signup for this ladder has closed (less than 1 month remaining in the season)" });
+    res.status(400).json({ error: "Signup for this ladder has closed" });
     return;
   }
 
