@@ -187,7 +187,7 @@ export default function Ladders() {
                         <>
                           <span className="inline-flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
-                            {ladder.activeSeason.name}
+                            {ladder.activeSeason.startDate} – {ladder.activeSeason.endDate}
                           </span>
                         </>
                       ) : (
