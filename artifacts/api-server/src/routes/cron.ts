@@ -22,6 +22,9 @@ router.post("/cron/inactivity-drop", requireCronSecret, async (_req, res): Promi
   const INACTIVITY_DAYS = 7;
 
   for (const activeSeason of activeSeasons) {
+    // Advisory lock per season prevents concurrent cron runs from double-dropping teams
+    await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${activeSeason.id}))`).catch(() => {});
+
     const standings = await db.select().from(ladderStandingsTable)
       .where(eq(ladderStandingsTable.seasonId, activeSeason.id))
       .orderBy(asc(ladderStandingsTable.position));

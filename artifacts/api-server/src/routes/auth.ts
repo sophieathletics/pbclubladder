@@ -254,7 +254,7 @@ router.post("/auth/resend-verification", requireAuth, async (req, res): Promise<
   const verificationToken = randomBytes(32).toString("hex");
   await db.update(playersTable).set({ emailVerificationToken: verificationToken }).where(eq(playersTable.id, player.id));
   try { sendVerificationEmail(player.email, verificationToken); } catch (e) { logger.error({ err: e }, "Failed to send verification email"); }
-  res.json({ success: true, message: "Verification email sent" });
+  res.json({ success: true, message: "A new verification link has been sent. Any previous link is now invalid." });
 });
 
 export function sanitizePlayer(player: any) {
