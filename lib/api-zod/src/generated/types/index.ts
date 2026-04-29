@@ -93,4 +93,5 @@ export * from "./updateProfileBody";
 export * from "./updateProfileBodySex";
 export * from "./updateTeamStatusBody";
 export * from "./updateTeamStatusBodyStatus";
+export * from "./verifyEmailParams";
 export * from "./withdrawTeam200";

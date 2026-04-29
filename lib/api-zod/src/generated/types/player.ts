@@ -21,4 +21,5 @@ export interface Player {
   role: PlayerRole;
   isActive: boolean;
   createdAt: string;
+  emailVerified: boolean;
 }

@@ -344,7 +344,7 @@ function MatchDetailContent() {
                         <p className="text-xs text-muted-foreground mt-1 mb-2">
                           Games are tied {team1Wins}–{team2Wins}. Pick the overall winner:
                         </p>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           {[challengerTeam, challengedTeam].filter(Boolean).map((t: any) => (
                             <button
                               key={t.id}
@@ -363,27 +363,27 @@ function MatchDetailContent() {
                   </div>
 
                   {/* Column headers */}
-                  <div className="grid grid-cols-[2rem_1fr_1fr] gap-2 px-1">
+                  <div className="grid grid-cols-[1.5rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr] gap-1 sm:gap-2 px-0 sm:px-1">
                     <div />
                     <p className="text-xs font-medium text-center truncate">{challengerTeam?.teamName ?? "Team 1"}</p>
                     <p className="text-xs font-medium text-center truncate">{challengedTeam?.teamName ?? "Team 2"}</p>
                   </div>
                   {games.map((game, i) => (
-                    <div key={i} className="grid grid-cols-[2rem_1fr_1fr] gap-2 items-center">
+                    <div key={i} className="grid grid-cols-[1.5rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr] gap-1 sm:gap-2 items-center">
                       <span className="text-xs text-muted-foreground text-center">G{i + 1}</span>
                       <Input
                         type="number" inputMode="numeric" min={0}
                         value={game.team1Score}
                         onChange={e => updateScore(i, "team1Score", parseInt(e.target.value) || 0)}
                         onFocus={e => e.target.select()}
-                        className="text-center text-lg font-bold h-12"
+                        className="text-center text-base sm:text-lg font-bold h-10 sm:h-12"
                       />
                       <Input
                         type="number" inputMode="numeric" min={0}
                         value={game.team2Score}
                         onChange={e => updateScore(i, "team2Score", parseInt(e.target.value) || 0)}
                         onFocus={e => e.target.select()}
-                        className="text-center text-lg font-bold h-12"
+                        className="text-center text-base sm:text-lg font-bold h-10 sm:h-12"
                       />
                     </div>
                   ))}
@@ -466,27 +466,27 @@ function MatchDetailContent() {
                   </div>
 
                   {/* Column headers */}
-                  <div className="grid grid-cols-[2rem_1fr_1fr] gap-2 px-1">
+                  <div className="grid grid-cols-[1.5rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr] gap-1 sm:gap-2 px-0 sm:px-1">
                     <div />
                     <p className="text-xs font-medium text-center truncate">{challengerTeam?.teamName ?? "Team 1"}</p>
                     <p className="text-xs font-medium text-center truncate">{challengedTeam?.teamName ?? "Team 2"}</p>
                   </div>
                   {games.map((game, i) => (
-                    <div key={i} className="grid grid-cols-[2rem_1fr_1fr] gap-2 items-center">
+                    <div key={i} className="grid grid-cols-[1.5rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr] gap-1 sm:gap-2 items-center">
                       <span className="text-xs text-muted-foreground text-center">G{i + 1}</span>
                       <Input
                         type="number" inputMode="numeric" min={0}
                         value={game.team1Score}
                         onChange={e => updateScore(i, "team1Score", parseInt(e.target.value) || 0)}
                         onFocus={e => e.target.select()}
-                        className="text-center text-lg font-bold h-12"
+                        className="text-center text-base sm:text-lg font-bold h-10 sm:h-12"
                       />
                       <Input
                         type="number" inputMode="numeric" min={0}
                         value={game.team2Score}
                         onChange={e => updateScore(i, "team2Score", parseInt(e.target.value) || 0)}
                         onFocus={e => e.target.select()}
-                        className="text-center text-lg font-bold h-12"
+                        className="text-center text-base sm:text-lg font-bold h-10 sm:h-12"
                       />
                     </div>
                   ))}

@@ -181,7 +181,7 @@ export default function Leaderboard() {
             <div className="my-5 sm:my-6">
               <Select value={ladderId} onValueChange={setLadderId}>
                 <SelectTrigger
-                  className="w-full h-auto min-h-[64px] py-3 px-4 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm [&>span]:line-clamp-none [&>span]:block [&>span]:text-left [&>span]:flex-1 [&>span]:min-w-0"
+                  className="w-full h-auto min-h-[52px] sm:min-h-[64px] py-2 sm:py-3 px-3 sm:px-4 text-sm sm:text-base font-semibold border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10 hover:border-primary/60 transition-all shadow-sm [&>span]:line-clamp-none [&>span]:block [&>span]:text-left [&>span]:flex-1 [&>span]:min-w-0"
                   data-testid="select-ladder"
                 >
                   {currentLadder ? (

@@ -50,6 +50,7 @@ export const LoginPlayerResponse = zod.object({
     role: zod.enum(["player", "admin"]),
     isActive: zod.boolean(),
     createdAt: zod.string(),
+    emailVerified: zod.boolean(),
   }),
   token: zod.string().optional(),
 });
@@ -78,6 +79,7 @@ export const GetCurrentPlayerResponse = zod.object({
   role: zod.enum(["player", "admin"]),
   isActive: zod.boolean(),
   createdAt: zod.string(),
+  emailVerified: zod.boolean(),
 });
 
 /**
@@ -102,6 +104,7 @@ export const UpdateProfileResponse = zod.object({
   role: zod.enum(["player", "admin"]),
   isActive: zod.boolean(),
   createdAt: zod.string(),
+  emailVerified: zod.boolean(),
 });
 
 /**
@@ -125,6 +128,26 @@ export const ForgotPasswordBody = zod.object({
 });
 
 export const ForgotPasswordResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Verify email address using token
+ */
+export const VerifyEmailQueryParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+export const VerifyEmailResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
+
+/**
+ * @summary Resend email verification link
+ */
+export const ResendVerificationResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().optional(),
 });
@@ -166,6 +189,7 @@ export const ListPlayersResponseItem = zod.object({
   role: zod.enum(["player", "admin"]),
   isActive: zod.boolean(),
   createdAt: zod.string(),
+  emailVerified: zod.boolean(),
 });
 export const ListPlayersResponse = zod.array(ListPlayersResponseItem);
 
@@ -186,6 +210,7 @@ export const GetPlayerResponse = zod.object({
   role: zod.enum(["player", "admin"]),
   isActive: zod.boolean(),
   createdAt: zod.string(),
+  emailVerified: zod.boolean(),
 });
 
 /**
@@ -447,6 +472,7 @@ export const ListTeamsResponseItem = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -463,6 +489,7 @@ export const ListTeamsResponseItem = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -529,6 +556,7 @@ export const GetMyTeamResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -545,6 +573,7 @@ export const GetMyTeamResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -606,6 +635,7 @@ export const GetMyTeamsResponseItem = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -622,6 +652,7 @@ export const GetMyTeamsResponseItem = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -685,6 +716,7 @@ export const GetTeamResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -701,6 +733,7 @@ export const GetTeamResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -804,6 +837,7 @@ export const GetTeamMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -820,6 +854,7 @@ export const GetTeamMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -878,6 +913,7 @@ export const GetTeamMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -894,6 +930,7 @@ export const GetTeamMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -1073,6 +1110,7 @@ export const UpdateTeamStatusResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -1089,6 +1127,7 @@ export const UpdateTeamStatusResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -1144,6 +1183,7 @@ export const ListInvitationsResponse = zod.object({
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       invitee: zod
@@ -1160,6 +1200,7 @@ export const ListInvitationsResponse = zod.object({
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       season: zod
@@ -1198,6 +1239,7 @@ export const ListInvitationsResponse = zod.object({
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       invitee: zod
@@ -1214,6 +1256,7 @@ export const ListInvitationsResponse = zod.object({
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       season: zod
@@ -1276,6 +1319,7 @@ export const AcceptInvitationResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       player2: zod
@@ -1292,6 +1336,7 @@ export const AcceptInvitationResponse = zod
           role: zod.enum(["player", "admin"]),
           isActive: zod.boolean(),
           createdAt: zod.string(),
+          emailVerified: zod.boolean(),
         })
         .optional(),
       standing: zod
@@ -1410,6 +1455,7 @@ export const GetLadderResponse = zod.object({
                     role: zod.enum(["player", "admin"]),
                     isActive: zod.boolean(),
                     createdAt: zod.string(),
+                    emailVerified: zod.boolean(),
                   })
                   .optional(),
                 player2: zod
@@ -1426,6 +1472,7 @@ export const GetLadderResponse = zod.object({
                     role: zod.enum(["player", "admin"]),
                     isActive: zod.boolean(),
                     createdAt: zod.string(),
+                    emailVerified: zod.boolean(),
                   })
                   .optional(),
                 standing: zod
@@ -1506,6 +1553,7 @@ export const GetTopLadderResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -1522,6 +1570,7 @@ export const GetTopLadderResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -1605,6 +1654,7 @@ export const GetMyLadderPositionResponse = zod.object({
                   role: zod.enum(["player", "admin"]),
                   isActive: zod.boolean(),
                   createdAt: zod.string(),
+                  emailVerified: zod.boolean(),
                 })
                 .optional(),
               player2: zod
@@ -1621,6 +1671,7 @@ export const GetMyLadderPositionResponse = zod.object({
                   role: zod.enum(["player", "admin"]),
                   isActive: zod.boolean(),
                   createdAt: zod.string(),
+                  emailVerified: zod.boolean(),
                 })
                 .optional(),
               standing: zod
@@ -1697,6 +1748,7 @@ export const GetMyLadderPositionResponse = zod.object({
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -1713,6 +1765,7 @@ export const GetMyLadderPositionResponse = zod.object({
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -1802,6 +1855,7 @@ export const UpdateLadderPositionResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -1818,6 +1872,7 @@ export const UpdateLadderPositionResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -1889,6 +1944,7 @@ export const GetInactivityLogResponseItem = zod.object({
             role: zod.enum(["player", "admin"]),
             isActive: zod.boolean(),
             createdAt: zod.string(),
+            emailVerified: zod.boolean(),
           })
           .optional(),
         player2: zod
@@ -1905,6 +1961,7 @@ export const GetInactivityLogResponseItem = zod.object({
             role: zod.enum(["player", "admin"]),
             isActive: zod.boolean(),
             createdAt: zod.string(),
+            emailVerified: zod.boolean(),
           })
           .optional(),
         standing: zod
@@ -1994,6 +2051,7 @@ export const ListChallengesResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2010,6 +2068,7 @@ export const ListChallengesResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2068,6 +2127,7 @@ export const ListChallengesResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2084,6 +2144,7 @@ export const ListChallengesResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2256,6 +2317,7 @@ export const GetMyActiveChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2272,6 +2334,7 @@ export const GetMyActiveChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2330,6 +2393,7 @@ export const GetMyActiveChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2346,6 +2410,7 @@ export const GetMyActiveChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2511,6 +2576,7 @@ export const GetChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2527,6 +2593,7 @@ export const GetChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2585,6 +2652,7 @@ export const GetChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2601,6 +2669,7 @@ export const GetChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2766,6 +2835,7 @@ export const AcceptChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2782,6 +2852,7 @@ export const AcceptChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -2840,6 +2911,7 @@ export const AcceptChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -2856,6 +2928,7 @@ export const AcceptChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -3021,6 +3094,7 @@ export const DeclineChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -3037,6 +3111,7 @@ export const DeclineChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -3095,6 +3170,7 @@ export const DeclineChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -3111,6 +3187,7 @@ export const DeclineChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -3276,6 +3353,7 @@ export const CancelChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -3292,6 +3370,7 @@ export const CancelChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -3350,6 +3429,7 @@ export const CancelChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -3366,6 +3446,7 @@ export const CancelChallengeResponse = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -3553,6 +3634,7 @@ export const BookMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -3569,6 +3651,7 @@ export const BookMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -3627,6 +3710,7 @@ export const BookMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -3643,6 +3727,7 @@ export const BookMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -3916,6 +4001,7 @@ export const ListMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -3932,6 +4018,7 @@ export const ListMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -3990,6 +4077,7 @@ export const ListMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4006,6 +4094,7 @@ export const ListMatchesResponseItem = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4172,6 +4261,7 @@ export const GetMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4188,6 +4278,7 @@ export const GetMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4246,6 +4337,7 @@ export const GetMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4262,6 +4354,7 @@ export const GetMatchResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4441,6 +4534,7 @@ export const SubmitScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4457,6 +4551,7 @@ export const SubmitScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4515,6 +4610,7 @@ export const SubmitScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4531,6 +4627,7 @@ export const SubmitScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4699,6 +4796,7 @@ export const ConfirmScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4715,6 +4813,7 @@ export const ConfirmScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4773,6 +4872,7 @@ export const ConfirmScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4789,6 +4889,7 @@ export const ConfirmScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -4961,6 +5062,7 @@ export const DisputeScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -4977,6 +5079,7 @@ export const DisputeScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -5035,6 +5138,7 @@ export const DisputeScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -5051,6 +5155,7 @@ export const DisputeScoreResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -5219,6 +5324,7 @@ export const ConfirmAttendanceResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -5235,6 +5341,7 @@ export const ConfirmAttendanceResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -5293,6 +5400,7 @@ export const ConfirmAttendanceResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -5309,6 +5417,7 @@ export const ConfirmAttendanceResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -5482,6 +5591,7 @@ export const ListAdminPlayersResponseItem = zod
     role: zod.enum(["player", "admin"]),
     isActive: zod.boolean(),
     createdAt: zod.string(),
+    emailVerified: zod.boolean(),
   })
   .and(
     zod.object({
@@ -5515,6 +5625,7 @@ export const ListAdminPlayersResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             player2: zod
@@ -5531,6 +5642,7 @@ export const ListAdminPlayersResponseItem = zod
                 role: zod.enum(["player", "admin"]),
                 isActive: zod.boolean(),
                 createdAt: zod.string(),
+                emailVerified: zod.boolean(),
               })
               .optional(),
             standing: zod
@@ -5655,6 +5767,7 @@ export const ListDisputesResponseItem = zod.object({
                         role: zod.enum(["player", "admin"]),
                         isActive: zod.boolean(),
                         createdAt: zod.string(),
+                        emailVerified: zod.boolean(),
                       })
                       .optional(),
                     player2: zod
@@ -5671,6 +5784,7 @@ export const ListDisputesResponseItem = zod.object({
                         role: zod.enum(["player", "admin"]),
                         isActive: zod.boolean(),
                         createdAt: zod.string(),
+                        emailVerified: zod.boolean(),
                       })
                       .optional(),
                     standing: zod
@@ -5729,6 +5843,7 @@ export const ListDisputesResponseItem = zod.object({
                         role: zod.enum(["player", "admin"]),
                         isActive: zod.boolean(),
                         createdAt: zod.string(),
+                        emailVerified: zod.boolean(),
                       })
                       .optional(),
                     player2: zod
@@ -5745,6 +5860,7 @@ export const ListDisputesResponseItem = zod.object({
                         role: zod.enum(["player", "admin"]),
                         isActive: zod.boolean(),
                         createdAt: zod.string(),
+                        emailVerified: zod.boolean(),
                       })
                       .optional(),
                     standing: zod
@@ -5926,6 +6042,7 @@ export const ResolveDisputeResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -5942,6 +6059,7 @@ export const ResolveDisputeResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
@@ -6000,6 +6118,7 @@ export const ResolveDisputeResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   player2: zod
@@ -6016,6 +6135,7 @@ export const ResolveDisputeResponse = zod
                       role: zod.enum(["player", "admin"]),
                       isActive: zod.boolean(),
                       createdAt: zod.string(),
+                      emailVerified: zod.boolean(),
                     })
                     .optional(),
                   standing: zod
