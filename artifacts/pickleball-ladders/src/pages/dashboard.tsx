@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History, CreditCard } from "lucide-react";
+import { Trophy, Users, Swords, Bell, ArrowRight, TrendingUp, Target, Shield, History, CreditCard, CheckCircle2, Circle } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -89,6 +89,43 @@ function DashboardContent() {
             </div>
           )}
         </div>
+
+        {/* Getting Started steps — shown until all steps are complete */}
+        {!isLoading && (() => {
+          const hasTeam = teams.length > 0;
+          const hasPaid = teams.some((t: any) => {
+            const amP1 = (player as any)?.id === t.player1Id;
+            return t.paymentStatus === "not_required" || (amP1 ? !!t.player1PaidAt : !!t.player2PaidAt);
+          });
+          const hasChallenge = !!activeChallenge || (myStanding?.wins ?? 0) > 0 || (myStanding?.losses ?? 0) > 0;
+          const allDone = hasTeam && hasPaid && hasChallenge;
+          if (allDone) return null;
+
+          const steps = [
+            { label: "Invite your partner & join a ladder", done: hasTeam, href: "/team" },
+            { label: "Pay your $35 entry fee", done: hasPaid, href: "/team" },
+            { label: "Challenge another team (opens May 1st)", done: hasChallenge, href: "/challenge" },
+          ];
+
+          return (
+            <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4">
+              <p className="font-bold text-sm mb-3">🎾 Getting started</p>
+              <div className="space-y-2">
+                {steps.map((step, i) => (
+                  <Link key={i} href={step.done ? "#" : step.href}>
+                    <div className={`flex items-center gap-3 text-sm py-1 ${step.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                      {step.done
+                        ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                        : <Circle className="w-4 h-4 text-primary shrink-0" />}
+                      <span>{step.label}</span>
+                      {!step.done && <ArrowRight className="w-3 h-3 ml-auto text-primary" />}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Unpaid entry fee banner — shown for any team where the current player hasn't paid */}
         {teams.some((t: any) => {
