@@ -18,7 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Swords, Users, CheckCircle, XCircle, Calendar, ArrowRight, MapPin, Clock, Loader2 } from "lucide-react";
+import { Swords, Users, CheckCircle, XCircle, Calendar, ArrowRight, MapPin, Clock, Loader2, Mail, Phone, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useState } from "react";
@@ -58,6 +58,7 @@ function ChallengeDetailContent() {
   const [bookLocation, setBookLocation] = useState("");
   const [locationError, setLocationError] = useState(false);
   const [showBookForm, setShowBookForm] = useState(false);
+  const [showContactInfo, setShowContactInfo] = useState(false);
 
   if (isLoading) {
     return (
@@ -291,16 +292,129 @@ function ChallengeDetailContent() {
                 );
               })()}
 
-              {c.challengerAvailabilitySubmitted && c.challengedAvailabilitySubmitted && (!c.overlappingSlots || c.overlappingSlots.length === 0) && (
-                <div className="mt-4 p-3 rounded-lg border border-orange-200 bg-orange-50/60 text-sm">
-                  <p className="font-semibold text-orange-700 mb-1 flex items-center gap-2">
-                    <XCircle className="w-4 h-4" /> No common availability
-                  </p>
-                  <p className="text-orange-700/90 text-xs">
-                    Both teams submitted availability but no time slots overlap. One or both teams should update their availability to find a match time.
-                  </p>
-                </div>
-              )}
+              {c.challengerAvailabilitySubmitted && c.challengedAvailabilitySubmitted && (!c.overlappingSlots || c.overlappingSlots.length === 0) && (() => {
+                const opponentTeam = isChallenger ? c.challengedTeam : c.challengerTeam;
+                const opponentSlots: any[] = isChallenger ? (c.challengedSlots ?? []) : (c.challengerSlots ?? []);
+                const fmtOpponentSlots = opponentSlots
+                  .slice()
+                  .sort((a: any, b: any) => a.date.localeCompare(b.date))
+                  .map((s: any) => {
+                    const d = new Date(s.date + "T00:00:00");
+                    const dayLabel = d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+                    const times = (s.times as string[]).slice().sort().map((t: string) => {
+                      const [hh, mm] = t.split(":");
+                      const hr = parseInt(hh, 10);
+                      const ampm = hr >= 12 ? "PM" : "AM";
+                      const hr12 = hr % 12 === 0 ? 12 : hr % 12;
+                      return `${hr12}${mm !== "00" ? ":" + mm : ""} ${ampm}`;
+                    });
+                    return { dayLabel, times };
+                  });
+
+                return (
+                  <div className="mt-4 space-y-3">
+                    <div className="p-3 rounded-lg border border-orange-200 bg-orange-50/60">
+                      <p className="font-semibold text-orange-700 flex items-center gap-2 mb-1">
+                        <XCircle className="w-4 h-4 shrink-0" /> No common availability found
+                      </p>
+                      <p className="text-orange-700/80 text-xs">Both teams submitted but no times overlap. Here are your options:</p>
+                    </div>
+
+                    {/* Option 1 — Update availability */}
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">Update your availability</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 mb-3">See when your opponent is free and adjust your times to match.</p>
+                          {fmtOpponentSlots.length > 0 && (
+                            <div className="mb-3 p-2 rounded bg-muted/40 text-xs space-y-1">
+                              <p className="font-medium text-muted-foreground">{opponentTeam?.teamName} is available:</p>
+                              {fmtOpponentSlots.map((row, i) => (
+                                <div key={i}>
+                                  <span className="font-medium">{row.dayLabel}: </span>
+                                  <span className="text-muted-foreground">{row.times.join(", ")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <Button size="sm" asChild>
+                            <Link href={`/availability/${id}`}>
+                              <Calendar className="w-4 h-4 mr-1" /> Update Availability
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Option 2 — Share contact info */}
+                    <div className="border rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-muted text-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">Coordinate directly</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 mb-3">Reach out to the other team to find a time that works.</p>
+                          <Button size="sm" variant="outline" onClick={() => setShowContactInfo(v => !v)}>
+                            <Mail className="w-4 h-4 mr-1" /> {showContactInfo ? "Hide" : "Show"} Contact Info
+                          </Button>
+                          {showContactInfo && (
+                            <div className="mt-3 space-y-3">
+                              {[c.challengerTeam, c.challengedTeam].filter(Boolean).map((team: any) => (
+                                <div key={team.id} className="text-xs">
+                                  <p className="font-semibold mb-1">{team.teamName}</p>
+                                  {[team.player1, team.player2].filter(Boolean).map((p: any) => (
+                                    <div key={p.id} className="flex flex-col gap-0.5 pl-2 mb-1.5">
+                                      <span className="font-medium">{p.fullName}</span>
+                                      {p.shareContact ? (
+                                        <div className="text-muted-foreground space-y-0.5">
+                                          <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{p.email}</span>
+                                          {p.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{p.phone}</span>}
+                                        </div>
+                                      ) : (
+                                        <span className="text-muted-foreground italic">Contact sharing disabled</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Option 3 — Cancel & rechallenge */}
+                    <div className="border border-destructive/20 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-muted text-foreground flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm">Cancel &amp; rechallenge</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 mb-3">Can't make it work? Cancel this challenge and try a different team.</p>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="sm" variant="destructive" disabled={cancelChallenge.isPending}>
+                                <RefreshCw className="w-4 h-4 mr-1" /> Cancel &amp; Try Another Team
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel this challenge?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  No common availability was found. Cancelling will notify {opponentTeam?.teamName} and free both teams to issue new challenges.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Keep trying</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCancel}>Yes, cancel</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {c.overlappingSlots?.length > 0 && (isChallenger || isChallenged) && (() => {
                 const flatSlots: { date: string; time: string; key: string; label: string }[] = [];
