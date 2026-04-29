@@ -4,6 +4,7 @@ import { logger } from "./logger";
 const APP_URL = process.env.APP_URL ?? "https://pbclubladder.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@example.com";
 const FROM_EMAIL = process.env.FROM_EMAIL ?? "Pickleball Club Ladder <noreply@pbclubladder.com>";
+const REPLY_TO = process.env.REPLY_TO_EMAIL ?? "info@pbclubladder.com";
 const CLUB_NAME = "Pickleball Club Ladder";
 
 interface EmailPayload {
@@ -27,6 +28,7 @@ async function sendEmail(payload: EmailPayload): Promise<void> {
   try {
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: Array.isArray(payload.to) ? payload.to : [payload.to],
       subject: payload.subject,
       html: payload.html,
