@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import express from "express";
-import { db, playersTable, teamsTable, matchResultsTable, matchesTable, matchScoresTable, seasonsTable, ladderStandingsTable, challengesTable } from "@workspace/db";
+import { db, playersTable, teamsTable, matchResultsTable, matchesTable, matchScoresTable, seasonsTable, ladderStandingsTable, challengesTable, laddersTable } from "@workspace/db";
 import { eq, and, sql, ilike, or } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
@@ -208,6 +208,95 @@ router.get("/admin/teams", requireAdmin, async (_req, res): Promise<void> => {
   }));
   enriched.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   res.json(enriched);
+});
+
+// Roster: all ladders with teams, players, standings, and match history
+router.get("/admin/roster", requireAdmin, async (_req, res): Promise<void> => {
+  const [ladders, seasons, teams, players, standings, matches, scores, results] = await Promise.all([
+    db.select().from(laddersTable),
+    db.select().from(seasonsTable),
+    db.select().from(teamsTable),
+    db.select().from(playersTable),
+    db.select().from(ladderStandingsTable),
+    db.select().from(matchesTable),
+    db.select().from(matchScoresTable),
+    db.select().from(matchResultsTable),
+  ]);
+
+  const playerMap = new Map(players.map(p => [p.id, sanitizePlayer(p)]));
+  const seasonMap = new Map(seasons.map(s => [s.id, s]));
+  const standingMap = new Map(standings.map(s => [s.teamId, s]));
+
+  // Build match lookup by team id
+  const matchesByTeam = new Map<string, any[]>();
+  for (const m of matches) {
+    const challenge = m.challengeId;
+    // matches are linked to teams via challenges; we attach to both teams via challenge lookup later
+  }
+
+  // Build challenge lookup for matches
+  const challenges = await db.select().from(challengesTable);
+  const challengeMap = new Map(challenges.map(c => [c.id, c]));
+
+  const scoresByMatch = new Map<string, any[]>();
+  for (const s of scores) {
+    if (!scoresByMatch.has(s.matchId)) scoresByMatch.set(s.matchId, []);
+    scoresByMatch.get(s.matchId)!.push(s);
+  }
+  const resultByMatch = new Map(results.map(r => [r.matchId, r]));
+
+  // Group matches by team
+  for (const m of matches) {
+    const ch = challengeMap.get(m.challengeId);
+    if (!ch) continue;
+    const matchData = {
+      id: m.id,
+      scheduledDate: m.scheduledDate,
+      scheduledTime: m.scheduledTime,
+      courtLocation: m.courtLocation,
+      scores: scoresByMatch.get(m.id) ?? [],
+      result: resultByMatch.get(m.id) ?? null,
+      challengerTeamId: ch.challengerTeamId,
+      challengedTeamId: ch.challengedTeamId,
+    };
+    for (const teamId of [ch.challengerTeamId, ch.challengedTeamId]) {
+      if (!matchesByTeam.has(teamId)) matchesByTeam.set(teamId, []);
+      matchesByTeam.get(teamId)!.push(matchData);
+    }
+  }
+
+  // Group teams by ladder
+  const ladderMap = new Map(ladders.map(l => [l.id, l]));
+  const teamsByLadder = new Map<string, any[]>();
+
+  for (const team of teams) {
+    const season = seasonMap.get(team.seasonId);
+    if (!season) continue;
+    const ladder = ladderMap.get(season.ladderId);
+    if (!ladder) continue;
+    if (!teamsByLadder.has(ladder.id)) teamsByLadder.set(ladder.id, []);
+    teamsByLadder.get(ladder.id)!.push({
+      ...team,
+      player1: team.player1Id ? playerMap.get(team.player1Id) ?? null : null,
+      player2: team.player2Id ? playerMap.get(team.player2Id) ?? null : null,
+      season,
+      standing: standingMap.get(team.id) ?? null,
+      matches: (matchesByTeam.get(team.id) ?? []).sort((a, b) =>
+        (b.scheduledDate ?? "").localeCompare(a.scheduledDate ?? "")
+      ),
+    });
+  }
+
+  const roster = ladders.map(l => ({
+    ladder: l,
+    activeSeason: seasons.find(s => s.ladderId === l.id && s.isActive) ?? null,
+    teams: (teamsByLadder.get(l.id) ?? []).sort((a, b) =>
+      (a.standing?.position ?? 999) - (b.standing?.position ?? 999)
+    ),
+  })).filter(r => r.teams.length > 0)
+    .sort((a, b) => a.ladder.name.localeCompare(b.ladder.name));
+
+  res.json(roster);
 });
 
 router.post("/admin/teams/:id/remove", requireAdmin, express.json(), async (req, res): Promise<void> => {

@@ -2657,6 +2657,33 @@ export function useListAllTeamsAdmin<
 }
 
 /**
+ * @summary Admin roster: all ladders with teams, players, standings and match history
+ */
+export const getAdminRosterUrl = () => `/api/admin/roster`;
+
+export const getAdminRoster = async (options?: RequestInit): Promise<any[]> => {
+  return customFetch<any[]>(getAdminRosterUrl(), { ...options, method: "GET" });
+};
+
+export const getAdminRosterQueryKey = () => [`/api/admin/roster`] as const;
+
+export const getAdminRosterQueryOptions = <TData = Awaited<ReturnType<typeof getAdminRoster>>, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getAdminRoster>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getAdminRosterQueryKey();
+  return { queryKey, queryFn: () => getAdminRoster(requestOptions), ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getAdminRoster>>, TError, TData>;
+};
+
+export function useGetAdminRoster<TData = Awaited<ReturnType<typeof getAdminRoster>>, TError = ErrorType<unknown>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getAdminRoster>>, TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdminRosterQueryOptions(options);
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
  * @summary Admin removes a team, optionally refunding both players
  */
 export const getAdminRemoveTeamUrl = (id: string) => {
