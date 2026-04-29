@@ -9,6 +9,7 @@ RUN corepack enable
 
 # Clone the full monorepo so pnpm can resolve workspace packages from lib/
 WORKDIR /monorepo
+ADD https://api.github.com/repos/sophieathletics/pbclubladder/git/refs/heads/main /tmp/latest-commit
 RUN git clone --depth 1 --branch main https://github.com/sophieathletics/pbclubladder.git .
 
 RUN pnpm install --no-frozen-lockfile
