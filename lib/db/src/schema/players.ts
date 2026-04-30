@@ -19,6 +19,7 @@ export const playersTable = pgTable("players", {
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   emailVerified: boolean("email_verified").notNull().default(false),
   emailVerificationToken: text("email_verification_token"),
+  noTeamNudgeSentAt: timestamp("no_team_nudge_sent_at", { withTimezone: true }),
 });
 
 export const insertPlayerSchema = createInsertSchema(playersTable).omit({ id: true, createdAt: true });

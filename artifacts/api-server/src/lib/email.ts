@@ -345,6 +345,45 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   });
 }
 
+export async function sendNoTeamNudgeEmail(to: string, firstName: string): Promise<void> {
+  const name = escapeHtml(firstName || "there");
+  const steps = [
+    { n: "1", title: "Find a ladder", body: `Browse available ladders at <a href="${APP_URL}/ladders" style="color:#16a34a;font-weight:600">pbclubladder.com/ladders</a> and pick the one that matches your level and schedule.` },
+    { n: "2", title: "Invite your partner", body: `Head to <a href="${APP_URL}/team" style="color:#16a34a;font-weight:600">My Team</a>, enter your partner's name and email, and send the invite. They'll get an email with a link to accept.` },
+    { n: "3", title: "Pay the entry fee", body: "Once your partner accepts, both teammates pay the entry fee through the app. Your team is then placed on the ladder and ready to compete." },
+    { n: "4", title: "Start challenging", body: "Challenge any team ranked 1–3 spots above you. Win and you take their spot. Climb your way to #1!" },
+  ];
+
+  const stepsHtml = steps.map(s =>
+    `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;width:100%"><tr>
+      <td valign="top" style="width:36px;padding-right:12px">
+        <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;font-weight:700;font-size:13px;line-height:28px;text-align:center">${s.n}</div>
+      </td>
+      <td valign="top">
+        <div style="font-weight:600;color:#111827;margin-bottom:3px">${s.title}</div>
+        <div style="color:#4b5563;font-size:14px;line-height:1.5">${s.body}</div>
+      </td>
+    </tr></table>`
+  ).join("");
+
+  sendEmail({
+    to,
+    subject: `Ready to compete? Here's how to get started`,
+    html: baseTemplate(
+      `<h2 style="margin:0 0 6px;font-size:22px;color:#111827">Hey ${name}, you're almost there!</h2>
+<p style="margin:0 0 24px;color:#4b5563">Your account is set up — now it's time to find a partner and get on the ladder. Here's how:</p>
+<h3 style="margin:0 0 16px;font-size:16px;color:#111827;border-bottom:1px solid #e5e7eb;padding-bottom:10px">Getting started</h3>
+${stepsHtml}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-top:8px">
+  <strong style="color:#166534">Questions?</strong>
+  <span style="color:#166534;font-size:14px"> Reply to this email and we'll help you out.</span>
+</div>`,
+      "Find a Ladder",
+      `${APP_URL}/ladders`
+    ),
+  });
+}
+
 export async function sendLadderWelcomeEmail(
   to: string | string[],
   teamName: string,

@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
-import { db, challengesTable, matchResultsTable, matchesTable, matchScoresTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, inactivityDropsTable } from "@workspace/db";
+import { db, challengesTable, matchResultsTable, matchesTable, matchScoresTable, teamsTable, ladderStandingsTable, seasonsTable, playersTable, inactivityDropsTable, teamInvitationsTable } from "@workspace/db";
 import { eq, and, sql, lt, isNull, or, asc, ne } from "drizzle-orm";
 import { requireCronSecret } from "../lib/auth";
 import { applyMatchResult } from "../lib/ladder";
-import { sendScoreAutoConfirmedEmail, sendInactivityDropEmail, sendChallengeExpiredEmail, sendPaymentReminderEmail, sendTeamAutoDissolvedEmail } from "../lib/email";
+import { sendScoreAutoConfirmedEmail, sendInactivityDropEmail, sendChallengeExpiredEmail, sendPaymentReminderEmail, sendTeamAutoDissolvedEmail, sendNoTeamNudgeEmail } from "../lib/email";
 import { notifyPlayers } from "../lib/notifications";
 import { logger } from "../lib/logger";
 import { refundPlayer } from "./payments";
@@ -256,6 +256,52 @@ router.post("/cron/auto-dissolve-unpaid", requireCronSecret, async (_req, res): 
       }
       details.push(`Team ${team.id} day-2 reminder sent`);
     }
+  }
+
+  res.json({ processed: details.length, details });
+});
+
+// Nudge players who registered 24+ hours ago but haven't invited a partner yet
+router.post("/cron/nudge-solo-players", requireCronSecret, async (_req, res): Promise<void> => {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  // Players created > 24h ago who haven't been nudged yet and have no outgoing invitation
+  const candidates = await db.select().from(playersTable).where(
+    and(
+      lt(playersTable.createdAt, cutoff),
+      isNull(playersTable.noTeamNudgeSentAt),
+      ne(playersTable.role, "admin"),
+    )
+  );
+
+  const details: string[] = [];
+
+  for (const player of candidates) {
+    // Skip if they've already sent an invitation
+    const [existingInvite] = await db.select({ id: teamInvitationsTable.id })
+      .from(teamInvitationsTable)
+      .where(eq(teamInvitationsTable.inviterId, player.id))
+      .limit(1);
+    if (existingInvite) {
+      // Mark nudge as sent so we don't recheck this player every run
+      await db.update(playersTable).set({ noTeamNudgeSentAt: new Date() }).where(eq(playersTable.id, player.id));
+      details.push(`Player ${player.id} skipped (already invited someone)`);
+      continue;
+    }
+
+    // Claim the send slot atomically to prevent double-sends
+    const claimed = await db.update(playersTable)
+      .set({ noTeamNudgeSentAt: new Date() })
+      .where(and(eq(playersTable.id, player.id), isNull(playersTable.noTeamNudgeSentAt)))
+      .returning({ id: playersTable.id });
+    if (claimed.length === 0) {
+      details.push(`Player ${player.id} nudge skipped (already claimed)`);
+      continue;
+    }
+
+    const firstName = player.firstName ?? player.fullName.split(" ")[0];
+    sendNoTeamNudgeEmail(player.email, firstName);
+    details.push(`Nudge sent to player ${player.id}`);
   }
 
   res.json({ processed: details.length, details });
