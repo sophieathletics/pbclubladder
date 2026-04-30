@@ -370,7 +370,7 @@ export async function sendLadderWelcomeEmail(
   const steps = [
     { n: "1", title: "Challenge a team", body: "Pick any team ranked 1–3 spots above you on the leaderboard and send a challenge. They have <strong>48 hours</strong> to accept or decline." },
     { n: "2", title: "Submit availability", body: "Once accepted, both teams submit their available dates &amp; times. The app finds overlapping slots so you can agree on a time." },
-    { n: "3", title: "Play your match", body: "Best of 3 sets (first to 6 games, win by 2). Use a tiebreak if the set reaches 6–6. A third-set tiebreak to 10 is played instead of a full third set." },
+    { n: "3", title: "Play your match", body: "Best of 5 games to 11 (win by 2). First team to win 3 games takes the match." },
     { n: "4", title: "Record the score", body: "The winning team enters the score in the app. The losing team has <strong>48 hours to confirm</strong>. After that it auto-confirms." },
     { n: "5", title: "Climb the ladder", body: "Beat a higher-ranked team and you swap positions. Keep challenging to reach #1!" },
   ];
