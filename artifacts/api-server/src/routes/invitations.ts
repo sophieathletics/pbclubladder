@@ -3,7 +3,7 @@ import { db, teamInvitationsTable, teamsTable, playersTable, ladderStandingsTabl
 import { eq, and, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sanitizePlayer } from "./auth";
-import { sendTeamInvitationEmail, sendExistingUserInvitationEmail, sendInvitationAcceptedEmail, sendInvitationDeclinedEmail } from "../lib/email";
+import { sendTeamInvitationEmail, sendExistingUserInvitationEmail, sendInvitationAcceptedEmail, sendInvitationDeclinedEmail, sendLadderWelcomeEmail } from "../lib/email";
 import { notifyPlayers } from "../lib/notifications";
 
 const router: IRouter = Router();
@@ -339,6 +339,20 @@ router.post("/invitations/:id/accept", requireAuth, async (req, res): Promise<vo
     sendInvitationAcceptedEmail(inviter.email, player.fullName, inv.teamName);
   }
   notifyPlayers([inv.inviterId], "invitation_accepted", `${player.fullName} accepted your invitation! Team "${inv.teamName}" is now active.`, "/team");
+
+  // Send welcome-to-ladder email to both players
+  const welcomeRecipients = [inviter?.email, player.email].filter(Boolean) as string[];
+  if (welcomeRecipients.length > 0) {
+    sendLadderWelcomeEmail(
+      welcomeRecipients,
+      inv.teamName,
+      invLadder?.name ?? "the ladder",
+      nextPos,
+      invitationSeason.startDate,
+      invitationSeason.endDate,
+      requiresPayment,
+    );
+  }
 
   const enriched = {
     ...team,

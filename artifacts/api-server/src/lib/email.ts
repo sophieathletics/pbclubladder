@@ -345,6 +345,65 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   });
 }
 
+export async function sendLadderWelcomeEmail(
+  to: string | string[],
+  teamName: string,
+  ladderName: string,
+  position: number,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  requiresPayment: boolean,
+): Promise<void> {
+  const fmt = (d: string) => {
+    const [y, m, day] = d.split("-").map(Number);
+    return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  };
+  const dateRange = startDate && endDate ? `${fmt(startDate)} – ${fmt(endDate)}` : null;
+
+  const paymentNote = requiresPayment
+    ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:14px 18px;margin-bottom:24px">
+        <strong style="color:#92400e">⚠️ Action required:</strong>
+        <span style="color:#78350f"> Both teammates must pay the entry fee before your team can send challenges. Head to <a href="${APP_URL}/team" style="color:#92400e">My Team</a> to pay.</span>
+      </div>`
+    : "";
+
+  const steps = [
+    { n: "1", title: "Challenge a team", body: "Pick any team ranked 1–3 spots above you on the leaderboard and send a challenge. They have <strong>48 hours</strong> to accept or decline." },
+    { n: "2", title: "Submit availability", body: "Once accepted, both teams submit their available dates &amp; times. The app finds overlapping slots so you can agree on a time." },
+    { n: "3", title: "Play your match", body: "Best of 3 sets (first to 6 games, win by 2). Use a tiebreak if the set reaches 6–6. A third-set tiebreak to 10 is played instead of a full third set." },
+    { n: "4", title: "Record the score", body: "The winning team enters the score in the app. The losing team has <strong>48 hours to confirm</strong>. After that it auto-confirms." },
+    { n: "5", title: "Climb the ladder", body: "Beat a higher-ranked team and you swap positions. Keep challenging to reach #1!" },
+  ];
+
+  const stepsHtml = steps.map(s =>
+    `<div style="display:flex;gap:14px;margin-bottom:20px;align-items:flex-start">
+      <div style="min-width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;line-height:28px;text-align:center">${s.n}</div>
+      <div>
+        <div style="font-weight:600;color:#111827;margin-bottom:3px">${s.title}</div>
+        <div style="color:#4b5563;font-size:14px;line-height:1.5">${s.body}</div>
+      </div>
+    </div>`
+  ).join("");
+
+  sendEmail({
+    to,
+    subject: `You're on the ladder — here's how to play`,
+    html: baseTemplate(
+      `<h2 style="margin:0 0 6px;font-size:22px;color:#111827">Welcome to the ladder, ${escapeHtml(teamName)}!</h2>
+<p style="margin:0 0 20px;color:#4b5563">You've successfully registered for the <strong>${escapeHtml(ladderName)}</strong> ladder at position <strong>#${position}</strong>.${dateRange ? ` Season runs <strong>${dateRange}</strong>.` : ""}</p>
+${paymentNote}
+<h3 style="margin:0 0 16px;font-size:16px;color:#111827;border-bottom:1px solid #e5e7eb;padding-bottom:10px">How it works</h3>
+${stepsHtml}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-top:8px">
+  <strong style="color:#166534">Good luck!</strong>
+  <span style="color:#166534;font-size:14px"> Challenge often — teams that don't play a match in 14 days drop one spot automatically. Stay active to keep your ranking!</span>
+</div>`,
+      "View Leaderboard",
+      `${APP_URL}/leaderboard`
+    ),
+  });
+}
+
 export async function sendAdminRemovedTeamEmail(to: string | string[], teamName: string, refundAmountCents: number | null): Promise<void> {
   const refundLine = refundAmountCents != null && refundAmountCents > 0
     ? `<p>Your entry fee of $${(refundAmountCents / 100).toFixed(2)} has been refunded to your card and should appear in 5–10 business days.</p>`
