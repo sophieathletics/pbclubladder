@@ -3,7 +3,7 @@ import { db, playersTable, teamInvitationsTable, passwordResetTokensTable } from
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import { hashPassword, verifyPassword, createToken, requireAuth } from "../lib/auth";
-import { sendPasswordResetEmail, sendVerificationEmail } from "../lib/email";
+import { sendPasswordResetEmail, sendVerificationEmail, sendNoTeamNudgeEmail } from "../lib/email";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -69,6 +69,7 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     .catch(() => {}); // non-fatal
 
   try { sendVerificationEmail(player.email, verificationToken); } catch (e) { logger.error({ err: e }, "Failed to send verification email"); }
+  try { sendNoTeamNudgeEmail(player.email, finalFirst, false); } catch (e) { logger.error({ err: e }, "Failed to send getting started email"); }
 
   const token = createToken(player.id);
 

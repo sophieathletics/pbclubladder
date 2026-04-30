@@ -345,14 +345,16 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string): Prom
   });
 }
 
-export async function sendNoTeamNudgeEmail(to: string, firstName: string): Promise<void> {
+export async function sendNoTeamNudgeEmail(to: string, firstName: string, emailVerified = false): Promise<void> {
   const name = escapeHtml(firstName || "there");
-  const steps = [
-    { n: "1", title: "Find a ladder", body: `Browse available ladders at <a href="${APP_URL}/ladders" style="color:#16a34a;font-weight:600">pbclubladder.com/ladders</a> and pick the one that matches your level and schedule.` },
-    { n: "2", title: "Invite your partner", body: `Head to <a href="${APP_URL}/team" style="color:#16a34a;font-weight:600">My Team</a>, enter your partner's name and email, and send the invite. They'll get an email with a link to accept.` },
-    { n: "3", title: "Pay the entry fee", body: "Once your partner accepts, both teammates pay the entry fee through the app. Your team is then placed on the ladder and ready to compete." },
-    { n: "4", title: "Start challenging", body: "Challenge any team ranked 1–3 spots above you. Win and you take their spot. Climb your way to #1!" },
+  const allSteps = [
+    ...(!emailVerified ? [{ n: "1", title: "Verify your email", body: `Check your inbox for a verification email from us and click the link to activate your account. Can't find it? <a href="${APP_URL}/login" style="color:#16a34a;font-weight:600">Log in</a> and request a new one.` }] : []),
+    { n: String(!emailVerified ? 2 : 1), title: "Find a ladder", body: `Browse available ladders at <a href="${APP_URL}/ladders" style="color:#16a34a;font-weight:600">pbclubladder.com/ladders</a> and pick the one that matches your level and schedule.` },
+    { n: String(!emailVerified ? 3 : 2), title: "Invite your partner", body: `Head to <a href="${APP_URL}/team" style="color:#16a34a;font-weight:600">My Team</a>, enter your partner's name and email, and send the invite. They'll get an email with a link to accept.` },
+    { n: String(!emailVerified ? 4 : 3), title: "Pay the entry fee", body: "Once your partner accepts, both teammates pay the entry fee through the app. Your team is then placed on the ladder and ready to compete." },
+    { n: String(!emailVerified ? 5 : 4), title: "Start challenging", body: "Challenge any team ranked 1–3 spots above you. Win and you take their spot. Climb your way to #1!" },
   ];
+  const steps = allSteps;
 
   const stepsHtml = steps.map(s =>
     `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;width:100%"><tr>
