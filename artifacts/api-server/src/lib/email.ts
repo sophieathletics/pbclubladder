@@ -376,13 +376,15 @@ export async function sendLadderWelcomeEmail(
   ];
 
   const stepsHtml = steps.map(s =>
-    `<div style="display:flex;gap:14px;margin-bottom:20px;align-items:flex-start">
-      <div style="min-width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;line-height:28px;text-align:center">${s.n}</div>
-      <div>
+    `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:20px;width:100%"><tr>
+      <td valign="top" style="width:36px;padding-right:12px">
+        <div style="width:28px;height:28px;background:#16a34a;color:#fff;border-radius:50%;font-weight:700;font-size:13px;line-height:28px;text-align:center">${s.n}</div>
+      </td>
+      <td valign="top">
         <div style="font-weight:600;color:#111827;margin-bottom:3px">${s.title}</div>
         <div style="color:#4b5563;font-size:14px;line-height:1.5">${s.body}</div>
-      </div>
-    </div>`
+      </td>
+    </tr></table>`
   ).join("");
 
   sendEmail({
