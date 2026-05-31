@@ -1,4 +1,4 @@
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -16,7 +16,7 @@ RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @workspace/api-server build
 
 # Runtime stage — esbuild bundles everything, so only the dist dir is needed
-FROM node:20-slim
+FROM node:22-slim
 WORKDIR /app
 COPY --from=build /monorepo/artifacts/api-server/dist ./dist
 

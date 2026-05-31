@@ -1,4 +1,4 @@
-FROM node:20-slim AS build
+FROM node:22-slim AS build
 
 RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
@@ -25,7 +25,7 @@ RUN echo "VITE_API_URL=https://api.pbclubladder.com" && \
     pnpm --filter @workspace/pickleball-ladders build
 
 # Runtime stage — serve reads PORT from the environment automatically
-FROM node:20-slim
+FROM node:22-slim
 RUN npm install -g serve
 WORKDIR /app
 COPY --from=build /monorepo/artifacts/pickleball-ladders/dist/public /app
