@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, laddersTable, seasonsTable, teamsTable } from "@workspace/db";
-import { eq, and, asc, sql } from "drizzle-orm";
+import { db, laddersTable, seasonsTable, teamsTable, challengesTable, inactivityDropsTable, teamInvitationsTable } from "@workspace/db";
+import { eq, and, asc, sql, inArray } from "drizzle-orm";
 import { requireAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -177,6 +177,15 @@ router.delete("/ladders/:id", requireAdmin, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Ladder not found" });
     return;
   }
+  // Get all seasons for this ladder so we can clean up child records that lack cascade
+  const seasons = await db.select({ id: seasonsTable.id }).from(seasonsTable).where(eq(seasonsTable.ladderId, id));
+  if (seasons.length > 0) {
+    const seasonIds = seasons.map(s => s.id);
+    await db.delete(challengesTable).where(inArray(challengesTable.seasonId, seasonIds));
+    await db.delete(inactivityDropsTable).where(inArray(inactivityDropsTable.seasonId, seasonIds));
+    await db.delete(teamInvitationsTable).where(inArray(teamInvitationsTable.seasonId, seasonIds));
+  }
+  // Cascade handles seasons → teams, standings
   await db.delete(laddersTable).where(eq(laddersTable.id, id));
   res.json({ success: true });
 });

@@ -15,7 +15,7 @@ import { useLocation, useSearch, Link } from "wouter";
 
 export default function Leaderboard() {
   const [search, setSearch] = useState("");
-  const { data: ladders } = useListLadders();
+  const { data: ladders } = useListLadders({ active_only: "true" } as any);
   const { data: player } = useGetCurrentPlayer();
   const { data: myTeams } = useGetMyTeams();
   const allLadderList = (ladders as any[]) ?? [];
