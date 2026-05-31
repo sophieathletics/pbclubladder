@@ -103,8 +103,8 @@ function DashboardContent() {
 
           const steps = [
             { label: "Invite your partner & join a ladder", done: hasTeam, href: "/team" },
-            { label: "Pay your $35 entry fee", done: hasPaid, href: "/team" },
-            { label: "Challenge another team (opens May 1st)", done: hasChallenge, href: "/challenge" },
+            { label: "Pay your entry fee", done: hasPaid, href: "/team" },
+            { label: "Challenge another team", done: hasChallenge, href: "/leaderboard" },
           ];
 
           return (
